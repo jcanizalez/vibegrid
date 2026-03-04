@@ -1,6 +1,26 @@
 import { StateCreator } from 'zustand'
 import { AppStore, UISlice } from './types'
 
+const GRID_STORAGE_KEY = 'vibegrid:gridSettings'
+
+function loadGridSettings(): { gridColumns?: number; sortMode?: string; statusFilter?: string } {
+  try {
+    const raw = localStorage.getItem(GRID_STORAGE_KEY)
+    return raw ? JSON.parse(raw) : {}
+  } catch {
+    return {}
+  }
+}
+
+function saveGridSettings(patch: Record<string, unknown>): void {
+  try {
+    const current = loadGridSettings()
+    localStorage.setItem(GRID_STORAGE_KEY, JSON.stringify({ ...current, ...patch }))
+  } catch { /* ignore */ }
+}
+
+const savedGrid = loadGridSettings()
+
 export const createUISlice: StateCreator<AppStore, [], [], UISlice> = (set) => ({
   focusedTerminalId: null,
   selectedTerminalId: null,
@@ -17,10 +37,10 @@ export const createUISlice: StateCreator<AppStore, [], [], UISlice> = (set) => (
   settingsCategory: 'general',
   showSessionBanner: false,
   previousSessions: [],
-  gridColumns: 0,
+  gridColumns: (savedGrid.gridColumns as number) ?? 0,
   rowHeight: 208,
-  sortMode: 'manual',
-  statusFilter: 'all',
+  sortMode: (savedGrid.sortMode as 'manual' | 'created' | 'recent') ?? 'manual',
+  statusFilter: (savedGrid.statusFilter as 'all' | 'running' | 'waiting' | 'idle' | 'error') ?? 'all',
   terminalOrder: [],
   visibleTerminalIds: [],
   minimizedTerminals: new Set(),
@@ -35,8 +55,8 @@ export const createUISlice: StateCreator<AppStore, [], [], UISlice> = (set) => (
     })),
   setSelectedTerminal: (id) => set({ selectedTerminalId: id }),
   setRenamingTerminalId: (id) => set({ renamingTerminalId: id }),
-  setSortMode: (mode) => set({ sortMode: mode }),
-  setStatusFilter: (filter) => set({ statusFilter: filter }),
+  setSortMode: (mode) => { saveGridSettings({ sortMode: mode }); set({ sortMode: mode }) },
+  setStatusFilter: (filter) => { saveGridSettings({ statusFilter: filter }); set({ statusFilter: filter }) },
 
   toggleSidebar: () => set((state) => ({ isSidebarOpen: !state.isSidebarOpen })),
 
@@ -63,7 +83,7 @@ export const createUISlice: StateCreator<AppStore, [], [], UISlice> = (set) => (
       previousSessions: sessions || []
     }),
 
-  setGridColumns: (cols) => set({ gridColumns: cols }),
+  setGridColumns: (cols) => { saveGridSettings({ gridColumns: cols }); set({ gridColumns: cols }) },
 
   setRowHeight: (height) =>
     set((state) => {

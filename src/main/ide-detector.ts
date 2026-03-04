@@ -1,5 +1,5 @@
 import fs from 'node:fs'
-import { execSync } from 'node:child_process'
+import { execFileSync, spawn } from 'node:child_process'
 
 export interface DetectedIDE {
   id: string
@@ -61,8 +61,8 @@ function getIDEDefinitions(): IDEDefinition[] {
 
 function commandExists(cmd: string): boolean {
   try {
-    const check = process.platform === 'win32' ? `where ${cmd}` : `which ${cmd}`
-    execSync(check, { stdio: 'pipe', timeout: 3000 })
+    const bin = process.platform === 'win32' ? 'where' : 'which'
+    execFileSync(bin, [cmd], { stdio: 'pipe', timeout: 3000 })
     return true
   } catch {
     return false
@@ -90,7 +90,6 @@ export function openInIDE(ideId: string, projectPath: string): void {
   const ide = detectIDEs().find((i) => i.id === ideId)
   if (!ide) return
 
-  const escaped = projectPath.replace(/"/g, '\\"')
-  const { exec } = require('node:child_process')
-  exec(`${ide.command} "${escaped}"`)
+  const parts = ide.command.split(' ')
+  spawn(parts[0], [...parts.slice(1), projectPath], { detached: true, stdio: 'ignore' }).unref()
 }

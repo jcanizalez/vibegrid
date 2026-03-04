@@ -164,6 +164,26 @@ export function GeneralSettings() {
             <span className="text-sm text-gray-400 w-12 text-right">{rowHeight}px</span>
           </div>
         </div>
+
+        {/* Reopen Sessions */}
+        <div className="flex items-center justify-between py-4 border-b border-white/[0.06]">
+          <div>
+            <div className="text-sm font-medium text-gray-200">Reopen Sessions on Startup</div>
+            <div className="text-xs text-gray-500 mt-0.5">Automatically restore previous sessions when the app starts</div>
+          </div>
+          <button
+            onClick={() => updateDefaults({ reopenSessions: !config.defaults.reopenSessions })}
+            className={`w-10 h-6 rounded-full transition-colors relative cursor-pointer ${
+              config.defaults.reopenSessions ? 'bg-blue-500' : 'bg-white/[0.1]'
+            }`}
+          >
+            <div
+              className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-transform ${
+                config.defaults.reopenSessions ? 'translate-x-5' : 'translate-x-1'
+              }`}
+            />
+          </button>
+        </div>
       </div>
 
       {/* Notifications section */}

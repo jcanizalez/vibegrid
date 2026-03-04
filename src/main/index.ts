@@ -26,7 +26,7 @@ function createWindow(): void {
       vibrancy: 'under-window',
       visualEffectState: 'active'
     } : {}),
-    backgroundColor: '#00000000',
+    backgroundColor: '#1a1a1e',
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
       contextIsolation: true,

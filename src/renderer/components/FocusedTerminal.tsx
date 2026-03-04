@@ -124,13 +124,20 @@ export function FocusedTerminal() {
       <motion.div
         className="fixed inset-3 z-50 rounded-xl border border-white/[0.08]
                    shadow-2xl flex flex-col overflow-hidden"
-        style={{ background: 'rgba(10, 14, 24, 0.92)' }}
+        style={{ background: '#1a1a1e' }}
         initial={{ opacity: 0, scale: 0.97 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ type: 'spring', stiffness: 400, damping: 30 }}
       >
         {/* Title bar — pl-[78px] for macOS traffic light safe zone */}
-        <div className="flex items-center gap-3 pl-[78px] pr-4 py-2.5 border-b border-white/[0.06] titlebar-no-drag">
+        <div
+          className="flex items-center gap-3 pl-[78px] pr-4 py-2.5 border-b border-white/[0.06] titlebar-no-drag"
+          onDoubleClick={(e) => {
+            // Contract on double-click, but not if clicking on a button or interactive element
+            if ((e.target as HTMLElement).closest('button, input, [role="button"]')) return
+            handleContract()
+          }}
+        >
           <AgentIcon agentType={terminal.session.agentType} size={16} />
           <div className="flex-1 min-w-0">
             {isRenaming ? (
@@ -195,6 +202,20 @@ export function FocusedTerminal() {
           )}
 
           <StatusBadge status={terminal.status} />
+
+          {/* Keyboard shortcut hints */}
+          <div className="flex items-center gap-2 text-[10px] text-gray-600 mx-1">
+            <span className="flex items-center gap-0.5">
+              <kbd className="px-1 py-0.5 rounded bg-white/[0.06] text-gray-500 font-mono">⌘W</kbd>
+              close
+            </span>
+            <span className="flex items-center gap-0.5">
+              <kbd className="px-1 py-0.5 rounded bg-white/[0.06] text-gray-500 font-mono">⌘[</kbd>
+              <kbd className="px-1 py-0.5 rounded bg-white/[0.06] text-gray-500 font-mono">⌘]</kbd>
+              cycle
+            </span>
+          </div>
+
           <OpenInButton projectPath={terminal.session.projectPath} />
           <TrafficLights
             onClose={handleKill}
@@ -215,7 +236,7 @@ export function FocusedTerminal() {
           {showDiffPanel && (
             <div
               className="relative flex flex-col border-l border-white/[0.06] shrink-0"
-              style={{ width: diffPanelWidth, background: 'rgba(6, 10, 20, 0.95)' }}
+              style={{ width: diffPanelWidth, background: '#141416' }}
             >
               {/* Resize handle */}
               <div

@@ -25,7 +25,7 @@ class ConfigManager {
 
   ensureConfigDir(): void {
     if (!fs.existsSync(CONFIG_DIR)) {
-      fs.mkdirSync(CONFIG_DIR, { recursive: true })
+      fs.mkdirSync(CONFIG_DIR, { recursive: true, mode: 0o700 })
     }
   }
 
@@ -64,7 +64,7 @@ class ConfigManager {
   saveConfig(config: AppConfig): void {
     this.ensureConfigDir()
     const raw = yaml.dump(config, { indent: 2, lineWidth: 120 })
-    fs.writeFileSync(CONFIG_PATH, raw, 'utf-8')
+    fs.writeFileSync(CONFIG_PATH, raw, { encoding: 'utf-8', mode: 0o600 })
   }
 
   watchConfig(callback: (config: AppConfig) => void): void {

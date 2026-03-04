@@ -4,7 +4,7 @@ import { useAppStore } from './stores'
 import { GridView } from './components/GridView'
 import { FocusedTerminal } from './components/FocusedTerminal'
 import { ProjectSidebar } from './components/ProjectSidebar'
-import { NewAgentDialog } from './components/NewAgentDialog'
+import { PromptLauncher } from './components/PromptLauncher'
 import { AddProjectDialog } from './components/AddProjectDialog'
 import { AddWorkflowDialog } from './components/AddWorkflowDialog'
 import { CommandPalette } from './components/CommandPalette'
@@ -58,7 +58,30 @@ export function App() {
 
       const prev = await window.api.getPreviousSessions()
       if (prev && prev.length > 0) {
-        useAppStore.getState().setSessionBanner(true, prev)
+        if (config.defaults.reopenSessions) {
+          // Auto-restore sessions with real agent session IDs
+          for (const s of prev) {
+            let resumeSessionId: string | undefined
+            const recentSessions = await window.api.getRecentSessions(s.projectPath)
+            const match = recentSessions.find((r) => r.agentType === s.agentType)
+            if (match) {
+              resumeSessionId = match.sessionId
+            }
+            const session = await window.api.createTerminal({
+              agentType: s.agentType,
+              projectName: s.projectName,
+              projectPath: s.projectPath,
+              branch: s.isWorktree ? s.branch : undefined,
+              useWorktree: s.isWorktree || undefined,
+              remoteHostId: s.remoteHostId,
+              resumeSessionId
+            })
+            useAppStore.getState().addTerminal(session)
+          }
+          window.api.clearPreviousSessions()
+        } else {
+          useAppStore.getState().setSessionBanner(true, prev)
+        }
       }
     })()
 
@@ -115,7 +138,7 @@ export function App() {
   }, [])
 
   return (
-    <div className="flex h-screen text-gray-100" style={{ background: 'rgba(3, 7, 18, 0.78)' }}>
+    <div className="flex h-screen text-gray-100" style={{ background: '#1a1a1e' }}>
       <ProjectSidebar />
 
       <main className="flex-1 flex flex-col overflow-hidden">
@@ -173,7 +196,7 @@ export function App() {
       {/* Focus overlay — no AnimatePresence so terminal handoff is instant */}
       {focusedId && <FocusedTerminal />}
 
-      <NewAgentDialog />
+      <PromptLauncher mode="overlay" onClose={() => setDialogOpen(false)} />
       <AddProjectDialog />
       <AddWorkflowDialog />
       <CommandPalette />

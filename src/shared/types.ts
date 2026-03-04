@@ -98,6 +98,7 @@ export interface AppConfig {
     defaultAgent?: AgentType
     notifications?: NotificationConfig
     hasSeenOnboarding?: boolean
+    reopenSessions?: boolean
   }
   projects: ProjectConfig[]
   agentCommands?: Partial<Record<AgentType, AgentCommandConfig>>

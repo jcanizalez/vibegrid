@@ -13,6 +13,26 @@ function getDefaultShell(): string {
   return process.env.SHELL || '/bin/zsh'
 }
 
+export function shellEscape(s: string): string {
+  return "'" + s.replace(/'/g, "'\\''") + "'"
+}
+
+const SENSITIVE_ENV_PREFIXES = [
+  'AWS_SECRET', 'AWS_SESSION', 'GITHUB_TOKEN', 'GH_TOKEN', 'OPENAI_API',
+  'ANTHROPIC_API', 'GOOGLE_API', 'STRIPE_', 'DATABASE_URL', 'DB_PASSWORD',
+  'SECRET_', 'PRIVATE_KEY', 'NPM_TOKEN', 'NODE_AUTH_TOKEN'
+]
+
+export function getSafeEnv(): Record<string, string> {
+  const env: Record<string, string> = {}
+  for (const [key, val] of Object.entries(process.env)) {
+    if (val === undefined) continue
+    if (SENSITIVE_ENV_PREFIXES.some((p) => key.toUpperCase().startsWith(p))) continue
+    env[key] = val
+  }
+  return env
+}
+
 class PtyManager {
   private ptys = new Map<string, pty.IPty>()
   private sessions = new Map<string, TerminalSession>()
@@ -44,27 +64,41 @@ class PtyManager {
     let launchLine = [cmd.command, ...cmd.args].join(' ')
     if (payload.resumeSessionId) {
       switch (payload.agentType) {
-        case 'claude':
+        case 'claude':   // claude --resume <sessionId>
           launchLine += ` --resume ${payload.resumeSessionId}`
           break
-        case 'copilot':
+        case 'copilot':  // gh copilot --resume <sessionId>
           launchLine += ` --resume ${payload.resumeSessionId}`
           break
-        case 'codex':
+        case 'codex':    // codex resume <sessionId>
           launchLine = `${cmd.command} resume ${payload.resumeSessionId}`
           break
-        case 'opencode':
+        case 'opencode': // opencode --session <sessionId>
           launchLine += ` --session ${payload.resumeSessionId}`
+          break
+        case 'gemini':   // gemini --resume latest (no UUID support, index-based)
+          launchLine += ` --resume latest`
           break
       }
     }
 
-    // Append initial prompt as CLI argument so the agent receives it
-    // directly on launch (e.g. `claude "prompt"`, `codex "prompt"`).
-    // This avoids fighting with interactive input key sequences.
+    // Append initial prompt as CLI argument
     if (payload.initialPrompt) {
       const escaped = payload.initialPrompt.replace(/'/g, "'\\''")
-      launchLine += ` '${escaped}'`
+      switch (payload.agentType) {
+        case 'copilot':  // gh copilot -i "prompt" (interactive + auto-execute)
+          launchLine += ` -i '${escaped}'`
+          break
+        case 'gemini':   // gemini -i "prompt" (interactive + auto-execute)
+          launchLine += ` -i '${escaped}'`
+          break
+        case 'opencode': // opencode --prompt "prompt"
+          launchLine += ` --prompt '${escaped}'`
+          break
+        default:         // claude "prompt", codex "prompt" (positional)
+          launchLine += ` '${escaped}'`
+          break
+      }
     }
 
     return launchLine
@@ -112,7 +146,7 @@ class PtyManager {
       cols: 80,
       rows: 24,
       cwd: effectivePath,
-      env: process.env as Record<string, string>
+      env: getSafeEnv()
     })
 
     const launchLine = this.buildAgentLaunchLine(payload)
@@ -144,19 +178,22 @@ class PtyManager {
       cols: 80,
       rows: 24,
       cwd: os.homedir(),
-      env: process.env as Record<string, string>
+      env: getSafeEnv()
     })
 
     // Build SSH command
     const sshParts: string[] = ['ssh', '-t']
     if (host.port !== 22) sshParts.push('-p', String(host.port))
     if (host.sshKeyPath) sshParts.push('-i', host.sshKeyPath)
-    if (host.sshOptions) sshParts.push(host.sshOptions)
+    if (host.sshOptions) {
+      const opts = host.sshOptions.split(/\s+/).filter(Boolean)
+      sshParts.push(...opts)
+    }
     sshParts.push(`${host.user}@${host.hostname}`)
 
     // Build remote command: cd to project path then launch agent
     const agentLine = this.buildAgentLaunchLine(payload)
-    const remoteCmd = `cd ${payload.projectPath} && ${agentLine}`
+    const remoteCmd = `cd ${shellEscape(payload.projectPath)} && ${agentLine}`
 
     // Write SSH command, then detect prompt and send the agent command
     setTimeout(() => ptyProcess.write(sshParts.join(' ') + '\r'), 300)

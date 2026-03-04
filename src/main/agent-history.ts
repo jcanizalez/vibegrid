@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import os from 'node:os'
-import { execSync } from 'node:child_process'
+import { execFileSync } from 'node:child_process'
 import { AgentType, RecentSession } from '../shared/types'
 
 interface AgentHistoryProvider {
@@ -14,11 +14,11 @@ interface AgentHistoryProvider {
 
 function querySqlite(dbPath: string, sql: string): Record<string, unknown>[] {
   try {
-    const escaped = sql.replace(/"/g, '\\"')
-    const output = execSync(
-      `sqlite3 -json -readonly "${dbPath}" "${escaped}"`,
-      { encoding: 'utf-8' as const, stdio: ['pipe', 'pipe', 'pipe'] as const, timeout: 5000 }
-    )
+    const output = execFileSync('sqlite3', ['-json', '-readonly', dbPath, sql], {
+      encoding: 'utf-8' as const,
+      stdio: ['pipe', 'pipe', 'pipe'] as const,
+      timeout: 5000
+    })
     const trimmed = output.trim()
     if (!trimmed) return []
     return JSON.parse(trimmed)

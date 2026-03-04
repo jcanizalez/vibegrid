@@ -142,7 +142,7 @@ export function NewAgentDialog() {
           <motion.div
             className="fixed top-1/2 left-1/2 z-50 w-[520px] border border-white/[0.08]
                        rounded-xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
-            style={{ background: 'rgba(12, 16, 28, 0.95)' }}
+            style={{ background: '#1e1e22' }}
             initial={{ opacity: 0, scale: 0.95, x: '-50%', y: '-50%' }}
             animate={{ opacity: 1, scale: 1, x: '-50%', y: '-50%' }}
             exit={{ opacity: 0, scale: 0.95, x: '-50%', y: '-50%' }}
@@ -330,7 +330,7 @@ export function NewAgentDialog() {
                         {/* Dropdown */}
                         {showBranchDropdown && filteredBranches.length > 0 && (
                           <div className="absolute top-full left-0 right-0 mt-1 max-h-48 overflow-y-auto
-                                          bg-[rgba(12,16,28,0.98)] border border-white/[0.08] rounded-lg shadow-xl z-10">
+                                          bg-\[#141416\] border border-white/[0.08] rounded-lg shadow-xl z-10">
                             {filteredBranches.map((b) => (
                               <button
                                 key={`${b.name}-${b.isRemote}`}

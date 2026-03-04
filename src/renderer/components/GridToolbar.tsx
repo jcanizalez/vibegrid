@@ -57,7 +57,7 @@ function Dropdown<T extends string>({ icon, options, value, onChange, title, lab
       {open && (
         <div className="absolute right-0 top-full mt-1 z-50 min-w-[140px]
                         border border-white/[0.08] rounded-lg shadow-xl overflow-hidden"
-             style={{ background: 'rgba(16, 20, 32, 0.95)', backdropFilter: 'blur(16px)' }}>
+             style={{ background: '#1a1a1e' }}>
           <div className="px-3 py-2 text-[11px] text-gray-500 uppercase tracking-wider">
             {label}
           </div>
@@ -148,7 +148,7 @@ export function GridToolbar() {
           <button
             key={opt.value}
             onClick={() => setStatusFilter(opt.value)}
-            className={`flex items-center gap-1.5 px-2 py-0.5 text-xs rounded-md transition-colors ${
+            className={`flex items-center gap-1.5 px-2.5 py-1 text-[13px] rounded-md transition-colors ${
               statusFilter === opt.value
                 ? 'bg-white/[0.1] text-white'
                 : 'text-gray-500 hover:text-gray-300'

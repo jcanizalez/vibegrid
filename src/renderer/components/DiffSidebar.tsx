@@ -69,7 +69,7 @@ export function DiffContent({ files, selectedFile }: { files: GitFileDiff[]; sel
             {/* File header */}
             <div className="sticky top-0 z-10 flex items-center gap-2 px-3 py-1.5 text-[12px] font-mono
                             border-b border-white/[0.06]"
-                 style={{ background: 'rgba(12, 16, 28, 0.98)' }}>
+                 style={{ background: '#1e1e22' }}>
               <span className={`${meta.color} font-bold`}>{meta.label}</span>
               <span className="text-gray-300">{file.filePath}</span>
             </div>
@@ -250,14 +250,14 @@ export function DiffSidebar() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={handleClose}
-            style={{ background: 'rgba(0, 0, 0, 0.3)' }}
+            style={{ background: '#141416' }}
           />
 
           {/* Sidebar */}
           <motion.div
             className="fixed top-0 right-0 bottom-0 z-50 flex flex-col border-l border-white/[0.08]
                        shadow-2xl"
-            style={{ width: sidebarWidth, background: 'rgba(10, 14, 24, 0.98)' }}
+            style={{ width: sidebarWidth, background: '#141416' }}
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}

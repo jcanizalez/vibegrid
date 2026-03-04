@@ -39,7 +39,7 @@ export function Tooltip({ label, children, position = 'top', delay = 400 }: Prop
           className="fixed z-[100] px-2 py-1 rounded-md text-[11px] text-gray-200 whitespace-nowrap
                      border border-white/[0.08] shadow-lg pointer-events-none"
           style={{
-            background: 'rgba(10, 14, 24, 0.95)',
+            background: '#1e1e22',
             left: coords.x,
             top: coords.y,
             transform: position === 'top'

@@ -45,7 +45,7 @@ export function RecentSessionsCard() {
     <div
       className="relative rounded-lg border border-white/[0.06] overflow-hidden flex flex-col
                  hover:border-white/[0.12] transition-colors h-full"
-      style={{ background: 'rgba(0, 0, 0, 0.25)' }}
+      style={{ background: '#1a1a1e' }}
     >
       {/* Header */}
       <div className="flex items-center gap-2 px-3 py-2 border-b border-white/[0.04] shrink-0">
@@ -57,7 +57,7 @@ export function RecentSessionsCard() {
       </div>
 
       {/* Session list */}
-      <div className="flex-1 min-h-0 overflow-auto" style={{ background: 'rgba(0, 0, 0, 0.15)' }}>
+      <div className="flex-1 min-h-0 overflow-auto" style={{ background: '#141416' }}>
         {sessions.length === 0 ? (
           <div className="flex items-center justify-center h-full p-6">
             <p className="text-xs text-gray-600">No recent sessions</p>

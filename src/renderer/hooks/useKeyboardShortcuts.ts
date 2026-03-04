@@ -18,6 +18,16 @@ export function useKeyboardShortcuts() {
     const handler = (e: KeyboardEvent): void => {
       const state = useAppStore.getState()
 
+      // Cmd+W — close focused terminal (xterm/agents capture plain Escape)
+      if (modKey(e) && e.key === 'w') {
+        if (state.focusedTerminalId) {
+          e.preventDefault()
+          state.setSelectedTerminal(state.focusedTerminalId)
+          state.setFocusedTerminal(null)
+          return
+        }
+      }
+
       // Escape chain — layered dismiss
       if (e.key === 'Escape') {
         if (state.isCommandPaletteOpen) {
@@ -143,6 +153,13 @@ export function useKeyboardShortcuts() {
         if (index < STATUS_FILTERS.length) {
           state.setStatusFilter(STATUS_FILTERS[index])
         }
+        return
+      }
+
+      // Cmd+O — expand selected terminal
+      if (modKey(e) && e.key === 'o' && !state.focusedTerminalId && state.selectedTerminalId) {
+        e.preventDefault()
+        state.setFocusedTerminal(state.selectedTerminalId)
         return
       }
 
