@@ -1,10 +1,21 @@
 import * as pty from 'node-pty'
 import crypto from 'node:crypto'
 import os from 'node:os'
+import { execFileSync } from 'node:child_process'
 import { BrowserWindow } from 'electron'
 import { AgentType, AgentCommandConfig, CreateTerminalPayload, IPC, TerminalSession, RemoteHost } from '../shared/types'
 import { getGitBranch, checkoutBranch, createWorktree } from './git-utils'
 import { DEFAULT_AGENT_COMMANDS } from '../shared/agent-defaults'
+
+function commandExists(cmd: string): boolean {
+  try {
+    const bin = process.platform === 'win32' ? 'where' : 'which'
+    execFileSync(bin, [cmd], { stdio: 'pipe', timeout: 3000 })
+    return true
+  } catch {
+    return false
+  }
+}
 
 function getDefaultShell(): string {
   if (process.platform === 'win32') {
@@ -59,8 +70,20 @@ class PtyManager {
     }
   }
 
+  private resolveAgentCommand(config: AgentCommandConfig): { command: string; args: string[] } {
+    if (commandExists(config.command)) {
+      return { command: config.command, args: config.args }
+    }
+    if (config.fallbackCommand && commandExists(config.fallbackCommand)) {
+      return { command: config.fallbackCommand, args: config.fallbackArgs ?? [] }
+    }
+    // Return original even if not found — let it fail visibly in the terminal
+    return { command: config.command, args: config.args }
+  }
+
   private buildAgentLaunchLine(payload: CreateTerminalPayload): string {
-    const cmd = this.agentCommands[payload.agentType] || DEFAULT_AGENT_COMMANDS[payload.agentType]
+    const cmdConfig = this.agentCommands[payload.agentType] || DEFAULT_AGENT_COMMANDS[payload.agentType]
+    const cmd = this.resolveAgentCommand(cmdConfig)
     let launchLine = [cmd.command, ...cmd.args].join(' ')
     if (payload.resumeSessionId) {
       switch (payload.agentType) {

@@ -115,7 +115,12 @@ const api = {
     const listener = (_: Electron.IpcRendererEvent, missed: { workflow: { id: string; name: string }; scheduledFor: string }[]): void => callback(missed)
     ipcRenderer.on(IPC.SCHEDULER_MISSED, listener)
     return () => { ipcRenderer.removeListener(IPC.SCHEDULER_MISSED, listener) }
-  }
+  },
+
+  // Window controls (Windows/Linux custom titlebar)
+  windowMinimize: () => ipcRenderer.send(IPC.WINDOW_MINIMIZE),
+  windowMaximize: () => ipcRenderer.send(IPC.WINDOW_MAXIMIZE),
+  windowClose: () => ipcRenderer.send(IPC.WINDOW_CLOSE)
 }
 
 contextBridge.exposeInMainWorld('api', api)

@@ -5,6 +5,8 @@ export type AgentStatus = 'running' | 'waiting' | 'idle' | 'error'
 export interface AgentCommandConfig {
   command: string
   args: string[]
+  fallbackCommand?: string
+  fallbackArgs?: string[]
 }
 
 export interface TerminalSession {
@@ -194,7 +196,10 @@ export const IPC = {
   SCHEDULER_EXECUTE: 'scheduler:execute',
   SCHEDULER_MISSED: 'scheduler:missed',
   SCHEDULER_GET_LOG: 'scheduler:getLog',
-  SCHEDULER_GET_NEXT_RUN: 'scheduler:getNextRun'
+  SCHEDULER_GET_NEXT_RUN: 'scheduler:getNextRun',
+  WINDOW_MINIMIZE: 'window:minimize',
+  WINDOW_MAXIMIZE: 'window:maximize',
+  WINDOW_CLOSE: 'window:close'
 } as const
 
 export interface ScheduleLogEntry {

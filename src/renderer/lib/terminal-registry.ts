@@ -16,26 +16,26 @@ const TERM_OPTIONS = {
   fontSize: 13,
   fontFamily: 'JetBrains Mono, Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace',
   theme: {
-    background: '#0f172a',
-    foreground: '#e2e8f0',
-    cursor: '#e2e8f0',
-    selectionBackground: '#334155',
-    black: '#1e293b',
+    background: '#141416',
+    foreground: '#d4d4d8',
+    cursor: '#d4d4d8',
+    selectionBackground: '#3f3f46',
+    black: '#27272a',
     red: '#ef4444',
     green: '#22c55e',
     yellow: '#eab308',
     blue: '#3b82f6',
     magenta: '#a855f7',
     cyan: '#06b6d4',
-    white: '#e2e8f0',
-    brightBlack: '#475569',
+    white: '#d4d4d8',
+    brightBlack: '#52525b',
     brightRed: '#f87171',
     brightGreen: '#4ade80',
     brightYellow: '#facc15',
     brightBlue: '#60a5fa',
     brightMagenta: '#c084fc',
     brightCyan: '#22d3ee',
-    brightWhite: '#f8fafc'
+    brightWhite: '#fafafa'
   },
   scrollback: 10000,
   allowProposedApi: true
@@ -47,10 +47,21 @@ export function setDefaultFontSize(size: number): void {
   configFontSize = size
 }
 
+const rendererIsMac = navigator.platform.toUpperCase().includes('MAC')
+
 function createTerminalEntry(terminalId: string): TerminalEntry {
   const term = new Terminal({ ...TERM_OPTIONS, fontSize: configFontSize })
   const fitAddon = new FitAddon()
   term.loadAddon(fitAddon)
+
+  // Let app-level shortcuts pass through instead of being consumed by xterm
+  term.attachCustomKeyEventHandler((e) => {
+    const mod = rendererIsMac ? e.metaKey : e.ctrlKey
+    if (!mod) return true
+    const passthrough = ['w', '[', ']', 'k', 'n', 'o', 'b', ',', '/']
+    if (passthrough.includes(e.key.toLowerCase())) return false
+    return true
+  })
 
   // Try WebGL, fall back to canvas (loaded after open())
   const loadRenderer = (): void => {

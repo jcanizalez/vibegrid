@@ -15,6 +15,9 @@ import { getDisplayName } from '../lib/terminal-display'
 import { GitBranch, FolderGit2, GitCommitHorizontal, FileCode2, RefreshCw, Loader2, Server } from 'lucide-react'
 import { GitDiffResult } from '../../shared/types'
 
+const isMac = navigator.platform.toUpperCase().includes('MAC')
+const MOD = isMac ? '⌘' : 'Ctrl+'
+
 export function FocusedTerminal() {
   const focusedId = useAppStore((s) => s.focusedTerminalId)
   const terminal = useAppStore((s) => focusedId ? s.terminals.get(focusedId) : undefined)
@@ -206,12 +209,12 @@ export function FocusedTerminal() {
           {/* Keyboard shortcut hints */}
           <div className="flex items-center gap-2 text-[10px] text-gray-600 mx-1">
             <span className="flex items-center gap-0.5">
-              <kbd className="px-1 py-0.5 rounded bg-white/[0.06] text-gray-500 font-mono">⌘W</kbd>
+              <kbd className="px-1 py-0.5 rounded bg-white/[0.06] text-gray-500 font-mono">{MOD}W</kbd>
               close
             </span>
             <span className="flex items-center gap-0.5">
-              <kbd className="px-1 py-0.5 rounded bg-white/[0.06] text-gray-500 font-mono">⌘[</kbd>
-              <kbd className="px-1 py-0.5 rounded bg-white/[0.06] text-gray-500 font-mono">⌘]</kbd>
+              <kbd className="px-1 py-0.5 rounded bg-white/[0.06] text-gray-500 font-mono">{MOD}[</kbd>
+              <kbd className="px-1 py-0.5 rounded bg-white/[0.06] text-gray-500 font-mono">{MOD}]</kbd>
               cycle
             </span>
           </div>

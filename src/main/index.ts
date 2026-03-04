@@ -1,4 +1,4 @@
-import { app, BrowserWindow, nativeImage } from 'electron'
+import { app, BrowserWindow, ipcMain, nativeImage } from 'electron'
 import path from 'node:path'
 import { registerIpcHandlers } from './ipc-handlers'
 import { ptyManager } from './pty-manager'
@@ -75,6 +75,14 @@ function createWindow(): void {
   } else {
     mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'))
   }
+
+  // Window control IPC handlers (used by custom titlebar on Windows/Linux)
+  ipcMain.on(IPC.WINDOW_MINIMIZE, () => mainWindow?.minimize())
+  ipcMain.on(IPC.WINDOW_MAXIMIZE, () => {
+    if (mainWindow?.isMaximized()) mainWindow.unmaximize()
+    else mainWindow?.maximize()
+  })
+  ipcMain.on(IPC.WINDOW_CLOSE, () => mainWindow?.close())
 
   mainWindow.on('closed', () => {
     mainWindow = null

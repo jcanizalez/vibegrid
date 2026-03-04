@@ -91,5 +91,7 @@ export function openInIDE(ideId: string, projectPath: string): void {
   if (!ide) return
 
   const parts = ide.command.split(' ')
-  spawn(parts[0], [...parts.slice(1), projectPath], { detached: true, stdio: 'ignore' }).unref()
+  const spawnOpts: import('node:child_process').SpawnOptions = { detached: true, stdio: 'ignore' }
+  if (process.platform === 'win32') spawnOpts.shell = true
+  spawn(parts[0], [...parts.slice(1), projectPath], spawnOpts).unref()
 }
