@@ -4,7 +4,7 @@ import { useAppStore } from './stores'
 import { GridView } from './components/GridView'
 import { FocusedTerminal } from './components/FocusedTerminal'
 import { ProjectSidebar } from './components/ProjectSidebar'
-import { NewAgentDialog } from './components/NewAgentDialog'
+import { PromptLauncher } from './components/PromptLauncher'
 import { AddProjectDialog } from './components/AddProjectDialog'
 import { AddWorkflowDialog } from './components/AddWorkflowDialog'
 import { CommandPalette } from './components/CommandPalette'
@@ -22,6 +22,43 @@ import { DiffSidebar } from './components/DiffSidebar'
 import { KeyboardShortcutsPanel } from './components/KeyboardShortcutsPanel'
 import { MissedScheduleDialog } from './components/MissedScheduleDialog'
 import { OnboardingModal } from './components/OnboardingModal'
+
+const isMac = navigator.platform.toUpperCase().includes('MAC')
+
+function WindowControls() {
+  if (isMac) return null
+  return (
+    <div className="flex items-center titlebar-no-drag ml-2">
+      <button
+        onClick={() => window.api.windowMinimize()}
+        className="w-[46px] h-[32px] flex items-center justify-center hover:bg-white/[0.08] transition-colors"
+        title="Minimize"
+      >
+        <svg width="10" height="1" viewBox="0 0 10 1" fill="currentColor" className="text-gray-400">
+          <rect width="10" height="1" />
+        </svg>
+      </button>
+      <button
+        onClick={() => window.api.windowMaximize()}
+        className="w-[46px] h-[32px] flex items-center justify-center hover:bg-white/[0.08] transition-colors"
+        title="Maximize"
+      >
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1" className="text-gray-400">
+          <rect x="0.5" y="0.5" width="9" height="9" />
+        </svg>
+      </button>
+      <button
+        onClick={() => window.api.windowClose()}
+        className="w-[46px] h-[32px] flex items-center justify-center hover:bg-red-500/80 transition-colors group"
+        title="Close"
+      >
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.2" className="text-gray-400 group-hover:text-white">
+          <path d="M1 1l8 8M9 1l-8 8" />
+        </svg>
+      </button>
+    </div>
+  )
+}
 
 export function App() {
   const focusedId = useAppStore((s) => s.focusedTerminalId)
@@ -58,7 +95,33 @@ export function App() {
 
       const prev = await window.api.getPreviousSessions()
       if (prev && prev.length > 0) {
-        useAppStore.getState().setSessionBanner(true, prev)
+        if (config.defaults.reopenSessions) {
+          // Auto-restore sessions — prefer hook-correlated session ID (exact),
+          // fall back to scanning agent history when hooks weren't active.
+          for (const s of prev) {
+            let resumeSessionId: string | undefined
+            if (s.hookSessionId) {
+              resumeSessionId = s.hookSessionId
+            } else {
+              const recentSessions = await window.api.getRecentSessions(s.projectPath)
+              const match = recentSessions.find((r) => r.agentType === s.agentType)
+              if (match) resumeSessionId = match.sessionId
+            }
+            const session = await window.api.createTerminal({
+              agentType: s.agentType,
+              projectName: s.projectName,
+              projectPath: s.projectPath,
+              branch: s.isWorktree ? s.branch : undefined,
+              useWorktree: s.isWorktree || undefined,
+              remoteHostId: s.remoteHostId,
+              resumeSessionId
+            })
+            useAppStore.getState().addTerminal(session)
+          }
+          window.api.clearPreviousSessions()
+        } else {
+          useAppStore.getState().setSessionBanner(true, prev)
+        }
       }
     })()
 
@@ -72,6 +135,10 @@ export function App() {
 
     const removeMenuListener = window.api.onMenuNewAgent(() => {
       useAppStore.getState().setNewAgentDialogOpen(true)
+    })
+
+    const removeWidgetSelectListener = window.api.onWidgetSelectTerminal((terminalId) => {
+      useAppStore.getState().setFocusedTerminal(terminalId)
     })
 
     // Scheduler: auto-execute workflows when triggered
@@ -111,11 +178,12 @@ export function App() {
       removeConfigListener()
       removeMenuListener()
       removeSchedulerListener()
+      removeWidgetSelectListener()
     }
   }, [])
 
   return (
-    <div className="flex h-screen text-gray-100" style={{ background: 'rgba(3, 7, 18, 0.78)' }}>
+    <div className="flex h-screen text-gray-100" style={{ background: '#1a1a1e' }}>
       <ProjectSidebar />
 
       <main className="flex-1 flex flex-col overflow-hidden">
@@ -163,6 +231,7 @@ export function App() {
               + New Session
               <KbdHint shortcutId="new-session" />
             </button>
+            <WindowControls />
           </div>
         </div>
 
@@ -173,7 +242,7 @@ export function App() {
       {/* Focus overlay — no AnimatePresence so terminal handoff is instant */}
       {focusedId && <FocusedTerminal />}
 
-      <NewAgentDialog />
+      <PromptLauncher mode="overlay" onClose={() => setDialogOpen(false)} />
       <AddProjectDialog />
       <AddWorkflowDialog />
       <CommandPalette />

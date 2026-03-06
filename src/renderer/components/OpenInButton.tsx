@@ -121,7 +121,7 @@ export function OpenInButton({ projectPath }: Props) {
         <div
           className="absolute right-0 top-full mt-1 z-50 min-w-[160px] py-1
                      border border-white/[0.08] rounded-lg shadow-xl"
-          style={{ background: 'rgba(12, 16, 28, 0.98)' }}
+          style={{ background: '#1e1e22' }}
         >
           <div className="px-3 py-1.5 text-[11px] text-gray-500 font-medium">Open in</div>
           {ides.map((ide) => (

@@ -84,7 +84,7 @@ export function OnboardingModal() {
       <motion.div
         className="fixed top-[10%] left-1/2 z-[60] w-[720px] max-h-[75vh] border border-white/[0.08]
                    rounded-xl shadow-2xl overflow-hidden flex"
-        style={{ background: 'rgba(12, 16, 28, 0.95)' }}
+        style={{ background: '#1e1e22' }}
         initial={{ opacity: 0, scale: 0.98, x: '-50%', y: -8 }}
         animate={{ opacity: 1, scale: 1, x: '-50%', y: 0 }}
         exit={{ opacity: 0, scale: 0.98, x: '-50%', y: -8 }}
@@ -92,7 +92,7 @@ export function OnboardingModal() {
       >
         {/* Left sidebar */}
         <div className="w-52 border-r border-white/[0.06] flex flex-col shrink-0"
-             style={{ background: 'rgba(0, 0, 0, 0.15)' }}>
+             style={{ background: '#141416' }}>
           {/* Sidebar header */}
           <div className="px-4 py-3.5 border-b border-white/[0.06]">
             <span className="text-sm font-medium text-white">Welcome Guide</span>

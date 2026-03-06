@@ -9,7 +9,7 @@ import {
   Folder, FolderGit2, Code, Globe, Database, Server, Smartphone, Package,
   FileCode, Terminal, Cpu, Cloud, Shield, Zap, Gamepad2, Music, Image,
   BookOpen, FlaskConical, Rocket, Play, MoreHorizontal, Pencil, Trash2, GitFork, ChevronRight,
-  Clock, Calendar, Repeat, Power
+  Clock, Calendar, Repeat, Power, X
 } from 'lucide-react'
 
 const STATUS_DOT_COLOR: Record<AgentStatus, string> = {
@@ -70,7 +70,7 @@ function ProjectContextMenu({
       ref={menuRef}
       className="absolute right-0 top-full mt-1 z-50 min-w-[140px] py-1
                  border border-white/[0.08] rounded-lg shadow-xl"
-      style={{ background: 'rgba(12, 16, 28, 0.98)' }}
+      style={{ background: '#141416' }}
     >
       <button
         onClick={() => { onEdit(); onClose() }}
@@ -124,7 +124,7 @@ function ShortcutContextMenu({
       ref={menuRef}
       className="absolute right-0 top-full mt-1 z-50 min-w-[160px] py-1
                  border border-white/[0.08] rounded-lg shadow-xl"
-      style={{ background: 'rgba(12, 16, 28, 0.98)' }}
+      style={{ background: '#141416' }}
     >
       <button
         onClick={() => { onEdit(); onClose() }}
@@ -195,6 +195,7 @@ export function ProjectSidebar() {
   }, [terminals])
 
   const isCollapsed = sidebarWidth <= COLLAPSED_WIDTH
+  const iconSize = isCollapsed ? 22 : 14
 
   const handleResizeStart = useCallback((e: React.PointerEvent) => {
     e.preventDefault()
@@ -271,7 +272,7 @@ export function ProjectSidebar() {
   return (
     <div
       className="border-r border-white/[0.06] flex flex-col h-full shrink-0 relative"
-      style={{ width: `${sidebarWidth}px`, background: 'rgba(0, 0, 0, 0.2)' }}
+      style={{ width: `${sidebarWidth}px`, background: '#141416' }}
     >
       {/* Traffic light safe zone */}
       <div className="titlebar-drag h-[52px] pl-[78px] pr-3 flex items-center justify-end
@@ -300,7 +301,7 @@ export function ProjectSidebar() {
           } ${isCollapsed ? 'justify-center px-0' : ''}`}
           title={isCollapsed ? 'All Projects' : undefined}
         >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="shrink-0">
+          <svg width={iconSize} height={iconSize} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="shrink-0">
             <rect x="2" y="3" width="20" height="14" rx="2" />
             <path d="M8 21h8M12 17v4" />
           </svg>
@@ -358,7 +359,7 @@ export function ProjectSidebar() {
                   } ${isCollapsed ? 'justify-center px-0' : ''}`}
                   title={isCollapsed ? project.name : undefined}
                 >
-                  <ProjectIcon icon={project.icon} color={project.iconColor} size={14} />
+                  <ProjectIcon icon={project.icon} color={project.iconColor} size={iconSize} />
                   {!isCollapsed && (
                     <>
                       <span className="truncate">{project.name}</span>
@@ -438,19 +439,33 @@ export function ProjectSidebar() {
                     <p className="text-[11px] text-gray-600 py-0.5 pl-2">No sessions</p>
                   ) : (
                     sessions.map((s) => (
-                      <button
-                        key={s.id}
-                        onClick={() => setFocusedTerminal(s.id)}
-                        className="w-full text-left px-2 py-1 rounded-md text-[12px] text-gray-400
-                                   hover:text-white hover:bg-white/[0.04] transition-colors
-                                   flex items-center gap-2 min-w-0"
-                      >
-                        <span className="relative shrink-0">
-                          <AgentIcon agentType={s.agentType} size={14} />
-                          <span className={`absolute -bottom-0.5 -right-0.5 w-1.5 h-1.5 rounded-full ${STATUS_DOT_COLOR[s.status]}`} />
-                        </span>
-                        <span className="truncate">{s.name}</span>
-                      </button>
+                      <div key={s.id} className="group/session flex items-center">
+                        <button
+                          onClick={() => setFocusedTerminal(s.id)}
+                          className="flex-1 text-left px-2 py-1 rounded-md text-[12px] text-gray-400
+                                     hover:text-white hover:bg-white/[0.04] transition-colors
+                                     flex items-center gap-2 min-w-0"
+                        >
+                          <span className="relative shrink-0">
+                            <AgentIcon agentType={s.agentType} size={14} />
+                            <span className={`absolute -bottom-0.5 -right-0.5 w-1.5 h-1.5 rounded-full ${STATUS_DOT_COLOR[s.status]}`} />
+                          </span>
+                          <span className="truncate">{s.name}</span>
+                        </button>
+                        <Tooltip label="Close session" position="right">
+                          <button
+                            onClick={async (e) => {
+                              e.stopPropagation()
+                              await window.api.killTerminal(s.id)
+                              useAppStore.getState().removeTerminal(s.id)
+                            }}
+                            className="opacity-0 group-hover/session:opacity-100 text-gray-600 hover:text-red-400
+                                       p-1 rounded-md hover:bg-white/[0.06] transition-all shrink-0"
+                          >
+                            <X size={12} strokeWidth={2} />
+                          </button>
+                        </Tooltip>
+                      </div>
                     ))
                   )}
                 </div>
@@ -467,25 +482,23 @@ export function ProjectSidebar() {
                      ${isCollapsed ? 'justify-center px-0' : ''}`}
           title={isCollapsed ? 'Add Project' : undefined}
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="shrink-0">
+          <svg width={iconSize} height={iconSize} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="shrink-0">
             <path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
             <path d="M12 11v6M9 14h6" />
           </svg>
           {!isCollapsed && 'Add Project'}
         </button>
-      </div>
 
-      {/* Workflows section */}
-      {!isCollapsed && (
-        <div className="px-3 pt-5 pb-1.5 flex items-center justify-between">
-          <span className="text-[11px] font-medium text-gray-500 uppercase tracking-wider">
-            Workflows
-          </span>
-        </div>
-      )}
-      {isCollapsed && <div className="pt-4" />}
+        {/* Workflows section */}
+        {!isCollapsed && (
+          <div className="pt-5 pb-1.5 flex items-center justify-between">
+            <span className="text-[11px] font-medium text-gray-500 uppercase tracking-wider">
+              Workflows
+            </span>
+          </div>
+        )}
+        {isCollapsed && <div className="pt-4" />}
 
-      <div className={`overflow-auto space-y-0.5 ${isCollapsed ? 'px-1.5' : 'px-3'}`}>
         {!isCollapsed && (!config?.shortcuts || config.shortcuts.length === 0) && (
           <p className="text-[13px] text-gray-600 px-2.5 py-1">No workflows</p>
         )}
@@ -522,7 +535,7 @@ export function ProjectSidebar() {
                 title={isCollapsed ? shortcut.name : undefined}
               >
                 <span className="relative shrink-0">
-                  <ShortcutIcon size={14} color={shortcut.iconColor || '#6b7280'} strokeWidth={1.5} />
+                  <ShortcutIcon size={iconSize} color={shortcut.iconColor || '#6b7280'} strokeWidth={1.5} />
                   {isScheduled && !isCollapsed && (
                     <Clock size={7} className="absolute -top-1 -right-1.5 text-blue-400" strokeWidth={2.5} />
                   )}
@@ -574,7 +587,7 @@ export function ProjectSidebar() {
                      ${isCollapsed ? 'justify-center px-0' : ''}`}
           title={isCollapsed ? 'Add Workflow' : undefined}
         >
-          <Zap size={14} strokeWidth={1.5} className="shrink-0" />
+          <Zap size={iconSize} strokeWidth={1.5} className="shrink-0" />
           {!isCollapsed && 'Add Workflow'}
         </button>
       </div>
@@ -588,7 +601,7 @@ export function ProjectSidebar() {
                      ${isCollapsed ? 'justify-center px-0' : ''}`}
           title={isCollapsed ? 'Welcome Guide' : undefined}
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="shrink-0">
+          <svg width={iconSize} height={iconSize} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="shrink-0">
             <circle cx="12" cy="12" r="10" />
             <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3" />
             <line x1="12" y1="17" x2="12.01" y2="17" />
@@ -602,7 +615,7 @@ export function ProjectSidebar() {
                      ${isCollapsed ? 'justify-center px-0' : ''}`}
           title={isCollapsed ? 'Settings' : undefined}
         >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="shrink-0">
+          <svg width={iconSize} height={iconSize} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="shrink-0">
             <circle cx="12" cy="12" r="3" />
             <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
           </svg>

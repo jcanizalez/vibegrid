@@ -48,7 +48,7 @@ export function SettingsPage() {
   return (
     <motion.div
       className="fixed inset-0 z-40 flex"
-      style={{ background: 'rgba(6, 10, 20, 0.98)' }}
+      style={{ background: '#1a1a1e' }}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -56,7 +56,7 @@ export function SettingsPage() {
     >
       {/* Left sidebar */}
       <div className="w-56 border-r border-white/[0.06] flex flex-col shrink-0"
-           style={{ background: 'rgba(0, 0, 0, 0.2)' }}>
+           style={{ background: '#141416' }}>
         {/* Header — pl-[78px] for macOS traffic light safe zone */}
         <div className="titlebar-drag h-[52px] pl-[78px] pr-3 flex items-center border-b border-white/[0.06] shrink-0">
           <button

@@ -2,8 +2,7 @@ import { useRef, useState, useCallback, useMemo, useEffect } from 'react'
 import { AnimatePresence, LayoutGroup } from 'framer-motion'
 import { useAppStore } from '../stores'
 import { AgentCard } from './AgentCard'
-import { RecentSessionsCard } from './RecentSessionsCard'
-import { getRandomTips } from '../lib/tips-data'
+import { PromptLauncher } from './PromptLauncher'
 
 interface DragState {
   draggingId: string
@@ -15,7 +14,6 @@ interface DragState {
 export function GridView() {
   const terminals = useAppStore((s) => s.terminals)
   const activeProject = useAppStore((s) => s.activeProject)
-  const setDialogOpen = useAppStore((s) => s.setNewAgentDialogOpen)
   const gridColumns = useAppStore((s) => s.gridColumns)
   const sortMode = useAppStore((s) => s.sortMode)
   const statusFilter = useAppStore((s) => s.statusFilter)
@@ -23,7 +21,6 @@ export function GridView() {
   const reorderTerminals = useAppStore((s) => s.reorderTerminals)
   const setVisibleTerminalIds = useAppStore((s) => s.setVisibleTerminalIds)
 
-  const randomTips = useMemo(() => getRandomTips(3), [])
   const [dragState, setDragState] = useState<DragState | null>(null)
   const [dropTargetIndex, setDropTargetIndex] = useState<number | null>(null)
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map())
@@ -122,71 +119,20 @@ export function GridView() {
       onPointerLeave={handlePointerUp}
     >
       {orderedIds.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-full">
-          {isFiltered ? (
-            <>
-              <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                   strokeWidth="1" className="text-white/20 mb-6">
-                <rect x="2" y="3" width="20" height="14" rx="2" />
-                <path d="M8 21h8M12 17v4" />
-                <path d="M7 8l3 3-3 3M12 14h4" />
-              </svg>
-              <p className="text-2xl font-semibold text-white mb-2">No matching agents</p>
-              <p className="text-sm text-gray-500 mb-6">Try changing the status filter</p>
-            </>
-          ) : (
-            <>
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                   strokeWidth="1" className="text-white/20 mb-4">
-                <rect x="2" y="3" width="20" height="14" rx="2" />
-                <path d="M8 21h8M12 17v4" />
-                <path d="M7 8l3 3-3 3M12 14h4" />
-              </svg>
-              <p className="text-xl font-semibold text-white mb-1">No agents running</p>
-              <p className="text-sm text-gray-500 mb-5">Resume a previous session or start a new one</p>
-
-              {/* Random tips */}
-              <div className="w-full max-w-[560px] mb-5">
-                <div className="text-[11px] font-medium text-gray-500 uppercase tracking-wider mb-2 px-1">
-                  Tips
-                </div>
-                <div className="space-y-1.5">
-                  {randomTips.map((tip, i) => (
-                    <div
-                      key={i}
-                      className="flex items-start gap-2.5 px-3 py-2 rounded-lg bg-white/[0.03] border border-white/[0.04]"
-                    >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                           strokeWidth="1.5" className="mt-0.5 shrink-0" style={{ color: 'rgba(0, 255, 212, 0.6)' }}>
-                        <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                      </svg>
-                      <span className="text-[13px] text-gray-400">
-                        {tip.text}
-                        {tip.shortcut && (
-                          <kbd className="ml-1.5 text-[10px] text-gray-500 bg-white/[0.04] border border-white/[0.06]
-                                          px-1.5 py-0.5 rounded font-mono">
-                            {tip.shortcut}
-                          </kbd>
-                        )}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="w-full max-w-[560px] mb-5" style={{ height: `${rowHeight + 42}px` }}>
-                <RecentSessionsCard />
-              </div>
-              <button
-                onClick={() => setDialogOpen(true)}
-                className="px-4 py-2 bg-white/[0.08] hover:bg-white/[0.12] text-white
-                           rounded-lg transition-colors text-sm font-medium"
-              >
-                New Session (Cmd+N)
-              </button>
-            </>
-          )}
-        </div>
+        isFiltered ? (
+          <div className="flex flex-col items-center justify-center h-full">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 strokeWidth="1" className="text-white/20 mb-6">
+              <rect x="2" y="3" width="20" height="14" rx="2" />
+              <path d="M8 21h8M12 17v4" />
+              <path d="M7 8l3 3-3 3M12 14h4" />
+            </svg>
+            <p className="text-2xl font-semibold text-white mb-2">No matching agents</p>
+            <p className="text-sm text-gray-500 mb-6">Try changing the status filter</p>
+          </div>
+        ) : (
+          <PromptLauncher mode="inline" />
+        )
       ) : (
         <LayoutGroup>
           <div className="grid gap-4" style={gridStyle}>

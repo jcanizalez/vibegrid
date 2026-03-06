@@ -99,7 +99,7 @@ export const AgentCard = forwardRef<HTMLDivElement, Props>(
                          ? 'card-drop-target border-blue-500/30 hover:border-white/[0.12]'
                          : 'border-white/[0.06] hover:border-white/[0.12]'
                    }`}
-        style={{ background: 'rgba(0, 0, 0, 0.25)', ...(isMinimized ? { alignSelf: 'start' } : {}) }}
+        style={{ background: '#1a1a1e', ...(isMinimized ? { alignSelf: 'start' } : {}) }}
         transition={{ type: 'spring', stiffness: 300, damping: 25 }}
         onMouseDown={() => { if (!isSelected && !isFocused) setSelected(terminalId) }}
         onMouseEnter={() => setCardHovered(true)}
@@ -184,7 +184,7 @@ export const AgentCard = forwardRef<HTMLDivElement, Props>(
 
         {/* Terminal — collapsible via minimize */}
         {!isMinimized && (
-          <div className="flex-1 min-h-0" style={{ background: 'rgba(0, 0, 0, 0.15)' }}>
+          <div className="flex-1 min-h-0" style={{ background: '#141416' }}>
             {!isFocused && <TerminalInstance terminalId={terminalId} isFocused={isSelected} />}
             {isFocused && (
               <div className="flex items-center justify-center h-full text-gray-600 text-xs">
