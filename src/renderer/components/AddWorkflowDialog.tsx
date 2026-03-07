@@ -8,7 +8,7 @@ import {
   Folder, FolderGit2, Code, Globe, Database, Server, Smartphone, Package,
   FileCode, Terminal, Cpu, Cloud, Shield, Zap, Gamepad2, Music, Image,
   BookOpen, FlaskConical, Rocket, GitBranch, MessageSquare, Clock, Calendar,
-  Repeat, ChevronDown, ChevronUp
+  Repeat, ChevronDown, ChevronUp, ListTodo
 } from 'lucide-react'
 
 const ICON_MAP: Record<string, React.FC<{ size?: number; color?: string; strokeWidth?: number }>> = {
@@ -19,6 +19,8 @@ const ICON_MAP: Record<string, React.FC<{ size?: number; color?: string; strokeW
 
 type ScheduleMode = 'manual' | 'once' | 'recurring'
 type RecurringPreset = 'weekdays' | 'daily' | 'hourly' | 'weekly' | 'custom'
+
+type PromptSource = 'inline' | 'task' | 'queue'
 
 interface ActionRow {
   agentType: AgentType
@@ -32,6 +34,8 @@ interface ActionRow {
   prompt: string
   promptDelayMs: number
   showPrompt: boolean
+  promptSource: PromptSource
+  taskId: string
 }
 
 function emptyAction(config: ReturnType<typeof useAppStore.getState>['config']): ActionRow {
@@ -47,7 +51,9 @@ function emptyAction(config: ReturnType<typeof useAppStore.getState>['config']):
     remoteHostId: '',
     prompt: '',
     promptDelayMs: 2000,
-    showPrompt: false
+    showPrompt: false,
+    promptSource: 'inline' as PromptSource,
+    taskId: ''
   }
 }
 
@@ -63,7 +69,9 @@ function shortcutActionToRow(action: ShortcutAction): ActionRow {
     remoteHostId: action.remoteHostId || '',
     prompt: action.prompt || '',
     promptDelayMs: action.promptDelayMs || 2000,
-    showPrompt: !!action.prompt
+    showPrompt: !!action.prompt || !!action.taskId || !!action.taskFromQueue,
+    promptSource: action.taskFromQueue ? 'queue' : action.taskId ? 'task' : 'inline',
+    taskId: action.taskId || ''
   }
 }
 
@@ -200,7 +208,9 @@ export function AddWorkflowDialog() {
       ...(a.branch.trim() ? { branch: a.branch.trim() } : {}),
       ...(a.useWorktree ? { useWorktree: true } : {}),
       ...(a.remoteHostId ? { remoteHostId: a.remoteHostId } : {}),
-      ...(a.prompt.trim() ? { prompt: a.prompt.trim(), promptDelayMs: a.promptDelayMs } : {})
+      ...(a.promptSource === 'inline' && a.prompt.trim() ? { prompt: a.prompt.trim(), promptDelayMs: a.promptDelayMs } : {}),
+      ...(a.promptSource === 'task' && a.taskId ? { taskId: a.taskId } : {}),
+      ...(a.promptSource === 'queue' ? { taskFromQueue: true } : {})
     }))
 
     const schedule = buildSchedule()
@@ -555,15 +565,15 @@ export function AddWorkflowDialog() {
                           <FolderGit2 size={12} strokeWidth={1.5} />
                         </button>
 
-                        {/* Prompt toggle */}
+                        {/* Prompt / Task toggle */}
                         <button
                           onClick={() => updateAction(index, { showPrompt: !action.showPrompt })}
                           className={`p-1.5 rounded-md border transition-all shrink-0 ${
-                            action.prompt.trim()
+                            action.prompt.trim() || action.taskId || action.promptSource === 'queue'
                               ? 'border-blue-500/30 bg-blue-500/10 text-blue-400'
                               : 'border-white/[0.06] text-gray-600 hover:text-gray-400'
                           }`}
-                          title="Initial prompt"
+                          title="Initial prompt / Task"
                         >
                           <MessageSquare size={12} strokeWidth={1.5} />
                         </button>
@@ -603,36 +613,93 @@ export function AddWorkflowDialog() {
                         </button>
                       </div>
 
-                      {/* Expandable prompt section */}
+                      {/* Expandable prompt / task section */}
                       {action.showPrompt && (
                         <div className="px-3 pb-3 pt-1 border-t border-white/[0.04]">
-                          <div className="flex items-center gap-2 mb-1.5">
-                            <MessageSquare size={11} className="text-gray-500" />
-                            <span className="text-[11px] text-gray-500">Initial prompt sent after agent starts</span>
+                          {/* Source selector */}
+                          <div className="flex rounded-md border border-white/[0.08] overflow-hidden mb-2">
+                            {([
+                              { mode: 'inline' as PromptSource, label: 'Inline Prompt', icon: MessageSquare },
+                              { mode: 'task' as PromptSource, label: 'Specific Task', icon: ListTodo },
+                              { mode: 'queue' as PromptSource, label: 'Next from Queue', icon: ListTodo }
+                            ]).map(({ mode, label, icon: Icon }) => (
+                              <button
+                                key={mode}
+                                onClick={() => updateAction(index, { promptSource: mode })}
+                                className={`flex-1 px-2 py-1.5 text-[10px] font-medium flex items-center justify-center gap-1 transition-colors ${
+                                  action.promptSource === mode
+                                    ? 'bg-white/[0.1] text-white'
+                                    : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.04]'
+                                }`}
+                              >
+                                <Icon size={10} strokeWidth={1.5} />
+                                {label}
+                              </button>
+                            ))}
                           </div>
-                          <textarea
-                            value={action.prompt}
-                            onChange={(e) => updateAction(index, { prompt: e.target.value })}
-                            placeholder="Review the PR at #123 and suggest improvements..."
-                            rows={2}
-                            className="w-full px-3 py-2 bg-white/[0.03] border border-white/[0.06] rounded-md text-xs
-                                       text-gray-200 placeholder-gray-600 focus:outline-none focus:border-white/[0.15]
-                                       resize-none"
-                          />
-                          <div className="flex items-center gap-2 mt-1.5">
-                            <span className="text-[10px] text-gray-600">Delay:</span>
-                            <input
-                              type="number"
-                              min={500}
-                              max={30000}
-                              step={500}
-                              value={action.promptDelayMs}
-                              onChange={(e) => updateAction(index, { promptDelayMs: Number(e.target.value) })}
-                              className="w-20 px-2 py-1 bg-white/[0.03] border border-white/[0.06] rounded text-[10px]
-                                         text-gray-300 focus:outline-none focus:border-white/[0.15]"
-                            />
-                            <span className="text-[10px] text-gray-600">ms after launch</span>
-                          </div>
+
+                          {/* Inline prompt */}
+                          {action.promptSource === 'inline' && (
+                            <>
+                              <textarea
+                                value={action.prompt}
+                                onChange={(e) => updateAction(index, { prompt: e.target.value })}
+                                placeholder="Review the PR at #123 and suggest improvements..."
+                                rows={2}
+                                className="w-full px-3 py-2 bg-white/[0.03] border border-white/[0.06] rounded-md text-xs
+                                           text-gray-200 placeholder-gray-600 focus:outline-none focus:border-white/[0.15]
+                                           resize-none"
+                              />
+                              <div className="flex items-center gap-2 mt-1.5">
+                                <span className="text-[10px] text-gray-600">Delay:</span>
+                                <input
+                                  type="number"
+                                  min={500}
+                                  max={30000}
+                                  step={500}
+                                  value={action.promptDelayMs}
+                                  onChange={(e) => updateAction(index, { promptDelayMs: Number(e.target.value) })}
+                                  className="w-20 px-2 py-1 bg-white/[0.03] border border-white/[0.06] rounded text-[10px]
+                                             text-gray-300 focus:outline-none focus:border-white/[0.15]"
+                                />
+                                <span className="text-[10px] text-gray-600">ms after launch</span>
+                              </div>
+                            </>
+                          )}
+
+                          {/* Specific task picker */}
+                          {action.promptSource === 'task' && (
+                            <div>
+                              <select
+                                value={action.taskId}
+                                onChange={(e) => updateAction(index, { taskId: e.target.value })}
+                                className="w-full px-3 py-2 bg-white/[0.03] border border-white/[0.06] rounded-md text-xs
+                                           text-gray-200 focus:outline-none focus:border-white/[0.15]"
+                              >
+                                <option value="">Select a task...</option>
+                                {(config?.tasks || [])
+                                  .filter((t) => t.projectName === action.projectName && t.status === 'todo')
+                                  .sort((a, b) => a.order - b.order)
+                                  .map((t) => (
+                                    <option key={t.id} value={t.id}>{t.title}</option>
+                                  ))}
+                              </select>
+                              {!action.projectName && (
+                                <p className="text-[10px] text-gray-600 mt-1">Select a project first to see available tasks</p>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Next from queue */}
+                          {action.promptSource === 'queue' && (
+                            <div className="flex items-center gap-2 px-1 py-2">
+                              <ListTodo size={12} className="text-gray-500" />
+                              <span className="text-[11px] text-gray-400">
+                                Will automatically pick the highest-priority todo task from{' '}
+                                <span className="text-gray-300">{action.projectName || 'the project'}</span>&apos;s queue at runtime
+                              </span>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>

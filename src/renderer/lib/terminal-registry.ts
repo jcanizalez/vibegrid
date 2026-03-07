@@ -171,6 +171,26 @@ export function focusTerminal(terminalId: string): void {
   registry.get(terminalId)?.term.focus()
 }
 
+export function scrollToBottom(terminalId: string): void {
+  const entry = registry.get(terminalId)
+  if (!entry) return
+  entry.term.scrollToBottom()
+}
+
+export function isAtBottom(terminalId: string): boolean {
+  const entry = registry.get(terminalId)
+  if (!entry) return true
+  const buf = entry.term.buffer.active
+  return buf.baseY + entry.term.rows >= buf.length
+}
+
+export function onTerminalScroll(terminalId: string, callback: () => void): (() => void) | undefined {
+  const entry = registry.get(terminalId)
+  if (!entry) return undefined
+  const disposable = entry.term.onScroll(callback)
+  return () => disposable.dispose()
+}
+
 /**
  * Fully destroy a terminal (when killing an agent).
  */

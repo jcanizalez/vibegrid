@@ -2,25 +2,15 @@ name: Release
 
 on:
   push:
-    tags: ['v*']
+    tags:
+      - 'v*'
 
 permissions:
   contents: write
 
 jobs:
-  build:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: macos-latest
-            platform: mac
-          - os: windows-latest
-            platform: win
-          - os: ubuntu-latest
-            platform: linux
-    runs-on: ${{ matrix.os }}
-
+  build-macos:
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -28,8 +18,57 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Install Python setuptools (needed by node-gyp)
-        run: pip3 install setuptools
+      - name: Install Python setuptools
+        run: pip install setuptools
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Import code signing certificate
+        env:
+          MAC_CERTIFICATE: ${{ secrets.MAC_CERTIFICATE }}
+          MAC_CERTIFICATE_PASSWORD: ${{ secrets.MAC_CERTIFICATE_PASSWORD }}
+        run: |
+          echo "$MAC_CERTIFICATE" | base64 --decode > certificate.p12
+          security create-keychain -p actions build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p actions build.keychain
+          security import certificate.p12 -k build.keychain -P "$MAC_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k actions build.keychain
+          rm certificate.p12
+
+      - name: Install dependencies
+        run: yarn install
+
+      - name: Build and publish
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          yarn build
+          yarn dist --publish always
+
+      - name: Clean up keychain
+        if: always()
+        run: security delete-keychain build.keychain || true
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Python setuptools
+        run: pip install setuptools
 
       - uses: actions/setup-node@v4
         with:
@@ -39,87 +78,47 @@ jobs:
         run: corepack enable
 
       - name: Install dependencies
-        run: yarn install --immutable
+        run: yarn install
 
-      - name: Build app
-        run: yarn build
-
-      - name: Package for ${{ matrix.platform }}
-        run: yarn electron-builder --${{ matrix.platform }} --publish never
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: dist-${{ matrix.platform }}
-          path: |
-            dist/*.dmg
-            dist/*.zip
-            dist/*.exe
-            dist/*.AppImage
-            dist/*.deb
-          if-no-files-found: error
-
-  release:
-    needs: build
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-          merge-multiple: true
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: artifacts/*
-          draft: true
-          generate_release_notes: true
-
-  update-homebrew:
-    needs: release
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Download mac artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: dist-mac
-          path: artifacts
-
-      - name: Compute SHA256
-        id: sha
-        run: echo "sha256=$(shasum -a 256 artifacts/*.dmg | awk '{print $1}')" >> $GITHUB_OUTPUT
-
-      - name: Extract version
-        id: version
-        run: echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
-
-      - name: Update Homebrew Tap
-        env:
-          TAP_PAT: ${{ secrets.HOMEBREW_TAP_PAT }}
-          VERSION: ${{ steps.version.outputs.version }}
-          SHA256: ${{ steps.sha.outputs.sha256 }}
+      - name: Build
         run: |
-          git clone https://x-access-token:${TAP_PAT}@github.com/jcanizalez/homebrew-tap.git
-          cd homebrew-tap
-          mkdir -p Casks
-          tee Casks/vibegrid.rb > /dev/null <<EOF
-          cask "vibegrid" do
-            version "${VERSION}"
-            sha256 "${SHA256}"
-            url "https://github.com/jcanizalez/vibegrid/releases/download/v#{version}/VibeGrid-#{version}.dmg"
-            name "VibeGrid"
-            desc "AI Agent Terminal Manager"
-            homepage "https://github.com/jcanizalez/vibegrid"
-            app "VibeGrid.app"
-          end
-          EOF
-          sed -i 's/^          //' Casks/vibegrid.rb
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
-          git add Casks/vibegrid.rb
-          git commit -m "Update vibegrid to v${VERSION}"
-          git push
+          yarn build
+          yarn dist --publish never
 
+      - name: Upload to release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $tag = "${env:GITHUB_REF_NAME}"
+          Get-ChildItem dist\*.exe, dist\*.blockmap, dist\latest*.yml | ForEach-Object {
+            gh release upload $tag $_.FullName --clobber
+          }
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Python setuptools
+        run: pip install setuptools
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install dependencies
+        run: yarn install
+
+      - name: Build and publish
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          yarn build
+          yarn dist --publish always

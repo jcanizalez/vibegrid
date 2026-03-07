@@ -17,7 +17,8 @@ const DEFAULT_CONFIG: AppConfig = {
   },
   projects: [],
   agentCommands: { ...DEFAULT_AGENT_COMMANDS },
-  shortcuts: []
+  shortcuts: [],
+  tasks: []
 }
 
 class ConfigManager {
@@ -57,6 +58,10 @@ class ConfigManager {
           shortcut.enabled = true
         }
       }
+    }
+    // Ensure tasks array exists
+    if (!config.tasks) {
+      config.tasks = []
     }
     return config
   }

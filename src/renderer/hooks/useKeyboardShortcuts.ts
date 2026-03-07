@@ -98,6 +98,13 @@ export function useKeyboardShortcuts() {
         return
       }
 
+      // Ctrl+` — toggle terminal panel
+      if (e.ctrlKey && e.key === '`') {
+        e.preventDefault()
+        state.toggleTerminalPanel()
+        return
+      }
+
       // Cmd+] — next terminal
       if (modKey(e) && e.key === ']') {
         e.preventDefault()

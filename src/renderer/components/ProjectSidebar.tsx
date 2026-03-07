@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useAppStore } from '../stores'
-import { ShortcutConfig, ProjectConfig, AgentStatus, AgentType } from '../../shared/types'
+import { ShortcutConfig, ProjectConfig, AgentStatus, AgentType, TaskConfig } from '../../shared/types'
 import { getDisplayName } from '../lib/terminal-display'
 import { KbdHint } from './KbdHint'
 import { Tooltip } from './Tooltip'
@@ -9,7 +9,7 @@ import {
   Folder, FolderGit2, Code, Globe, Database, Server, Smartphone, Package,
   FileCode, Terminal, Cpu, Cloud, Shield, Zap, Gamepad2, Music, Image,
   BookOpen, FlaskConical, Rocket, Play, MoreHorizontal, Pencil, Trash2, GitFork, ChevronRight,
-  Clock, Calendar, Repeat, Power, X
+  Clock, Calendar, Repeat, Power, X, ListTodo, Plus, Circle
 } from 'lucide-react'
 
 const STATUS_DOT_COLOR: Record<AgentStatus, string> = {
@@ -173,6 +173,9 @@ export function ProjectSidebar() {
 
   const setEditingShortcut = useAppStore((s) => s.setEditingShortcut)
   const setFocusedTerminal = useAppStore((s) => s.setFocusedTerminal)
+  const setTaskPanelOpen = useAppStore((s) => s.setTaskPanelOpen)
+  const setTaskDialogOpen = useAppStore((s) => s.setTaskDialogOpen)
+  const setEditingTask = useAppStore((s) => s.setEditingTask)
 
   const [sidebarWidth, setSidebarWidth] = useState(256)
   const [openMenuProject, setOpenMenuProject] = useState<string | null>(null)
@@ -432,42 +435,150 @@ export function ProjectSidebar() {
                 )}
               </div>
 
-              {/* Session list under project */}
+              {/* Expanded sub-groups under project */}
               {!isCollapsed && isExpanded && (
-                <div className="ml-4 pl-2 border-l border-white/[0.04] space-y-0.5 mt-0.5 mb-1">
-                  {sessions.length === 0 ? (
-                    <p className="text-[11px] text-gray-600 py-0.5 pl-2">No sessions</p>
-                  ) : (
-                    sessions.map((s) => (
-                      <div key={s.id} className="group/session flex items-center">
-                        <button
-                          onClick={() => setFocusedTerminal(s.id)}
-                          className="flex-1 text-left px-2 py-1 rounded-md text-[12px] text-gray-400
-                                     hover:text-white hover:bg-white/[0.04] transition-colors
-                                     flex items-center gap-2 min-w-0"
-                        >
-                          <span className="relative shrink-0">
-                            <AgentIcon agentType={s.agentType} size={14} />
-                            <span className={`absolute -bottom-0.5 -right-0.5 w-1.5 h-1.5 rounded-full ${STATUS_DOT_COLOR[s.status]}`} />
-                          </span>
-                          <span className="truncate">{s.name}</span>
-                        </button>
-                        <Tooltip label="Close session" position="right">
+                <div className="ml-4 pl-2 border-l border-white/[0.04] mt-0.5 mb-1 space-y-1">
+                  {/* Sessions sub-group */}
+                  <div>
+                    <div className="flex items-center gap-1.5 px-2 py-1">
+                      <Terminal size={11} strokeWidth={2} className="text-gray-600" />
+                      <span className="text-[11px] font-medium text-gray-500 uppercase tracking-wider">
+                        Sessions
+                      </span>
+                      {sessions.length > 0 && (
+                        <span className="text-[10px] text-gray-600 bg-white/[0.06] px-1.5 py-0.5 rounded-full">
+                          {sessions.length}
+                        </span>
+                      )}
+                    </div>
+                    <div className="space-y-0.5">
+                      {sessions.length === 0 ? (
+                        <p className="text-[11px] text-gray-600 py-0.5 pl-2">No sessions</p>
+                      ) : (
+                        sessions.map((s) => (
+                          <div key={s.id} className="group/session flex items-center">
+                            <button
+                              onClick={() => setFocusedTerminal(s.id)}
+                              className="flex-1 text-left px-2 py-1 rounded-md text-[12px] text-gray-400
+                                         hover:text-white hover:bg-white/[0.04] transition-colors
+                                         flex items-center gap-2 min-w-0"
+                            >
+                              <span className="relative shrink-0">
+                                <AgentIcon agentType={s.agentType} size={14} />
+                                <span className={`absolute -bottom-0.5 -right-0.5 w-1.5 h-1.5 rounded-full ${STATUS_DOT_COLOR[s.status]}`} />
+                              </span>
+                              <span className="truncate">{s.name}</span>
+                            </button>
+                            <Tooltip label="Close session" position="right">
+                              <button
+                                onClick={async (e) => {
+                                  e.stopPropagation()
+                                  await window.api.killTerminal(s.id)
+                                  useAppStore.getState().removeTerminal(s.id)
+                                }}
+                                className="opacity-0 group-hover/session:opacity-100 text-gray-600 hover:text-red-400
+                                           p-1 rounded-md hover:bg-white/[0.06] transition-all shrink-0"
+                              >
+                                <X size={12} strokeWidth={2} />
+                              </button>
+                            </Tooltip>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Tasks sub-group */}
+                  {(() => {
+                    const todoTasks = (config?.tasks || []).filter(
+                      (t: TaskConfig) => t.projectName === project.name && t.status === 'todo'
+                    )
+                    const inProgressTasks = (config?.tasks || []).filter(
+                      (t: TaskConfig) => t.projectName === project.name && t.status === 'in_progress'
+                    )
+                    const taskCount = todoTasks.length + inProgressTasks.length
+                    return (
+                      <div>
+                        <div className="flex items-center justify-between px-2 py-1">
                           <button
-                            onClick={async (e) => {
-                              e.stopPropagation()
-                              await window.api.killTerminal(s.id)
-                              useAppStore.getState().removeTerminal(s.id)
+                            onClick={() => {
+                              setActiveProject(project.name)
+                              setTaskPanelOpen(true)
                             }}
-                            className="opacity-0 group-hover/session:opacity-100 text-gray-600 hover:text-red-400
-                                       p-1 rounded-md hover:bg-white/[0.06] transition-all shrink-0"
+                            className="flex items-center gap-1.5 text-[11px] font-medium text-gray-500 uppercase tracking-wider hover:text-gray-300 transition-colors"
                           >
-                            <X size={12} strokeWidth={2} />
+                            <ListTodo size={11} strokeWidth={2} className="text-gray-600 normal-case" />
+                            Tasks
+                            {taskCount > 0 && (
+                              <span className="text-[10px] font-normal text-gray-600 bg-white/[0.06] px-1.5 py-0.5 rounded-full normal-case">
+                                {taskCount}
+                              </span>
+                            )}
                           </button>
-                        </Tooltip>
+                          <button
+                            onClick={() => {
+                              setActiveProject(project.name)
+                              setEditingTask(null)
+                              setTaskDialogOpen(true)
+                            }}
+                            className="text-gray-600 hover:text-gray-300 p-0.5 transition-colors"
+                            title="Add task"
+                          >
+                            <Plus size={11} strokeWidth={2} />
+                          </button>
+                        </div>
+                        <div className="space-y-0.5">
+                          {taskCount === 0 ? (
+                            <p className="text-[11px] text-gray-600 py-0.5 pl-2">No tasks</p>
+                          ) : (
+                            <>
+                              {inProgressTasks.map((task: TaskConfig) => (
+                                <button
+                                  key={task.id}
+                                  onClick={() => {
+                                    setEditingTask(task)
+                                    setTaskDialogOpen(true)
+                                  }}
+                                  className="w-full text-left px-2 py-1 rounded-md text-[12px] text-blue-400/80
+                                             hover:text-blue-300 hover:bg-white/[0.04] truncate transition-colors
+                                             flex items-center gap-2 min-w-0"
+                                >
+                                  <Clock size={11} strokeWidth={2} className="shrink-0" />
+                                  <span className="truncate">{task.title}</span>
+                                </button>
+                              ))}
+                              {todoTasks.sort((a: TaskConfig, b: TaskConfig) => a.order - b.order).slice(0, 3).map((task: TaskConfig) => (
+                                <button
+                                  key={task.id}
+                                  onClick={() => {
+                                    setEditingTask(task)
+                                    setTaskDialogOpen(true)
+                                  }}
+                                  className="w-full text-left px-2 py-1 rounded-md text-[12px] text-gray-500
+                                             hover:text-gray-300 hover:bg-white/[0.04] truncate transition-colors
+                                             flex items-center gap-2 min-w-0"
+                                >
+                                  <Circle size={11} strokeWidth={2} className="shrink-0 text-gray-600" />
+                                  <span className="truncate">{task.title}</span>
+                                </button>
+                              ))}
+                              {todoTasks.length > 3 && (
+                                <button
+                                  onClick={() => {
+                                    setActiveProject(project.name)
+                                    setTaskPanelOpen(true)
+                                  }}
+                                  className="px-2 py-0.5 text-[10px] text-gray-600 hover:text-gray-400 transition-colors"
+                                >
+                                  +{todoTasks.length - 3} more...
+                                </button>
+                              )}
+                            </>
+                          )}
+                        </div>
                       </div>
-                    ))
-                  )}
+                    )
+                  })()}
                 </div>
               )}
             </div>
@@ -516,17 +627,45 @@ export function ProjectSidebar() {
               <button
                 onClick={async () => {
                   for (const action of shortcut.actions) {
+                    let initialPrompt = action.prompt
+                    let resolvedTaskId: string | undefined
+                    let branch = action.branch
+                    let useWorktree = action.useWorktree
+                    const currentState = useAppStore.getState()
+
+                    if (action.taskId) {
+                      const task = (currentState.config?.tasks || []).find((t) => t.id === action.taskId && t.status === 'todo')
+                      if (task) {
+                        initialPrompt = task.description
+                        resolvedTaskId = task.id
+                        branch = task.branch || branch
+                        useWorktree = task.useWorktree || useWorktree
+                      }
+                    } else if (action.taskFromQueue) {
+                      const task = currentState.getNextTask(action.projectName)
+                      if (task) {
+                        initialPrompt = task.description
+                        resolvedTaskId = task.id
+                        branch = task.branch || branch
+                        useWorktree = task.useWorktree || useWorktree
+                      }
+                    }
+
                     const session = await window.api.createTerminal({
                       agentType: action.agentType,
                       projectName: action.projectName,
                       projectPath: action.projectPath,
                       displayName: action.displayName,
-                      branch: action.branch,
-                      useWorktree: action.useWorktree,
-                      initialPrompt: action.prompt,
+                      branch,
+                      useWorktree,
+                      initialPrompt,
                       promptDelayMs: action.promptDelayMs
                     })
                     addTerminal(session)
+
+                    if (resolvedTaskId) {
+                      useAppStore.getState().startTask(resolvedTaskId, session.id, action.agentType)
+                    }
                   }
                 }}
                 className={`flex-1 text-left px-2.5 py-1.5 rounded-md text-[13px] transition-colors

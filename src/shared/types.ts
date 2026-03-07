@@ -61,6 +61,28 @@ export interface ShortcutAction {
   remoteHostId?: string
   prompt?: string
   promptDelayMs?: number
+  taskId?: string          // Reference a specific task (mutually exclusive with prompt)
+  taskFromQueue?: boolean  // Auto-pick next todo task from project queue
+}
+
+// Task queue types
+export type TaskStatus = 'todo' | 'in_progress' | 'done'
+
+export interface TaskConfig {
+  id: string
+  projectName: string
+  title: string
+  description: string
+  acceptanceCriteria?: string[]
+  status: TaskStatus
+  order: number
+  assignedSessionId?: string
+  assignedAgent?: AgentType
+  branch?: string
+  useWorktree?: boolean
+  createdAt: string
+  updatedAt: string
+  completedAt?: string
 }
 
 // Schedule types for workflows
@@ -109,6 +131,7 @@ export interface AppConfig {
   agentCommands?: Partial<Record<AgentType, AgentCommandConfig>>
   shortcuts?: ShortcutConfig[]
   remoteHosts?: RemoteHost[]
+  tasks?: TaskConfig[]
 }
 
 export interface RecentSession {
@@ -211,7 +234,10 @@ export const IPC = {
   WIDGET_SET_ENABLED: 'widget:set-enabled',
   WIDGET_PERMISSION_REQUEST: 'widget:permission-request',
   WIDGET_PERMISSION_RESPONSE: 'widget:permission-response',
-  WIDGET_PERMISSION_CANCELLED: 'widget:permission-cancelled'
+  WIDGET_PERMISSION_CANCELLED: 'widget:permission-cancelled',
+  SHELL_CREATE: 'shell:create',
+  UPDATE_DOWNLOADED: 'update:downloaded',
+  UPDATE_INSTALL: 'update:install'
 } as const
 
 export interface PermissionSuggestion {

@@ -18,6 +18,10 @@ export function registerIpcHandlers(): void {
     ptyManager.killPty(id)
   )
 
+  ipcMain.handle(IPC.SHELL_CREATE, (_, cwd?: string) =>
+    ptyManager.createShellPty(cwd)
+  )
+
   ipcMain.handle(IPC.CONFIG_LOAD, () =>
     configManager.loadConfig()
   )

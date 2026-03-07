@@ -28,6 +28,7 @@ export const SHORTCUTS: ShortcutDef[] = [
   { id: 'shortcuts-panel', key: '/', meta: true, display: `${MOD}/`, category: 'view', description: 'Keyboard shortcuts' },
   { id: 'settings', key: ',', meta: true, display: `${MOD},`, category: 'view', description: 'Settings' },
   { id: 'toggle-sidebar', key: 'b', meta: true, display: `${MOD}B`, category: 'view', description: 'Toggle sidebar' },
+  { id: 'toggle-terminal', key: '`', display: 'Ctrl+`', category: 'view', description: 'Toggle terminal panel' },
 
   // Filters
   { id: 'filter-all', key: '1', meta: true, display: `${MOD}1`, category: 'filter', description: 'Show all' },

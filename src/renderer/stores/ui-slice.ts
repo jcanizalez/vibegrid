@@ -47,6 +47,13 @@ export const createUISlice: StateCreator<AppStore, [], [], UISlice> = (set) => (
   isOnboardingOpen: false,
   diffSidebarTerminalId: null,
   gitDiffStats: new Map(),
+  isTaskPanelOpen: false,
+  isTaskDialogOpen: false,
+  editingTask: null,
+  isTerminalPanelOpen: false,
+  terminalPanelHeight: 250,
+  shellTabs: [],
+  activeShellTab: null,
 
   setFocusedTerminal: (id) =>
     set(() => ({
@@ -127,5 +134,36 @@ export const createUISlice: StateCreator<AppStore, [], [], UISlice> = (set) => (
       const next = new Map(state.gitDiffStats)
       next.set(terminalId, stat)
       return { gitDiffStats: next }
-    })
+    }),
+
+  setTaskPanelOpen: (open) => set({ isTaskPanelOpen: open }),
+  setTaskDialogOpen: (open) => set({ isTaskDialogOpen: open }),
+  setEditingTask: (task) => set({ editingTask: task }),
+
+  toggleTerminalPanel: () =>
+    set((state) => ({ isTerminalPanelOpen: !state.isTerminalPanelOpen })),
+
+  setTerminalPanelHeight: (height) =>
+    set({ terminalPanelHeight: height }),
+
+  addShellTab: (tab) =>
+    set((state) => ({
+      shellTabs: [...state.shellTabs, tab],
+      activeShellTab: tab.id
+    })),
+
+  removeShellTab: (id) =>
+    set((state) => {
+      const tabs = state.shellTabs.filter((t) => t.id !== id)
+      const active = state.activeShellTab === id
+        ? (tabs.length > 0 ? tabs[tabs.length - 1].id : null)
+        : state.activeShellTab
+      return { shellTabs: tabs, activeShellTab: active }
+    }),
+
+  setActiveShellTab: (id) =>
+    set({ activeShellTab: id }),
+
+  updateVersion: null,
+  setUpdateVersion: (version) => set({ updateVersion: version })
 })

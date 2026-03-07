@@ -1,16 +1,40 @@
 import * as pty from 'node-pty'
 import crypto from 'node:crypto'
 import os from 'node:os'
-import { execFileSync } from 'node:child_process'
+import { execFileSync, execSync } from 'node:child_process'
 import { BrowserWindow } from 'electron'
 import { AgentType, AgentStatus, AgentCommandConfig, CreateTerminalPayload, IPC, TerminalSession, RemoteHost } from '../shared/types'
 import { getGitBranch, checkoutBranch, createWorktree } from './git-utils'
 import { DEFAULT_AGENT_COMMANDS } from '../shared/agent-defaults'
 
+function getUserShellEnv(): Record<string, string> {
+  if (process.platform === 'win32') return { ...process.env } as Record<string, string>
+  try {
+    const shell = process.env.SHELL || '/bin/zsh'
+    const output = execSync(`${shell} -ilc 'env'`, {
+      encoding: 'utf-8',
+      timeout: 5000,
+      stdio: ['pipe', 'pipe', 'pipe']
+    })
+    const env: Record<string, string> = {}
+    for (const line of output.split('\n')) {
+      const idx = line.indexOf('=')
+      if (idx > 0) {
+        env[line.substring(0, idx)] = line.substring(idx + 1)
+      }
+    }
+    return env
+  } catch {
+    return { ...process.env } as Record<string, string>
+  }
+}
+
+const resolvedEnv = getUserShellEnv()
+
 function commandExists(cmd: string): boolean {
   try {
     const bin = process.platform === 'win32' ? 'where' : 'which'
-    execFileSync(bin, [cmd], { stdio: 'pipe', timeout: 3000 })
+    execFileSync(bin, [cmd], { stdio: 'pipe', timeout: 3000, env: resolvedEnv })
     return true
   } catch {
     return false
@@ -36,7 +60,7 @@ const SENSITIVE_ENV_PREFIXES = [
 
 export function getSafeEnv(): Record<string, string> {
   const env: Record<string, string> = {}
-  for (const [key, val] of Object.entries(process.env)) {
+  for (const [key, val] of Object.entries(resolvedEnv)) {
     if (val === undefined) continue
     if (SENSITIVE_ENV_PREFIXES.some((p) => key.toUpperCase().startsWith(p))) continue
     env[key] = val
@@ -90,7 +114,7 @@ class PtyManager {
         case 'claude':   // claude --resume <sessionId>
           launchLine += ` --resume ${payload.resumeSessionId}`
           break
-        case 'copilot':  // gh copilot --resume <sessionId>
+        case 'copilot':  // copilot --resume <sessionId>
           launchLine += ` --resume ${payload.resumeSessionId}`
           break
         case 'codex':    // codex resume <sessionId>
@@ -109,7 +133,7 @@ class PtyManager {
     if (payload.initialPrompt) {
       const escaped = payload.initialPrompt.replace(/'/g, "'\\''")
       switch (payload.agentType) {
-        case 'copilot':  // gh copilot -i "prompt" (interactive + auto-execute)
+        case 'copilot':  // copilot -i "prompt" (interactive + auto-execute)
           launchLine += ` -i '${escaped}'`
           break
         case 'gemini':   // gemini -i "prompt" (interactive + auto-execute)
@@ -164,7 +188,7 @@ class PtyManager {
       effectiveBranch = payload.branch
     }
 
-    const ptyProcess = pty.spawn(shell, [], {
+    const ptyProcess = pty.spawn(shell, ['-l'], {
       name: 'xterm-256color',
       cols: 80,
       rows: 24,
@@ -196,7 +220,7 @@ class PtyManager {
   }
 
   private createRemotePty(id: string, shell: string, payload: CreateTerminalPayload, host: RemoteHost): TerminalSession {
-    const ptyProcess = pty.spawn(shell, [], {
+    const ptyProcess = pty.spawn(shell, ['-l'], {
       name: 'xterm-256color',
       cols: 80,
       rows: 24,
@@ -263,6 +287,21 @@ class PtyManager {
     }
     this.sessions.set(id, session)
     return session
+  }
+
+  createShellPty(cwd?: string): { id: string; pid: number } {
+    const id = crypto.randomUUID()
+    const shell = getDefaultShell()
+    const ptyProcess = pty.spawn(shell, ['-l'], {
+      name: 'xterm-256color',
+      cols: 80,
+      rows: 24,
+      cwd: cwd || os.homedir(),
+      env: getSafeEnv()
+    })
+    this.setupPtyEvents(id, ptyProcess)
+    this.ptys.set(id, ptyProcess)
+    return { id, pid: ptyProcess.pid }
   }
 
   private sendToRenderer(channel: string, ...args: unknown[]): void {

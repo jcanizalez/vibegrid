@@ -9,6 +9,7 @@ import { createMenu } from './menu'
 import { hookServer } from './hook-server'
 import { installHooks, uninstallHooks } from './hook-installer'
 import { hookStatusMapper } from './hook-status-mapper'
+import { updateManager } from './update-manager'
 import { IPC, WidgetAgentInfo, PermissionRequestInfo } from '../shared/types'
 
 let mainWindow: BrowserWindow | null = null
@@ -196,6 +197,7 @@ app.whenReady().then(() => {
   createMenu(toggleWidget)
   createWindow()
   createWidgetWindow()
+  updateManager.init(mainWindow!)
 
   // Load widget setting
   const config = configManager.loadConfig()
@@ -215,6 +217,10 @@ app.whenReady().then(() => {
   })
 
   // Widget IPC handlers
+  ipcMain.on(IPC.UPDATE_INSTALL, () => {
+    updateManager.installUpdate()
+  })
+
   ipcMain.on(IPC.WIDGET_HIDE, () => {
     hideWidget()
   })
@@ -224,6 +230,13 @@ app.whenReady().then(() => {
       mainWindow.show()
       mainWindow.focus()
       mainWindow.webContents.send('widget:select-terminal', terminalId)
+    }
+  })
+
+  ipcMain.on('widget:show-app', () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.show()
+      mainWindow.focus()
     }
   })
 
@@ -238,22 +251,23 @@ app.whenReady().then(() => {
     if (!enabled) hideWidget()
   })
 
-  // Widget compact/expanded resize
-  ipcMain.on('widget:set-compact', (_, compact: boolean) => {
+  // Widget view mode resize (full / compact)
+  const VIEW_SIZES = { full: { w: 280, h: 400 }, compact: { w: 140, h: 36 } }
+  ipcMain.on('widget:set-view-mode', (_, mode: 'full' | 'compact') => {
     if (!widgetWindow || widgetWindow.isDestroyed()) return
     const display = screen.getPrimaryDisplay()
     const { width: screenW, height: screenH } = display.workAreaSize
-    if (compact) {
-      const w = 120
-      const h = 36
-      widgetWindow.setSize(w, h)
-      widgetWindow.setPosition(screenW - w - 20, screenH - h - 20)
-    } else {
-      const w = 280
-      const h = 400
-      widgetWindow.setSize(w, h)
-      widgetWindow.setPosition(screenW - w - 20, screenH - h - 20)
-    }
+    const [oldX, oldY] = widgetWindow.getPosition()
+    const [oldW, oldH] = widgetWindow.getSize()
+    const { w, h } = VIEW_SIZES[mode]
+    // Anchor bottom-right corner
+    let newX = oldX + (oldW - w)
+    let newY = oldY + (oldH - h)
+    // Clamp to screen bounds
+    newX = Math.max(0, Math.min(newX, screenW - w))
+    newY = Math.max(0, Math.min(newY, screenH - h))
+    widgetWindow.setSize(w, h)
+    widgetWindow.setPosition(newX, newY)
   })
 
   // Start hook server for agent status events
@@ -387,6 +401,7 @@ app.on('before-quit', () => {
   hookServer.stop()
   uninstallHooks()
   hookStatusMapper.clear()
+  updateManager.stop()
   scheduler.stopAll()
   ptyManager.killAll()
   configManager.stopWatching()

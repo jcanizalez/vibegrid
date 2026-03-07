@@ -14,6 +14,9 @@ const api = {
   killTerminal: (id: string) =>
     ipcRenderer.invoke(IPC.TERMINAL_KILL, id),
 
+  createShellTerminal: (cwd?: string): Promise<{ id: string; pid: number }> =>
+    ipcRenderer.invoke(IPC.SHELL_CREATE, cwd),
+
   onTerminalData: (callback: (event: { id: string; data: string }) => void) => {
     const listener = (_: Electron.IpcRendererEvent, event: { id: string; data: string }): void => callback(event)
     ipcRenderer.on(IPC.TERMINAL_DATA, listener)
@@ -130,7 +133,15 @@ const api = {
     const listener = (_: Electron.IpcRendererEvent, terminalId: string): void => callback(terminalId)
     ipcRenderer.on('widget:select-terminal', listener)
     return () => { ipcRenderer.removeListener('widget:select-terminal', listener) }
-  }
+  },
+
+  // Auto-update
+  onUpdateDownloaded: (callback: (info: { version: string }) => void) => {
+    const listener = (_: Electron.IpcRendererEvent, info: { version: string }): void => callback(info)
+    ipcRenderer.on(IPC.UPDATE_DOWNLOADED, listener)
+    return () => { ipcRenderer.removeListener(IPC.UPDATE_DOWNLOADED, listener) }
+  },
+  installUpdate: () => ipcRenderer.send(IPC.UPDATE_INSTALL)
 }
 
 contextBridge.exposeInMainWorld('api', api)

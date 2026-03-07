@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { AgentType, WidgetAgentInfo, PermissionRequestInfo, PermissionSuggestion, AskUserQuestion } from '../../shared/types'
 import { AgentIcon } from './AgentIcon'
 
+type ViewMode = 'full' | 'compact'
+
 declare global {
   interface Window {
     widgetApi: {
@@ -11,7 +13,8 @@ declare global {
       respondPermission: (requestId: string, allow: boolean, extra?: { updatedPermissions?: unknown[]; updatedInput?: unknown }) => void
       focusTerminal: (id: string) => void
       hideWidget: () => void
-      setCompact: (compact: boolean) => void
+      showApp: () => void
+      setViewMode: (mode: ViewMode) => void
     }
   }
 }
@@ -222,15 +225,19 @@ function AgentSection({
   )
 }
 
-function CompactWidget({ agents, onExpand }: { agents: WidgetAgentInfo[]; onExpand: () => void }) {
+function CompactWidget({ agents, setMode }: { agents: WidgetAgentInfo[]; setMode: (m: ViewMode) => void }) {
   const running = agents.filter(a => a.status === 'running').length
   const waiting = agents.filter(a => a.status === 'waiting').length
   const errored = agents.filter(a => a.status === 'error').length
 
   return (
-    <div className="widget-container widget-compact" onClick={onExpand}>
+    <div className="widget-container widget-compact">
       <div className="widget-compact-inner">
-        <span style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.7)' }}>VG</span>
+        <button
+          className="widget-app-btn"
+          onClick={() => window.widgetApi.showApp()}
+          title="Open VibeGrid"
+        >VG</button>
         <div className="widget-compact-dots">
           {running > 0 && (
             <div className="widget-compact-badge">
@@ -254,6 +261,19 @@ function CompactWidget({ agents, onExpand }: { agents: WidgetAgentInfo[]; onExpa
             <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)' }}>0</span>
           )}
         </div>
+        <div className="widget-mode-btns">
+          <button className="widget-mode-btn" onClick={() => setMode('full')} title="Expand panel">
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+              <rect x="1.5" y="1.5" width="7" height="7" rx="1.2" stroke="currentColor" strokeWidth="1.2" />
+              <path d="M1.5 3.5H8.5" stroke="currentColor" strokeWidth="1.2" />
+            </svg>
+          </button>
+          <button className="widget-mode-btn" onClick={() => window.widgetApi.hideWidget()} title="Hide widget">
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+              <path d="M2.5 2.5L7.5 7.5M7.5 2.5L2.5 7.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
   )
@@ -262,7 +282,7 @@ function CompactWidget({ agents, onExpand }: { agents: WidgetAgentInfo[]; onExpa
 export function Widget() {
   const [agents, setAgents] = useState<WidgetAgentInfo[]>([])
   const [permissions, setPermissions] = useState<PermissionRequestInfo[]>([])
-  const [compact, setCompact] = useState(false)
+  const [viewMode, setViewMode] = useState<ViewMode>('full')
 
   const respondPermission = useCallback((requestId: string, allow: boolean, extra?: { updatedPermissions?: unknown[]; updatedInput?: unknown }) => {
     window.widgetApi.respondPermission(requestId, allow, extra)
@@ -289,11 +309,11 @@ export function Widget() {
   }, [])
 
   useEffect(() => {
-    window.widgetApi.setCompact(compact)
-  }, [compact])
+    window.widgetApi.setViewMode(viewMode)
+  }, [viewMode])
 
-  if (compact) {
-    return <CompactWidget agents={agents} onExpand={() => setCompact(false)} />
+  if (viewMode === 'compact') {
+    return <CompactWidget agents={agents} setMode={setViewMode} />
   }
 
   const running = agents.filter(a => a.status === 'running').length
@@ -313,49 +333,38 @@ export function Widget() {
     <div className="widget-container">
       <div className="widget-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.85)' }}>
+          <button
+            className="widget-app-btn"
+            onClick={() => window.widgetApi.showApp()}
+            title="Open VibeGrid"
+            style={{ fontSize: 13 }}
+          >
             VibeGrid
-          </span>
+          </button>
           {total > 0 && (
             <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>
               {running}/{total}
             </span>
           )}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <button
-            onClick={() => setCompact(true)}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: 'rgba(255,255,255,0.35)',
-              fontSize: 14,
-              lineHeight: 1,
-              padding: '0 4px',
-              transition: 'color 0.15s'
-            }}
-            onMouseEnter={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.7)')}
-            onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.35)')}
-            title="Compact mode"
+            className="widget-header-btn"
+            onClick={() => setViewMode('compact')}
+            title="Collapse"
           >
-            &#x2012;
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path d="M3 6H9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
           </button>
           <button
+            className="widget-header-btn"
             onClick={() => window.widgetApi.hideWidget()}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: 'rgba(255,255,255,0.35)',
-              fontSize: 16,
-              lineHeight: 1,
-              padding: '0 2px',
-              transition: 'color 0.15s'
-            }}
-            onMouseEnter={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.7)')}
-            onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.35)')}
             title="Hide widget"
           >
-            &times;
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path d="M3 3L9 9M9 3L3 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
           </button>
         </div>
       </div>

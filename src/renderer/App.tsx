@@ -22,6 +22,10 @@ import { DiffSidebar } from './components/DiffSidebar'
 import { KeyboardShortcutsPanel } from './components/KeyboardShortcutsPanel'
 import { MissedScheduleDialog } from './components/MissedScheduleDialog'
 import { OnboardingModal } from './components/OnboardingModal'
+import { TerminalPanel } from './components/TerminalPanel'
+import { UpdateBanner } from './components/UpdateBanner'
+import { AddTaskDialog } from './components/AddTaskDialog'
+import { TaskQueuePanel } from './components/TaskQueuePanel'
 
 const isMac = navigator.platform.toUpperCase().includes('MAC')
 
@@ -70,6 +74,8 @@ export function App() {
   const isSettingsOpen = useAppStore((s) => s.isSettingsOpen)
   const isShortcutsPanelOpen = useAppStore((s) => s.isShortcutsPanelOpen)
   const isOnboardingOpen = useAppStore((s) => s.isOnboardingOpen)
+  const toggleTerminalPanel = useAppStore((s) => s.toggleTerminalPanel)
+  const isTerminalPanelOpen = useAppStore((s) => s.isTerminalPanelOpen)
   const [recentOpen, setRecentOpen] = useState(false)
 
   useKeyboardShortcuts()
@@ -126,7 +132,21 @@ export function App() {
     })()
 
     const removeExitListener = window.api.onTerminalExit(({ id }) => {
-      useAppStore.getState().updateStatus(id, 'idle')
+      const state = useAppStore.getState()
+      // If it's a shell tab, remove it; otherwise update agent status
+      if (state.shellTabs.some((t) => t.id === id)) {
+        state.removeShellTab(id)
+      } else {
+        state.updateStatus(id, 'idle')
+
+        // Auto-complete any task assigned to this session
+        const assignedTask = (state.config?.tasks || []).find(
+          (t) => t.assignedSessionId === id && t.status === 'in_progress'
+        )
+        if (assignedTask) {
+          state.completeTask(assignedTask.id)
+        }
+      }
     })
 
     const removeConfigListener = window.api.onConfigChanged((config) => {
@@ -152,17 +172,48 @@ export function App() {
         if (i > 0 && workflow.staggerDelayMs) {
           await new Promise((r) => setTimeout(r, workflow.staggerDelayMs))
         }
+
+        // Resolve prompt from task if applicable
+        let initialPrompt = action.prompt
+        let resolvedTaskId: string | undefined
+        let branch = action.branch
+        let useWorktree = action.useWorktree
+        const currentState = useAppStore.getState()
+
+        if (action.taskId) {
+          const task = (currentState.config?.tasks || []).find((t) => t.id === action.taskId && t.status === 'todo')
+          if (task) {
+            initialPrompt = task.description
+            resolvedTaskId = task.id
+            branch = task.branch || branch
+            useWorktree = task.useWorktree || useWorktree
+          }
+        } else if (action.taskFromQueue) {
+          const task = currentState.getNextTask(action.projectName)
+          if (task) {
+            initialPrompt = task.description
+            resolvedTaskId = task.id
+            branch = task.branch || branch
+            useWorktree = task.useWorktree || useWorktree
+          }
+        }
+
         const session = await window.api.createTerminal({
           agentType: action.agentType,
           projectName: action.projectName,
           projectPath: action.projectPath,
           displayName: action.displayName,
-          branch: action.branch,
-          useWorktree: action.useWorktree,
-          initialPrompt: action.prompt,
+          branch,
+          useWorktree,
+          initialPrompt,
           promptDelayMs: action.promptDelayMs
         })
         useAppStore.getState().addTerminal(session)
+
+        // Transition task to in_progress
+        if (resolvedTaskId) {
+          useAppStore.getState().startTask(resolvedTaskId, session.id, action.agentType)
+        }
       }
 
       // Show notification
@@ -173,12 +224,17 @@ export function App() {
       }
     })
 
+    const removeUpdateListener = window.api.onUpdateDownloaded(({ version }) => {
+      useAppStore.getState().setUpdateVersion(version)
+    })
+
     return () => {
       removeExitListener()
       removeConfigListener()
       removeMenuListener()
       removeSchedulerListener()
       removeWidgetSelectListener()
+      removeUpdateListener()
     }
   }, [])
 
@@ -211,6 +267,20 @@ export function App() {
           </div>
           <div className="flex items-center gap-3 titlebar-no-drag">
             <GridToolbar />
+            <button
+              onClick={toggleTerminalPanel}
+              className={`p-1.5 rounded-md transition-colors ${
+                isTerminalPanelOpen
+                  ? 'text-white bg-white/[0.1]'
+                  : 'text-gray-400 hover:text-white bg-white/[0.06] hover:bg-white/[0.1]'
+              }`}
+              title="Toggle terminal panel"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="4 17 10 11 4 5" />
+                <line x1="12" y1="19" x2="20" y2="19" />
+              </svg>
+            </button>
             <div className="relative">
               <button
                 onClick={() => setRecentOpen(!recentOpen)}
@@ -236,7 +306,9 @@ export function App() {
         </div>
 
         {showBanner && <SessionRestoredBanner />}
+        <UpdateBanner />
         <GridView />
+        <TerminalPanel />
       </main>
 
       {/* Focus overlay — no AnimatePresence so terminal handoff is instant */}
@@ -245,6 +317,8 @@ export function App() {
       <PromptLauncher mode="overlay" onClose={() => setDialogOpen(false)} />
       <AddProjectDialog />
       <AddWorkflowDialog />
+      <AddTaskDialog />
+      <TaskQueuePanel />
       <CommandPalette />
       <WorktreeCleanupDialog />
       <MissedScheduleDialog />

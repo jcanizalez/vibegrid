@@ -29,8 +29,11 @@ const widgetApi = {
   hideWidget: () =>
     ipcRenderer.send(IPC.WIDGET_HIDE),
 
-  setCompact: (compact: boolean) =>
-    ipcRenderer.send('widget:set-compact', compact)
+  showApp: () =>
+    ipcRenderer.send('widget:show-app'),
+
+  setViewMode: (mode: 'full' | 'compact') =>
+    ipcRenderer.send('widget:set-view-mode', mode)
 }
 
 contextBridge.exposeInMainWorld('widgetApi', widgetApi)

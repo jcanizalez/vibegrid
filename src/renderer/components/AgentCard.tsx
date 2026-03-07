@@ -1,4 +1,4 @@
-import { useState, forwardRef } from 'react'
+import { useState, useEffect, forwardRef } from 'react'
 import { motion } from 'framer-motion'
 import { useAppStore } from '../stores'
 import { AgentIcon } from './AgentIcon'
@@ -8,7 +8,7 @@ import { TrafficLights } from './TrafficLights'
 import { InlineRename } from './InlineRename'
 import { GitChangesIndicator } from './GitChangesIndicator'
 import { AGENT_DEFINITIONS } from '../lib/agent-definitions'
-import { destroyTerminal } from '../lib/terminal-registry'
+import { destroyTerminal, scrollToBottom, isAtBottom, onTerminalScroll } from '../lib/terminal-registry'
 import { getDisplayName } from '../lib/terminal-display'
 import { GitBranch, FolderGit2, Server, Pencil } from 'lucide-react'
 
@@ -62,6 +62,14 @@ export const AgentCard = forwardRef<HTMLDivElement, Props>(
     const setRenamingTerminalId = useAppStore((s) => s.setRenamingTerminalId)
     const renameTerminal = useAppStore((s) => s.renameTerminal)
     const [cardHovered, setCardHovered] = useState(false)
+    const [showScrollBtn, setShowScrollBtn] = useState(false)
+
+    useEffect(() => {
+      const check = (): void => setShowScrollBtn(!isAtBottom(terminalId))
+      check()
+      const dispose = onTerminalScroll(terminalId, check)
+      return () => dispose?.()
+    }, [terminalId])
 
     if (!terminal) return null
 
@@ -184,12 +192,25 @@ export const AgentCard = forwardRef<HTMLDivElement, Props>(
 
         {/* Terminal — collapsible via minimize */}
         {!isMinimized && (
-          <div className="flex-1 min-h-0" style={{ background: '#141416' }}>
+          <div className="relative flex-1 min-h-0" style={{ background: '#141416' }}>
             {!isFocused && <TerminalInstance terminalId={terminalId} isFocused={isSelected} />}
             {isFocused && (
               <div className="flex items-center justify-center h-full text-gray-600 text-xs">
                 Expanded
               </div>
+            )}
+            {!isFocused && showScrollBtn && (
+              <button
+                className="absolute bottom-2 right-2 w-6 h-6 flex items-center justify-center
+                           rounded bg-white/[0.08] hover:bg-white/[0.15] text-gray-400 hover:text-white
+                           transition-colors z-10"
+                onClick={() => { scrollToBottom(terminalId); setShowScrollBtn(false) }}
+                title="Scroll to bottom"
+              >
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                  <path d="M6 2.5V9.5M3 7L6 10L9 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
             )}
           </div>
         )}
