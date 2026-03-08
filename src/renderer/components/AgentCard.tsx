@@ -1,4 +1,4 @@
-import { useState, useEffect, forwardRef } from 'react'
+import { useState, useEffect, useRef, forwardRef } from 'react'
 import { motion } from 'framer-motion'
 import { useAppStore } from '../stores'
 import { AgentIcon } from './AgentIcon'
@@ -67,6 +67,8 @@ export const AgentCard = forwardRef<HTMLDivElement, Props>(
     const setTaskDialogOpen = useAppStore((s) => s.setTaskDialogOpen)
     const [cardHovered, setCardHovered] = useState(false)
     const [showScrollBtn, setShowScrollBtn] = useState(false)
+    const [confirmKill, setConfirmKill] = useState(false)
+    const confirmKillTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
     useEffect(() => {
       const check = (): void => setShowScrollBtn(!isAtBottom(terminalId))
@@ -82,6 +84,13 @@ export const AgentCard = forwardRef<HTMLDivElement, Props>(
     const def = AGENT_DEFINITIONS[terminal.session.agentType]
 
     const handleKill = async (): Promise<void> => {
+      if (!confirmKill) {
+        setConfirmKill(true)
+        if (confirmKillTimer.current) clearTimeout(confirmKillTimer.current)
+        confirmKillTimer.current = setTimeout(() => setConfirmKill(false), 2000)
+        return
+      }
+      if (confirmKillTimer.current) clearTimeout(confirmKillTimer.current)
       const name = getDisplayName(terminal.session)
       if (focusedId === terminalId) setFocused(null)
       await window.api.killTerminal(terminalId)
@@ -215,6 +224,7 @@ export const AgentCard = forwardRef<HTMLDivElement, Props>(
               onClose={handleKill}
               onMinimize={handleMinimize}
               onExpand={handleExpand}
+              confirmClose={confirmKill}
             />
           </div>
         </div>
@@ -226,6 +236,14 @@ export const AgentCard = forwardRef<HTMLDivElement, Props>(
             {isFocused && (
               <div className="flex items-center justify-center h-full text-gray-600 text-xs">
                 Expanded
+              </div>
+            )}
+            {!isFocused && terminal.lastOutputTimestamp === 0 && (
+              <div className="absolute inset-0 p-3 space-y-2 pointer-events-none" style={{ background: '#141416' }}>
+                <div className="h-3 w-3/4 rounded bg-white/[0.04] animate-pulse" />
+                <div className="h-3 w-1/2 rounded bg-white/[0.04] animate-pulse" style={{ animationDelay: '0.15s' }} />
+                <div className="h-3 w-5/6 rounded bg-white/[0.04] animate-pulse" style={{ animationDelay: '0.3s' }} />
+                <div className="h-3 w-2/3 rounded bg-white/[0.04] animate-pulse" style={{ animationDelay: '0.45s' }} />
               </div>
             )}
             {!isFocused && showScrollBtn && (

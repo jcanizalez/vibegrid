@@ -4,6 +4,7 @@ import { ShortcutConfig, ProjectConfig, AgentStatus, AgentType, TaskConfig } fro
 import { getDisplayName } from '../lib/terminal-display'
 import { KbdHint } from './KbdHint'
 import { Tooltip } from './Tooltip'
+import { toast } from './Toast'
 import { AgentIcon } from './AgentIcon'
 import {
   Folder, FolderGit2, Code, Globe, Database, Server, Smartphone, Package,
@@ -54,6 +55,7 @@ function ProjectContextMenu({
   onClose: () => void
 }) {
   const menuRef = useRef<HTMLDivElement>(null)
+  const [confirmDelete, setConfirmDelete] = useState(false)
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -80,14 +82,25 @@ function ProjectContextMenu({
         <Pencil size={12} strokeWidth={1.5} />
         Edit Project
       </button>
-      <button
-        onClick={() => { onDelete(); onClose() }}
-        className="w-full px-3 py-1.5 text-left text-[13px] text-red-400 hover:text-red-300
-                   hover:bg-white/[0.06] flex items-center gap-2 transition-colors"
-      >
-        <Trash2 size={12} strokeWidth={1.5} />
-        Delete Project
-      </button>
+      {confirmDelete ? (
+        <button
+          onClick={() => { onDelete(); onClose(); toast.success(`Project "${project.name}" deleted`) }}
+          className="w-full px-3 py-1.5 text-left text-[13px] text-red-300 bg-red-500/10
+                     hover:bg-red-500/20 flex items-center gap-2 transition-colors"
+        >
+          <Trash2 size={12} strokeWidth={1.5} />
+          Confirm delete?
+        </button>
+      ) : (
+        <button
+          onClick={() => setConfirmDelete(true)}
+          className="w-full px-3 py-1.5 text-left text-[13px] text-red-400 hover:text-red-300
+                     hover:bg-white/[0.06] flex items-center gap-2 transition-colors"
+        >
+          <Trash2 size={12} strokeWidth={1.5} />
+          Delete Project
+        </button>
+      )}
     </div>
   )
 }

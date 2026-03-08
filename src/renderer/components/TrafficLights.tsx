@@ -5,9 +5,10 @@ interface Props {
   onMinimize: () => void
   onExpand: () => void
   expanded?: boolean
+  confirmClose?: boolean
 }
 
-export function TrafficLights({ onClose, onMinimize, onExpand, expanded }: Props) {
+export function TrafficLights({ onClose, onMinimize, onExpand, expanded, confirmClose }: Props) {
   const [hovered, setHovered] = useState(false)
 
   return (
@@ -19,11 +20,11 @@ export function TrafficLights({ onClose, onMinimize, onExpand, expanded }: Props
       {/* Red — Close/Kill */}
       <button
         onClick={(e) => { e.stopPropagation(); onClose() }}
-        className="traffic-light-dot bg-[#ff5f57]"
-        title="Kill"
-        aria-label="Close session"
+        className={`traffic-light-dot ${confirmClose ? 'bg-[#ff5f57] animate-pulse' : 'bg-[#ff5f57]'}`}
+        title={confirmClose ? 'Click again to kill' : 'Kill'}
+        aria-label={confirmClose ? 'Confirm kill' : 'Close session'}
       >
-        {hovered && (
+        {(hovered || confirmClose) && (
           <svg width="6" height="6" viewBox="0 0 24 24" fill="none"
                stroke="rgba(80,0,0,0.8)" strokeWidth="4" strokeLinecap="round">
             <path d="M18 6L6 18M6 6l12 12" />
@@ -34,10 +35,12 @@ export function TrafficLights({ onClose, onMinimize, onExpand, expanded }: Props
       {/* Yellow — Minimize (disabled when expanded, like macOS fullscreen) */}
       <button
         onClick={(e) => { e.stopPropagation(); if (!expanded) onMinimize() }}
-        className={`traffic-light-dot ${expanded ? 'bg-[#3a3a3c]' : 'bg-[#febc2e]'}`}
+        className={`traffic-light-dot ${expanded ? 'bg-[#3a3a3c] cursor-default' : 'bg-[#febc2e]'}`}
+        style={expanded ? { pointerEvents: 'none' } : undefined}
         title={expanded ? 'Minimize disabled' : 'Minimize'}
         aria-label={expanded ? 'Minimize disabled' : 'Minimize'}
-        disabled={expanded}
+        aria-disabled={expanded}
+        tabIndex={expanded ? -1 : 0}
       >
         {hovered && !expanded && (
           <svg width="7" height="2" viewBox="0 0 24 4" fill="none"
