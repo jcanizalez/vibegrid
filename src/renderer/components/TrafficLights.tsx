@@ -21,6 +21,7 @@ export function TrafficLights({ onClose, onMinimize, onExpand, expanded }: Props
         onClick={(e) => { e.stopPropagation(); onClose() }}
         className="traffic-light-dot bg-[#ff5f57]"
         title="Kill"
+        aria-label="Close session"
       >
         {hovered && (
           <svg width="6" height="6" viewBox="0 0 24 24" fill="none"
@@ -35,6 +36,7 @@ export function TrafficLights({ onClose, onMinimize, onExpand, expanded }: Props
         onClick={(e) => { e.stopPropagation(); if (!expanded) onMinimize() }}
         className={`traffic-light-dot ${expanded ? 'bg-[#3a3a3c]' : 'bg-[#febc2e]'}`}
         title={expanded ? 'Minimize disabled' : 'Minimize'}
+        aria-label={expanded ? 'Minimize disabled' : 'Minimize'}
         disabled={expanded}
       >
         {hovered && !expanded && (
@@ -50,6 +52,7 @@ export function TrafficLights({ onClose, onMinimize, onExpand, expanded }: Props
         onClick={(e) => { e.stopPropagation(); onExpand() }}
         className="traffic-light-dot bg-[#28c840]"
         title={expanded ? 'Exit fullscreen' : 'Expand'}
+        aria-label={expanded ? 'Exit fullscreen' : 'Expand'}
       >
         {hovered && !expanded && (
           <svg width="7" height="7" viewBox="0 0 24 24" fill="none"

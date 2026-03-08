@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useAppStore } from '../stores'
 import { AgentType } from '../../shared/types'
 import { PROJECT_ICON_OPTIONS, ICON_COLOR_PALETTE } from '../lib/project-icons'
+import { toast } from './Toast'
 import {
   Folder, FolderGit2, Code, Globe, Database, Server, Smartphone, Package,
   FileCode, Terminal, Cpu, Cloud, Shield, Zap, Gamepad2, Music, Image,
@@ -68,8 +69,10 @@ export function AddProjectDialog() {
 
     if (isEditMode) {
       updateProject(editingProject.name, project)
+      toast.success(`Project "${project.name}" updated`)
     } else {
       addProject(project)
+      toast.success(`Project "${project.name}" added`)
     }
     handleClose()
   }

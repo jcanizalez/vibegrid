@@ -344,9 +344,15 @@ export function ProjectSidebar() {
   }
 
   return (
-    <div
+    <aside
+      role="navigation"
+      aria-label="Project sidebar"
       className="border-r border-white/[0.06] flex flex-col h-full shrink-0 relative"
-      style={{ width: `${sidebarWidth}px`, background: '#141416' }}
+      style={{
+        width: `${sidebarWidth}px`,
+        background: '#141416',
+        transition: isResizing.current ? 'none' : 'width 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
+      }}
     >
       {/* Traffic light safe zone */}
       <div className="titlebar-drag h-[52px] pl-[78px] pr-3 flex items-center justify-end
@@ -997,7 +1003,10 @@ export function ProjectSidebar() {
         onDoubleClick={handleResizeDoubleClick}
         className="absolute top-0 right-0 w-1.5 h-full cursor-col-resize
                    hover:bg-white/[0.08] active:bg-white/[0.12] transition-colors z-10"
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Resize sidebar"
       />
-    </div>
+    </aside>
   )
 }

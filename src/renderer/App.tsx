@@ -26,6 +26,7 @@ import { TerminalPanel } from './components/TerminalPanel'
 import { UpdateBanner } from './components/UpdateBanner'
 import { AddTaskDialog } from './components/AddTaskDialog'
 import { TaskQueuePanel } from './components/TaskQueuePanel'
+import { ToastContainer } from './components/Toast'
 
 const isMac = navigator.platform.toUpperCase().includes('MAC')
 
@@ -335,6 +336,8 @@ export function App() {
       <AnimatePresence>
         {isOnboardingOpen && <OnboardingModal />}
       </AnimatePresence>
+
+      <ToastContainer />
     </div>
   )
 }

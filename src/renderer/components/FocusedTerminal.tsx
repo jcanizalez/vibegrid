@@ -14,6 +14,7 @@ import { destroyTerminal } from '../lib/terminal-registry'
 import { getDisplayName } from '../lib/terminal-display'
 import { GitBranch, FolderGit2, GitCommitHorizontal, FileCode2, RefreshCw, Loader2, Server } from 'lucide-react'
 import { GitDiffResult } from '../../shared/types'
+import { toast } from './Toast'
 
 const isMac = navigator.platform.toUpperCase().includes('MAC')
 const MOD = isMac ? '⌘' : 'Ctrl+'
@@ -71,10 +72,12 @@ export function FocusedTerminal() {
   }
 
   const handleKill = async (): Promise<void> => {
+    const name = getDisplayName(terminal.session)
     await window.api.killTerminal(focusedId)
     destroyTerminal(focusedId)
     removeTerminal(focusedId)
     setFocused(null)
+    toast.success(`Session "${name}" closed`)
   }
 
   const handleToggleDiff = (): void => {

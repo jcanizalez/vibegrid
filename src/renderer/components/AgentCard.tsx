@@ -11,6 +11,7 @@ import { AGENT_DEFINITIONS } from '../lib/agent-definitions'
 import { destroyTerminal, scrollToBottom, isAtBottom, onTerminalScroll } from '../lib/terminal-registry'
 import { getDisplayName } from '../lib/terminal-display'
 import { GitBranch, FolderGit2, Server, Pencil, ListTodo } from 'lucide-react'
+import { toast } from './Toast'
 
 interface Props {
   terminalId: string
@@ -81,10 +82,12 @@ export const AgentCard = forwardRef<HTMLDivElement, Props>(
     const def = AGENT_DEFINITIONS[terminal.session.agentType]
 
     const handleKill = async (): Promise<void> => {
+      const name = getDisplayName(terminal.session)
       if (focusedId === terminalId) setFocused(null)
       await window.api.killTerminal(terminalId)
       destroyTerminal(terminalId)
       removeTerminal(terminalId)
+      toast.success(`Session "${name}" closed`)
     }
 
     const handleMinimize = (): void => {
@@ -132,13 +135,17 @@ export const AgentCard = forwardRef<HTMLDivElement, Props>(
                   onCommit={(name) => {
                     renameTerminal(terminalId, name)
                     setRenamingTerminalId(null)
+                    toast.success(`Renamed to "${name}"`)
                   }}
                   onCancel={() => setRenamingTerminalId(null)}
                   className="text-[13px] font-medium w-full"
                 />
               ) : (
                 <div className="flex items-center gap-1 group/rename">
-                  <span className="text-[13px] font-medium text-gray-300 truncate">
+                  <span
+                    className="text-[13px] font-medium text-gray-300 truncate"
+                    title={terminal.session.displayName?.trim() ? getDisplayName(terminal.session) : assignedTask ? assignedTask.title : getDisplayName(terminal.session)}
+                  >
                     {terminal.session.displayName?.trim() ? getDisplayName(terminal.session) : assignedTask ? assignedTask.title : getDisplayName(terminal.session)}
                   </span>
                   {isMinimized && assignedTask && (

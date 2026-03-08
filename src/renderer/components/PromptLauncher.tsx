@@ -391,7 +391,10 @@ export function PromptLauncher({ mode, onClose }: PromptLauncherProps) {
     return (
       <div className="flex flex-col items-center justify-center w-full h-full">
         <div className="w-[80%] max-w-[800px] flex flex-col items-center">
-          <img src={vibegridLogo} alt="VibeGrid" className="h-8 mb-6 opacity-40" draggable={false} />
+          <img src={vibegridLogo} alt="VibeGrid" className="h-8 mb-5 opacity-40" draggable={false} />
+          <p className="text-sm text-gray-500 mb-6">
+            Describe a task to start a coding agent
+          </p>
           {promptInput}
         </div>
       </div>

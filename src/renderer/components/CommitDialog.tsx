@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { X, GitCommitHorizontal, ArrowUp, Check, Loader2, GitBranch } from 'lucide-react'
 import { GitDiffStat } from '../../shared/types'
+import { toast } from './Toast'
 
 type CommitAction = 'commit' | 'commit-push'
 
@@ -49,6 +50,7 @@ export function CommitDialog({ cwd, branch, stat, onClose, onCommitted }: Props)
         }
       }
 
+      toast.success(action === 'commit-push' ? 'Committed and pushed' : 'Changes committed')
       onCommitted()
       onClose()
     } catch (err) {

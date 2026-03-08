@@ -5,6 +5,8 @@ import { TaskConfig, TaskStatus, TaskViewMode } from '../../shared/types'
 import { AgentIcon } from './AgentIcon'
 import { MarkdownPreview } from './MarkdownEditor'
 import { Pencil, Trash2, Play, CheckCircle2, Clock, Circle, X, LayoutList, Columns3, Terminal } from 'lucide-react'
+import { ConfirmPopover } from './ConfirmPopover'
+import { toast } from './Toast'
 
 const STATUS_BADGE: Record<string, { label: string; color: string; bg: string }> = {
   todo: { label: 'Todo', color: 'text-gray-400', bg: 'bg-gray-500/20' },
@@ -76,13 +78,18 @@ function TaskCard({ task, onEdit, onDelete, onStart, onOpenSession, sessionIsLiv
           >
             <Pencil size={12} strokeWidth={2} />
           </button>
-          <button
-            onClick={onDelete}
-            className="p-1 text-gray-600 hover:text-red-400 rounded transition-colors"
-            title="Delete task"
+          <ConfirmPopover
+            message="Delete this task permanently?"
+            confirmLabel="Delete"
+            onConfirm={onDelete}
           >
-            <Trash2 size={12} strokeWidth={2} />
-          </button>
+            <button
+              className="p-1 text-gray-600 hover:text-red-400 rounded transition-colors"
+              title="Delete task"
+            >
+              <Trash2 size={12} strokeWidth={2} />
+            </button>
+          </ConfirmPopover>
         </div>
       </div>
     </div>
@@ -140,8 +147,10 @@ function KanbanBoard({ allTasks, onEdit, onDelete, onStart, onDrop, onOpenSessio
         return (
           <div
             key={col.status}
-            className={`flex-1 min-w-[200px] flex flex-col rounded-lg border transition-colors ${
-              isDragOver ? 'border-white/[0.15] bg-white/[0.02]' : 'border-white/[0.06]'
+            className={`flex-1 min-w-[200px] flex flex-col rounded-lg border transition-all duration-200 ${
+              isDragOver
+                ? `${col.color} bg-white/[0.03] ring-1 ring-inset ${col.color.replace('border-', 'ring-')}`
+                : 'border-white/[0.06]'
             }`}
             onDragOver={(e) => handleDragOver(e, col.status)}
             onDragLeave={handleDragLeave}
@@ -405,7 +414,7 @@ export function TaskQueuePanel() {
             <KanbanBoard
               allTasks={allTasks}
               onEdit={handleEdit}
-              onDelete={(id) => removeTask(id)}
+              onDelete={(id) => { removeTask(id); toast.success('Task deleted') }}
               onStart={handleStartTask}
               onDrop={handleKanbanDrop}
               onOpenSession={getOpenSessionHandler}
@@ -415,7 +424,7 @@ export function TaskQueuePanel() {
             <ListView
               sections={sections}
               onEdit={handleEdit}
-              onDelete={(id) => removeTask(id)}
+              onDelete={(id) => { removeTask(id); toast.success('Task deleted') }}
               onStart={handleStartTask}
               onOpenSession={getOpenSessionHandler}
               isSessionLive={isSessionLive}

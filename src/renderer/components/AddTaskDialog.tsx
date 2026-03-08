@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAppStore } from '../stores'
 import { FolderGit2 } from 'lucide-react'
-import { MarkdownEditor, TASK_TEMPLATE } from './MarkdownEditor'
+import { RichMarkdownEditor } from './rich-editor/RichMarkdownEditor'
+import { TASK_TEMPLATE } from './MarkdownEditor'
+import { toast } from './Toast'
 
 export function AddTaskDialog() {
   const isOpen = useAppStore((s) => s.isTaskDialogOpen)
@@ -74,6 +76,7 @@ export function AddTaskDialog() {
         updatedAt: now
       })
     }
+    toast.success(isEditMode ? 'Task updated' : 'Task created')
     handleClose()
   }
 
@@ -151,13 +154,12 @@ export function AddTaskDialog() {
                   Description
                 </label>
                 <p className="text-[11px] text-gray-600 mb-1.5">
-                  Supports markdown. This will be sent as the prompt to the coding agent.
+                  This will be sent as the prompt to the coding agent.
                 </p>
-                <MarkdownEditor
+                <RichMarkdownEditor
                   value={description}
                   onChange={setDescription}
-                  placeholder="Describe the task in detail..."
-                  rows={10}
+                  placeholder="Describe the task in detail, or type / for commands..."
                 />
               </div>
 

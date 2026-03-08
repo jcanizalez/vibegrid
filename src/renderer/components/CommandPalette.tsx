@@ -45,6 +45,19 @@ function timeAgo(ts: number): string {
   return new Date(ts).toLocaleDateString()
 }
 
+function highlightMatch(text: string, query: string): React.ReactNode {
+  if (!query.trim()) return text
+  const idx = text.toLowerCase().indexOf(query.toLowerCase())
+  if (idx === -1) return text
+  return (
+    <>
+      {text.slice(0, idx)}
+      <span className="text-white font-semibold">{text.slice(idx, idx + query.length)}</span>
+      {text.slice(idx + query.length)}
+    </>
+  )
+}
+
 function scoreMatch(query: string, command: Command): number {
   const q = query.toLowerCase()
   const label = command.label.toLowerCase()
@@ -531,7 +544,9 @@ export function CommandPalette() {
                       {cmd.icon}
                     </span>
                     <span className="flex-1 min-w-0">
-                      <span className="truncate block">{cmd.label}</span>
+                      <span className="truncate block">
+                        {hasQuery ? highlightMatch(cmd.label, query) : cmd.label}
+                      </span>
                       {cmd.sublabel && (
                         <span className="text-[10px] text-gray-600 truncate block">{cmd.sublabel}</span>
                       )}
