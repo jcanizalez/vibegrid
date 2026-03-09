@@ -33,6 +33,7 @@ export function useStatusDetection(terminalId: string) {
             sendAgentNotification(
               t,
               newStatus === 'waiting' ? 'waiting' : 'error',
+              state.config,
               () => useAppStore.getState().setFocusedTerminal(terminalId)
             )
           }
@@ -47,6 +48,7 @@ export function useStatusDetection(terminalId: string) {
           sendAgentNotification(
             t,
             'bell',
+            state.config,
             () => useAppStore.getState().setFocusedTerminal(terminalId)
           )
         }

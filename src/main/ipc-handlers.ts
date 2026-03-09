@@ -6,8 +6,10 @@ import { scheduleLogManager } from './schedule-log'
 import { scheduler } from './scheduler'
 import { getRecentSessions } from './agent-history'
 import { detectIDEs, openInIDE } from './ide-detector'
-import { CreateTerminalPayload, IPC, ResizePayload, AppConfig } from '../shared/types'
+import { CreateTerminalPayload, IPC, ResizePayload, AppConfig, ArchivedSession } from '../shared/types'
 import { listBranches, listRemoteBranches, getGitBranch, createWorktree, removeWorktree, listWorktrees, getGitDiffStat, getGitDiffFull, gitCommit, gitPush } from './git-utils'
+import { saveTaskImage, deleteTaskImage, getTaskImagePath, cleanupTaskImages } from './task-images'
+import { archiveSession, unarchiveSession, listArchivedSessions } from './database'
 
 export function registerIpcHandlers(): void {
   ipcMain.handle(IPC.TERMINAL_CREATE, (_, payload: CreateTerminalPayload) =>
@@ -117,6 +119,55 @@ export function registerIpcHandlers(): void {
     const config = configManager.loadConfig()
     return scheduler.getNextRun(workflowId, config.shortcuts ?? [])
   })
+
+  // Task images
+  ipcMain.handle(IPC.DIALOG_OPEN_IMAGE, async () => {
+    const win = BrowserWindow.getFocusedWindow()
+    if (!win) return null
+    const result = await dialog.showOpenDialog(win, {
+      properties: ['openFile', 'multiSelections'],
+      filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg'] }]
+    })
+    return result.canceled ? null : result.filePaths
+  })
+
+  ipcMain.handle(IPC.TASK_IMAGE_SAVE, (_, { taskId, sourcePath }: { taskId: string; sourcePath: string }) =>
+    saveTaskImage(taskId, sourcePath)
+  )
+
+  ipcMain.handle(IPC.TASK_IMAGE_DELETE, (_, { taskId, filename }: { taskId: string; filename: string }) =>
+    deleteTaskImage(taskId, filename)
+  )
+
+  ipcMain.handle(IPC.TASK_IMAGE_GET_PATH, (_, { taskId, filename }: { taskId: string; filename: string }) =>
+    getTaskImagePath(taskId, filename)
+  )
+
+  ipcMain.handle(IPC.TASK_IMAGE_CLEANUP, (_, taskId: string) =>
+    cleanupTaskImages(taskId)
+  )
+
+  // Session archive
+  ipcMain.handle(IPC.SESSION_ARCHIVE, (_, session: ArchivedSession) =>
+    archiveSession({
+      id: session.id,
+      agentType: session.agentType,
+      projectName: session.projectName,
+      projectPath: session.projectPath,
+      displayName: session.displayName,
+      branch: session.branch,
+      agentSessionId: session.agentSessionId,
+      archivedAt: session.archivedAt
+    })
+  )
+
+  ipcMain.handle(IPC.SESSION_UNARCHIVE, (_, id: string) =>
+    unarchiveSession(id)
+  )
+
+  ipcMain.handle(IPC.SESSION_LIST_ARCHIVED, () =>
+    listArchivedSessions()
+  )
 
   // High-frequency fire-and-forget channels
   ipcMain.on(IPC.TERMINAL_WRITE, (_, { id, data }: { id: string; data: string }) =>

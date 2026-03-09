@@ -10,7 +10,7 @@ import { GitChangesIndicator } from './GitChangesIndicator'
 import { AGENT_DEFINITIONS } from '../lib/agent-definitions'
 import { destroyTerminal, scrollToBottom, isAtBottom, onTerminalScroll } from '../lib/terminal-registry'
 import { getDisplayName } from '../lib/terminal-display'
-import { GitBranch, FolderGit2, Server, Pencil, ListTodo } from 'lucide-react'
+import { GitBranch, FolderGit2, Server, Pencil, ListTodo, Pin, Archive } from 'lucide-react'
 import { toast } from './Toast'
 
 interface Props {
@@ -65,6 +65,8 @@ export const AgentCard = forwardRef<HTMLDivElement, Props>(
     const assignedTask = useAppStore((s) => s.config?.tasks?.find(t => t.assignedSessionId === terminalId && t.status === 'in_progress'))
     const setEditingTask = useAppStore((s) => s.setEditingTask)
     const setTaskDialogOpen = useAppStore((s) => s.setTaskDialogOpen)
+    const togglePinned = useAppStore((s) => s.togglePinned)
+    const archiveSession = useAppStore((s) => s.archiveSession)
     const [cardHovered, setCardHovered] = useState(false)
     const [showScrollBtn, setShowScrollBtn] = useState(false)
     const [confirmKill, setConfirmKill] = useState(false)
@@ -81,6 +83,8 @@ export const AgentCard = forwardRef<HTMLDivElement, Props>(
 
     const isFocused = focusedId === terminalId
     const isSelected = selectedId === terminalId
+    const isPinned = terminal.session.pinned === true
+    const isIdlePinned = terminal.status === 'idle' && isPinned
     const def = AGENT_DEFINITIONS[terminal.session.agentType]
 
     const handleKill = async (): Promise<void> => {
@@ -122,7 +126,7 @@ export const AgentCard = forwardRef<HTMLDivElement, Props>(
                          ? 'card-drop-target border-blue-500/30 hover:border-white/[0.12]'
                          : 'border-white/[0.06] hover:border-white/[0.12]'
                    }`}
-        style={{ background: '#1a1a1e', ...(isMinimized ? { alignSelf: 'start' } : {}) }}
+        style={{ background: '#1a1a1e', ...(isMinimized ? { alignSelf: 'start' } : {}), ...(isIdlePinned ? { opacity: 0.55 } : {}) }}
         transition={{ type: 'spring', stiffness: 300, damping: 25 }}
         onMouseDown={() => { if (!isSelected && !isFocused) setSelected(terminalId) }}
         onMouseEnter={() => setCardHovered(true)}
@@ -217,6 +221,35 @@ export const AgentCard = forwardRef<HTMLDivElement, Props>(
 
           <StatusBadge status={terminal.status} />
           <GitChangesIndicator terminalId={terminalId} />
+
+          {/* Pin / Archive buttons */}
+          {cardHovered && (
+            <div className="flex items-center gap-0.5">
+              <button
+                onClick={(e) => { e.stopPropagation(); togglePinned(terminalId) }}
+                className={`p-1 rounded transition-colors ${
+                  isPinned
+                    ? 'text-amber-400 hover:text-amber-300'
+                    : 'text-gray-500 hover:text-gray-300'
+                }`}
+                title={isPinned ? 'Unpin session' : 'Pin session'}
+              >
+                <Pin size={12} strokeWidth={2} className={isPinned ? 'fill-current' : ''} />
+              </button>
+              {isIdlePinned && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); archiveSession(terminalId) }}
+                  className="p-1 rounded text-gray-500 hover:text-gray-300 transition-colors"
+                  title="Archive session"
+                >
+                  <Archive size={12} strokeWidth={2} />
+                </button>
+              )}
+            </div>
+          )}
+          {!cardHovered && isPinned && (
+            <Pin size={10} strokeWidth={2} className="text-amber-400 fill-current shrink-0" />
+          )}
 
           {/* Traffic lights — right side */}
           <div className={cardHovered ? '' : 'traffic-light-inactive'}>

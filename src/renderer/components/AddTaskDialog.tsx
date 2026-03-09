@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAppStore } from '../stores'
-import { FolderGit2 } from 'lucide-react'
+import { FolderGit2, ImagePlus, X } from 'lucide-react'
 import { RichMarkdownEditor } from './rich-editor/RichMarkdownEditor'
 import { TASK_TEMPLATE } from './MarkdownEditor'
 import { toast } from './Toast'
@@ -21,6 +21,9 @@ export function AddTaskDialog() {
   const [description, setDescription] = useState('')
   const [branch, setBranch] = useState('')
   const [useWorktree, setUseWorktree] = useState(false)
+  const [images, setImages] = useState<string[]>([]) // filenames
+  const [imagePaths, setImagePaths] = useState<Map<string, string>>(new Map()) // filename -> absolute path for display
+  const taskIdRef = useRef<string>(crypto.randomUUID())
 
   const isEditMode = !!editingTask
 
@@ -31,8 +34,20 @@ export function AddTaskDialog() {
       setDescription(editingTask.description)
       setBranch(editingTask.branch || '')
       setUseWorktree(editingTask.useWorktree || false)
+      setImages(editingTask.images || [])
+      taskIdRef.current = editingTask.id
+      // Resolve image paths
+      if (editingTask.images?.length) {
+        Promise.all(
+          editingTask.images.map(async (f) => {
+            const p = await window.api.getTaskImagePath(editingTask.id, f)
+            return [f, p] as [string, string]
+          })
+        ).then((pairs) => setImagePaths(new Map(pairs)))
+      }
     } else if (isOpen) {
       setProjectName(activeProject || config?.projects[0]?.name || '')
+      taskIdRef.current = crypto.randomUUID()
       if (!editingTask) {
         setDescription(TASK_TEMPLATE)
       }
@@ -47,6 +62,60 @@ export function AddTaskDialog() {
     setDescription('')
     setBranch('')
     setUseWorktree(false)
+    setImages([])
+    setImagePaths(new Map())
+  }
+
+  const handleAddImages = async () => {
+    const filePaths = await window.api.openImageDialog()
+    if (!filePaths) return
+
+    const taskId = isEditMode ? editingTask.id : taskIdRef.current
+    const newImages = [...images]
+    const newPaths = new Map(imagePaths)
+
+    for (const sourcePath of filePaths) {
+      const filename = await window.api.saveTaskImage(taskId, sourcePath)
+      newImages.push(filename)
+      const absPath = await window.api.getTaskImagePath(taskId, filename)
+      newPaths.set(filename, absPath)
+    }
+
+    setImages(newImages)
+    setImagePaths(newPaths)
+  }
+
+  const handleRemoveImage = async (filename: string) => {
+    const taskId = isEditMode ? editingTask.id : taskIdRef.current
+    await window.api.deleteTaskImage(taskId, filename)
+    setImages((prev) => prev.filter((f) => f !== filename))
+    setImagePaths((prev) => {
+      const next = new Map(prev)
+      next.delete(filename)
+      return next
+    })
+  }
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault()
+    const files = Array.from(e.dataTransfer.files).filter((f) =>
+      /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(f.name)
+    )
+    if (!files.length) return
+
+    const taskId = isEditMode ? editingTask.id : taskIdRef.current
+    const newImages = [...images]
+    const newPaths = new Map(imagePaths)
+
+    for (const file of files) {
+      const filename = await window.api.saveTaskImage(taskId, file.path)
+      newImages.push(filename)
+      const absPath = await window.api.getTaskImagePath(taskId, filename)
+      newPaths.set(filename, absPath)
+    }
+
+    setImages(newImages)
+    setImagePaths(newPaths)
   }
 
   const handleSubmit = () => {
@@ -59,12 +128,13 @@ export function AddTaskDialog() {
         projectName,
         description: description.trim(),
         branch: branch.trim() || undefined,
-        useWorktree: useWorktree || undefined
+        useWorktree: useWorktree || undefined,
+        images: images.length > 0 ? images : undefined
       })
     } else {
       const existingTasks = config?.tasks?.filter((t) => t.projectName === projectName && t.status === 'todo') || []
       addTask({
-        id: crypto.randomUUID(),
+        id: taskIdRef.current,
         projectName,
         title: title.trim(),
         description: description.trim(),
@@ -72,6 +142,7 @@ export function AddTaskDialog() {
         order: existingTasks.length,
         branch: branch.trim() || undefined,
         useWorktree: useWorktree || undefined,
+        images: images.length > 0 ? images : undefined,
         createdAt: now,
         updatedAt: now
       })
@@ -102,6 +173,8 @@ export function AddTaskDialog() {
             animate={{ opacity: 1, scale: 1, x: '-50%', y: '-50%' }}
             exit={{ opacity: 0, scale: 0.95, x: '-50%', y: '-50%' }}
             transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={handleDrop}
           >
             {/* Header */}
             <div className="px-6 py-4 border-b border-white/[0.06] shrink-0">
@@ -161,6 +234,45 @@ export function AddTaskDialog() {
                   onChange={setDescription}
                   placeholder="Describe the task in detail, or type / for commands..."
                 />
+              </div>
+
+              {/* Image attachments */}
+              <div>
+                <label className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2 block">
+                  Images
+                  <span className="text-gray-600 normal-case tracking-normal ml-1">(optional — drag & drop or click to add)</span>
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {images.map((filename) => {
+                    const absPath = imagePaths.get(filename)
+                    return (
+                      <div key={filename} className="relative group/img w-16 h-16 rounded-lg border border-white/[0.08] overflow-hidden bg-white/[0.03]">
+                        {absPath && (
+                          <img
+                            src={`file://${absPath}`}
+                            alt=""
+                            className="w-full h-full object-cover"
+                          />
+                        )}
+                        <button
+                          onClick={() => handleRemoveImage(filename)}
+                          className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-black/70 flex items-center justify-center
+                                     opacity-0 group-hover/img:opacity-100 transition-opacity text-white hover:text-red-400"
+                        >
+                          <X size={10} strokeWidth={3} />
+                        </button>
+                      </div>
+                    )
+                  })}
+                  <button
+                    onClick={handleAddImages}
+                    className="w-16 h-16 rounded-lg border border-dashed border-white/[0.1] flex items-center justify-center
+                               text-gray-600 hover:text-gray-400 hover:border-white/[0.2] transition-colors"
+                    title="Add images"
+                  >
+                    <ImagePlus size={18} strokeWidth={1.5} />
+                  </button>
+                </div>
               </div>
 
               {/* Branch & Worktree */}

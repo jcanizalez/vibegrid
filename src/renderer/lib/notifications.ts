@@ -8,6 +8,40 @@ export type NotificationReason = 'waiting' | 'error' | 'bell'
 const COOLDOWN_MS = 10_000
 const lastNotified = new Map<string, number>()
 
+// --- Web Audio API sound ---
+
+let audioCtx: AudioContext | null = null
+
+function getAudioContext(): AudioContext {
+  if (!audioCtx) audioCtx = new AudioContext()
+  return audioCtx
+}
+
+const SOUND_PROFILES: Record<NotificationReason, { freq: number; duration: number }> = {
+  waiting: { freq: 880, duration: 0.15 },
+  error: { freq: 330, duration: 0.3 },
+  bell: { freq: 660, duration: 0.2 }
+}
+
+export function playNotificationSound(reason: NotificationReason, volume: number = 0.5): void {
+  const ctx = getAudioContext()
+  const profile = SOUND_PROFILES[reason]
+
+  const osc = ctx.createOscillator()
+  const gain = ctx.createGain()
+  osc.connect(gain)
+  gain.connect(ctx.destination)
+
+  osc.frequency.value = profile.freq
+  osc.type = 'sine'
+  gain.gain.setValueAtTime(Math.max(0.001, volume), ctx.currentTime)
+  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + profile.duration)
+  osc.start()
+  osc.stop(ctx.currentTime + profile.duration)
+}
+
+// --- Notification logic ---
+
 export function shouldNotifyStatus(
   config: AppConfig | null,
   prevStatus: AgentStatus,
@@ -33,11 +67,18 @@ export function shouldNotifyBell(config: AppConfig | null): boolean {
 export function sendAgentNotification(
   terminal: TerminalState,
   reason: NotificationReason,
+  config: AppConfig | null,
   onClick?: () => void
 ): void {
-  if (Notification.permission !== 'granted') return
+  const prefs = config?.defaults.notifications
 
-  // Don't notify if window is focused
+  // Play sound even when window is focused
+  if (prefs?.soundEnabled) {
+    playNotificationSound(reason, prefs.soundVolume ?? 0.5)
+  }
+
+  // OS notification only when window is not focused
+  if (Notification.permission !== 'granted') return
   if (document.hasFocus()) return
 
   // Cooldown per terminal

@@ -21,7 +21,7 @@ function saveGridSettings(patch: Record<string, unknown>): void {
 
 const savedGrid = loadGridSettings()
 
-export const createUISlice: StateCreator<AppStore, [], [], UISlice> = (set) => ({
+export const createUISlice: StateCreator<AppStore, [], [], UISlice> = (set, get) => ({
   focusedTerminalId: null,
   selectedTerminalId: null,
   renamingTerminalId: null,
@@ -46,6 +46,7 @@ export const createUISlice: StateCreator<AppStore, [], [], UISlice> = (set) => (
   minimizedTerminals: new Set(),
   isOnboardingOpen: false,
   diffSidebarTerminalId: null,
+  diffReviewTaskId: null,
   gitDiffStats: new Map(),
   isTaskPanelOpen: false,
   isTaskDialogOpen: false,
@@ -128,6 +129,7 @@ export const createUISlice: StateCreator<AppStore, [], [], UISlice> = (set) => (
 
   setOnboardingOpen: (open) => set({ isOnboardingOpen: open }),
   setDiffSidebarTerminalId: (id) => set({ diffSidebarTerminalId: id }),
+  setDiffReviewTaskId: (id) => set({ diffReviewTaskId: id }),
 
   updateGitDiffStat: (terminalId, stat) =>
     set((state) => {
@@ -172,5 +174,39 @@ export const createUISlice: StateCreator<AppStore, [], [], UISlice> = (set) => (
     })),
 
   updateVersion: null,
-  setUpdateVersion: (version) => set({ updateVersion: version })
+  setUpdateVersion: (version) => set({ updateVersion: version }),
+
+  archivedSessions: [],
+  showArchivedSessions: false,
+  setShowArchivedSessions: (show) => set({ showArchivedSessions: show }),
+
+  loadArchivedSessions: async () => {
+    const sessions = await window.api.listArchivedSessions()
+    set({ archivedSessions: sessions })
+  },
+
+  archiveSession: async (id) => {
+    const state = get()
+    const term = state.terminals.get(id)
+    if (!term) return
+    await window.api.archiveSession({
+      id: term.id,
+      agentType: term.session.agentType,
+      projectName: term.session.projectName,
+      projectPath: term.session.projectPath,
+      displayName: term.session.displayName,
+      branch: term.session.branch,
+      agentSessionId: term.session.hookSessionId,
+      archivedAt: Date.now()
+    })
+    state.removeTerminal(id)
+    const sessions = await window.api.listArchivedSessions()
+    set({ archivedSessions: sessions })
+  },
+
+  unarchiveSession: async (id) => {
+    await window.api.unarchiveSession(id)
+    const sessions = await window.api.listArchivedSessions()
+    set({ archivedSessions: sessions })
+  }
 })

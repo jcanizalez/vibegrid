@@ -32,6 +32,10 @@ export const createTasksSlice: StateCreator<AppStore, [], [], TasksSlice> = (set
   removeTask: (id) =>
     set((state) => {
       if (!state.config) return {}
+      const task = (state.config.tasks || []).find((t) => t.id === id)
+      if (task?.images?.length) {
+        window.api.cleanupTaskImages(id)
+      }
       const updated = {
         ...state.config,
         tasks: (state.config.tasks || []).filter((t) => t.id !== id)
@@ -82,7 +86,7 @@ export const createTasksSlice: StateCreator<AppStore, [], [], TasksSlice> = (set
       return { config: updated }
     }),
 
-  startTask: (id, sessionId, agentType) =>
+  startTask: (id, sessionId, agentType, worktreePath) =>
     set((state) => {
       if (!state.config) return {}
       const now = new Date().toISOString()
@@ -90,7 +94,7 @@ export const createTasksSlice: StateCreator<AppStore, [], [], TasksSlice> = (set
         ...state.config,
         tasks: (state.config.tasks || []).map((t) =>
           t.id === id
-            ? { ...t, status: 'in_progress' as const, assignedSessionId: sessionId, assignedAgent: agentType, updatedAt: now }
+            ? { ...t, status: 'in_progress' as const, assignedSessionId: sessionId, assignedAgent: agentType, worktreePath: worktreePath || t.worktreePath, updatedAt: now }
             : t
         )
       }
@@ -107,6 +111,54 @@ export const createTasksSlice: StateCreator<AppStore, [], [], TasksSlice> = (set
         tasks: (state.config.tasks || []).map((t) =>
           t.id === id
             ? { ...t, status: 'done' as const, completedAt: now, updatedAt: now, assignedSessionId: undefined }
+            : t
+        )
+      }
+      window.api.saveConfig(updated)
+      return { config: updated }
+    }),
+
+  reviewTask: (id) =>
+    set((state) => {
+      if (!state.config) return {}
+      const now = new Date().toISOString()
+      const updated = {
+        ...state.config,
+        tasks: (state.config.tasks || []).map((t) =>
+          t.id === id
+            ? { ...t, status: 'in_review' as const, updatedAt: now, assignedSessionId: undefined }
+            : t
+        )
+      }
+      window.api.saveConfig(updated)
+      return { config: updated }
+    }),
+
+  cancelTask: (id) =>
+    set((state) => {
+      if (!state.config) return {}
+      const now = new Date().toISOString()
+      const updated = {
+        ...state.config,
+        tasks: (state.config.tasks || []).map((t) =>
+          t.id === id
+            ? { ...t, status: 'cancelled' as const, completedAt: now, updatedAt: now, assignedSessionId: undefined }
+            : t
+        )
+      }
+      window.api.saveConfig(updated)
+      return { config: updated }
+    }),
+
+  reopenTask: (id) =>
+    set((state) => {
+      if (!state.config) return {}
+      const now = new Date().toISOString()
+      const updated = {
+        ...state.config,
+        tasks: (state.config.tasks || []).map((t) =>
+          t.id === id
+            ? { ...t, status: 'todo' as const, updatedAt: now, completedAt: undefined, assignedSessionId: undefined, assignedAgent: undefined }
             : t
         )
       }

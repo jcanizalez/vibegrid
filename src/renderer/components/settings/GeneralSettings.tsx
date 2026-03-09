@@ -3,6 +3,7 @@ import { setAllTerminalsFontSize } from '../../lib/terminal-registry'
 import { AGENT_LIST } from '../../lib/agent-definitions'
 import { AgentIcon } from '../AgentIcon'
 import { AgentType, NotificationConfig, TaskViewMode } from '../../../shared/types'
+import { playNotificationSound } from '../../lib/notifications'
 
 function NotificationToggle({
   label,
@@ -273,6 +274,45 @@ export function GeneralSettings() {
           onChange={(onBell) => updateNotifications({ onBell })}
           disabled={!notifications.enabled}
         />
+      </div>
+
+      {/* Sound section */}
+      <h3 className="text-sm font-medium text-gray-200 mt-8 mb-2">Sound</h3>
+      <p className="text-sm text-gray-500 mb-6">Play audio tones when agents change status</p>
+
+      <div className="space-y-3">
+        <NotificationToggle
+          label="Sound Effects"
+          description="Play a tone on waiting, error, and bell events (works even when focused)"
+          checked={notifications.soundEnabled ?? false}
+          onChange={(soundEnabled) => updateNotifications({ soundEnabled })}
+          disabled={!notifications.enabled}
+        />
+
+        {notifications.soundEnabled && notifications.enabled && (
+          <div className="flex items-center gap-3 px-4 py-2">
+            <span className="text-xs text-gray-400 shrink-0 w-12">Volume</span>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              value={Math.round((notifications.soundVolume ?? 0.5) * 100)}
+              onChange={(e) => updateNotifications({ soundVolume: Number(e.target.value) / 100 })}
+              className="flex-1 h-1 bg-white/[0.08] rounded-full appearance-none cursor-pointer
+                         [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3
+                         [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full
+                         [&::-webkit-slider-thumb]:bg-white"
+            />
+            <span className="text-xs text-gray-500 w-8 text-right">{Math.round((notifications.soundVolume ?? 0.5) * 100)}%</span>
+            <button
+              onClick={() => playNotificationSound('bell', notifications.soundVolume ?? 0.5)}
+              className="px-2 py-1 text-[11px] text-gray-400 hover:text-white bg-white/[0.06]
+                         hover:bg-white/[0.1] rounded transition-colors"
+            >
+              Test
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )

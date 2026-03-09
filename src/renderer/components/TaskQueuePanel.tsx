@@ -4,28 +4,36 @@ import { useAppStore } from '../stores'
 import { TaskConfig, TaskStatus, TaskViewMode } from '../../shared/types'
 import { AgentIcon } from './AgentIcon'
 import { MarkdownPreview } from './MarkdownEditor'
-import { Pencil, Trash2, Play, CheckCircle2, Clock, Circle, X, LayoutList, Columns3, Terminal } from 'lucide-react'
+import { Pencil, Trash2, Play, CheckCircle2, Clock, Circle, X, LayoutList, Columns3, Terminal, Eye, XCircle, RotateCcw, FileCode, ImageIcon } from 'lucide-react'
 import { ConfirmPopover } from './ConfirmPopover'
 import { toast } from './Toast'
 
 const STATUS_BADGE: Record<string, { label: string; color: string; bg: string }> = {
   todo: { label: 'Todo', color: 'text-gray-400', bg: 'bg-gray-500/20' },
   in_progress: { label: 'In Progress', color: 'text-blue-400', bg: 'bg-blue-500/20' },
-  done: { label: 'Done', color: 'text-green-400', bg: 'bg-green-500/20' }
+  in_review: { label: 'In Review', color: 'text-purple-400', bg: 'bg-purple-500/20' },
+  done: { label: 'Done', color: 'text-green-400', bg: 'bg-green-500/20' },
+  cancelled: { label: 'Cancelled', color: 'text-gray-500', bg: 'bg-gray-500/10' }
 }
 
 const STATUS_ICON: Record<string, React.FC<{ size?: number; className?: string }>> = {
   todo: Circle,
   in_progress: Clock,
-  done: CheckCircle2
+  in_review: Eye,
+  done: CheckCircle2,
+  cancelled: XCircle
 }
 
-function TaskCard({ task, onEdit, onDelete, onStart, onOpenSession, sessionIsLive, compact }: {
+function TaskCard({ task, onEdit, onDelete, onStart, onOpenSession, onComplete, onCancel, onReopen, onReviewDiff, sessionIsLive, compact }: {
   task: TaskConfig
   onEdit: () => void
   onDelete: () => void
   onStart: () => void
   onOpenSession?: () => void
+  onComplete?: () => void
+  onCancel?: () => void
+  onReopen?: () => void
+  onReviewDiff?: () => void
   sessionIsLive?: boolean
   compact?: boolean
 }) {
@@ -33,14 +41,21 @@ function TaskCard({ task, onEdit, onDelete, onStart, onOpenSession, sessionIsLiv
   const StatusIcon = STATUS_ICON[task.status]
 
   return (
-    <div className="group bg-white/[0.03] border border-white/[0.06] rounded-lg p-3 hover:border-white/[0.1] transition-colors">
+    <div className={`group bg-white/[0.03] border border-white/[0.06] rounded-lg p-3 hover:border-white/[0.1] transition-colors
+                     ${task.status === 'cancelled' ? 'opacity-60' : ''}`}>
       <div className="flex items-start gap-2">
         <StatusIcon size={14} className={`${badge.color} mt-0.5 shrink-0`} />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-200 font-medium truncate">{task.title}</span>
+            <span className={`text-sm font-medium truncate ${task.status === 'cancelled' ? 'text-gray-500 line-through' : 'text-gray-200'}`}>{task.title}</span>
             {task.assignedAgent && (
               <AgentIcon agentType={task.assignedAgent} size={14} />
+            )}
+            {task.images && task.images.length > 0 && (
+              <span className="flex items-center gap-0.5 text-gray-600" title={`${task.images.length} image${task.images.length !== 1 ? 's' : ''}`}>
+                <ImageIcon size={11} strokeWidth={2} />
+                <span className="text-[10px]">{task.images.length}</span>
+              </span>
             )}
           </div>
           {!compact && (
@@ -62,6 +77,33 @@ function TaskCard({ task, onEdit, onDelete, onStart, onOpenSession, sessionIsLiv
               <Play size={12} strokeWidth={2} />
             </button>
           )}
+          {task.status === 'in_review' && onReviewDiff && (
+            <button
+              onClick={onReviewDiff}
+              className="p-1 text-gray-600 hover:text-purple-400 rounded transition-colors"
+              title="Review diff"
+            >
+              <FileCode size={12} strokeWidth={2} />
+            </button>
+          )}
+          {task.status === 'in_review' && onComplete && (
+            <button
+              onClick={onComplete}
+              className="p-1 text-gray-600 hover:text-green-400 rounded transition-colors"
+              title="Mark as done"
+            >
+              <CheckCircle2 size={12} strokeWidth={2} />
+            </button>
+          )}
+          {task.status === 'cancelled' && onReopen && (
+            <button
+              onClick={onReopen}
+              className="p-1 text-gray-600 hover:text-amber-400 rounded transition-colors"
+              title="Reopen task"
+            >
+              <RotateCcw size={12} strokeWidth={2} />
+            </button>
+          )}
           {onOpenSession && (
             <button
               onClick={onOpenSession}
@@ -78,6 +120,15 @@ function TaskCard({ task, onEdit, onDelete, onStart, onOpenSession, sessionIsLiv
           >
             <Pencil size={12} strokeWidth={2} />
           </button>
+          {task.status !== 'cancelled' && task.status !== 'done' && onCancel && (
+            <button
+              onClick={onCancel}
+              className="p-1 text-gray-600 hover:text-red-400 rounded transition-colors"
+              title="Cancel task"
+            >
+              <XCircle size={12} strokeWidth={2} />
+            </button>
+          )}
           <ConfirmPopover
             message="Delete this task permanently?"
             confirmLabel="Delete"
@@ -99,16 +150,22 @@ function TaskCard({ task, onEdit, onDelete, onStart, onOpenSession, sessionIsLiv
 const KANBAN_COLUMNS: { status: TaskStatus; title: string; color: string }[] = [
   { status: 'todo', title: 'Todo', color: 'border-gray-500/30' },
   { status: 'in_progress', title: 'In Progress', color: 'border-blue-500/30' },
-  { status: 'done', title: 'Done', color: 'border-green-500/30' }
+  { status: 'in_review', title: 'In Review', color: 'border-purple-500/30' },
+  { status: 'done', title: 'Done', color: 'border-green-500/30' },
+  { status: 'cancelled', title: 'Cancelled', color: 'border-gray-500/20' }
 ]
 
-function KanbanBoard({ allTasks, onEdit, onDelete, onStart, onDrop, onOpenSession, isSessionLive }: {
+function KanbanBoard({ allTasks, onEdit, onDelete, onStart, onDrop, onOpenSession, onComplete, onCancel, onReopen, onReviewDiff, isSessionLive }: {
   allTasks: TaskConfig[]
   onEdit: (task: TaskConfig) => void
   onDelete: (id: string) => void
   onStart: (task: TaskConfig) => void
   onDrop: (taskId: string, newStatus: TaskStatus) => void
   onOpenSession: (task: TaskConfig) => (() => void) | undefined
+  onComplete: (id: string) => void
+  onCancel: (id: string) => void
+  onReopen: (id: string) => void
+  onReviewDiff: (id: string) => void
   isSessionLive: (task: TaskConfig) => boolean
 }) {
   const [dragOverCol, setDragOverCol] = useState<TaskStatus | null>(null)
@@ -184,6 +241,10 @@ function KanbanBoard({ allTasks, onEdit, onDelete, onStart, onDrop, onOpenSessio
                       onDelete={() => onDelete(task.id)}
                       onStart={() => onStart(task)}
                       onOpenSession={onOpenSession(task)}
+                      onComplete={() => onComplete(task.id)}
+                      onCancel={() => onCancel(task.id)}
+                      onReopen={() => onReopen(task.id)}
+                      onReviewDiff={() => onReviewDiff(task.id)}
                       sessionIsLive={isSessionLive(task)}
                       compact
                     />
@@ -198,12 +259,16 @@ function KanbanBoard({ allTasks, onEdit, onDelete, onStart, onDrop, onOpenSessio
   )
 }
 
-function ListView({ sections, onEdit, onDelete, onStart, onOpenSession, isSessionLive }: {
+function ListView({ sections, onEdit, onDelete, onStart, onOpenSession, onComplete, onCancel, onReopen, onReviewDiff, isSessionLive }: {
   sections: { title: string; tasks: TaskConfig[]; emptyText: string }[]
   onEdit: (task: TaskConfig) => void
   onDelete: (id: string) => void
   onStart: (task: TaskConfig) => void
   onOpenSession: (task: TaskConfig) => (() => void) | undefined
+  onComplete: (id: string) => void
+  onCancel: (id: string) => void
+  onReopen: (id: string) => void
+  onReviewDiff: (id: string) => void
   isSessionLive: (task: TaskConfig) => boolean
 }) {
   return (
@@ -230,6 +295,10 @@ function ListView({ sections, onEdit, onDelete, onStart, onOpenSession, isSessio
                   onDelete={() => onDelete(task.id)}
                   onStart={() => onStart(task)}
                   onOpenSession={onOpenSession(task)}
+                  onComplete={() => onComplete(task.id)}
+                  onCancel={() => onCancel(task.id)}
+                  onReopen={() => onReopen(task.id)}
+                  onReviewDiff={() => onReviewDiff(task.id)}
                   sessionIsLive={isSessionLive(task)}
                 />
               ))}
@@ -251,10 +320,14 @@ export function TaskQueuePanel() {
   const setTaskDialogOpen = useAppStore((s) => s.setTaskDialogOpen)
   const addTerminal = useAppStore((s) => s.addTerminal)
   const startTask = useAppStore((s) => s.startTask)
+  const completeTask = useAppStore((s) => s.completeTask)
+  const cancelTask = useAppStore((s) => s.cancelTask)
+  const reopenTask = useAppStore((s) => s.reopenTask)
   const updateTask = useAppStore((s) => s.updateTask)
   const setConfig = useAppStore((s) => s.setConfig)
   const terminals = useAppStore((s) => s.terminals)
   const setFocusedTerminal = useAppStore((s) => s.setFocusedTerminal)
+  const setDiffReviewTaskId = useAppStore((s) => s.setDiffReviewTaskId)
 
   const defaultView = config?.defaults.taskViewMode || 'list'
   const [viewMode, setViewMode] = useState<TaskViewMode>(defaultView)
@@ -264,7 +337,9 @@ export function TaskQueuePanel() {
   const allTasks = config?.tasks?.filter((t) => t.projectName === activeProject) || []
   const todoTasks = allTasks.filter((t) => t.status === 'todo').sort((a, b) => a.order - b.order)
   const inProgressTasks = allTasks.filter((t) => t.status === 'in_progress')
+  const inReviewTasks = allTasks.filter((t) => t.status === 'in_review')
   const doneTasks = allTasks.filter((t) => t.status === 'done')
+  const cancelledTasks = allTasks.filter((t) => t.status === 'cancelled')
 
   const project = config?.projects.find((p) => p.name === activeProject)
 
@@ -280,7 +355,7 @@ export function TaskQueuePanel() {
       initialPrompt: task.description
     })
     addTerminal(session)
-    startTask(task.id, session.id, agentType)
+    startTask(task.id, session.id, agentType, session.worktreePath)
   }
 
   const handleEdit = (task: TaskConfig) => {
@@ -297,7 +372,7 @@ export function TaskQueuePanel() {
       }
     }
     // Session closed but agent session ID available — resume
-    if (task.agentSessionId && task.assignedAgent && (task.status === 'in_progress' || task.status === 'done')) {
+    if (task.agentSessionId && task.assignedAgent && (task.status === 'in_progress' || task.status === 'in_review' || task.status === 'done')) {
       return async () => {
         const agentType = task.assignedAgent!
         const session = await window.api.createTerminal({
@@ -325,23 +400,31 @@ export function TaskQueuePanel() {
 
     if (newStatus === 'in_progress' && task.status === 'todo') {
       handleStartTask(task)
+    } else if (newStatus === 'in_review') {
+      updateTask(taskId, { status: 'in_review', assignedSessionId: undefined })
     } else if (newStatus === 'done') {
-      updateTask(taskId, { status: 'done', completedAt: new Date().toISOString() })
+      completeTask(taskId)
+      toast.success('Task completed')
+    } else if (newStatus === 'cancelled') {
+      cancelTask(taskId)
+      toast.info('Task cancelled')
     } else if (newStatus === 'todo') {
-      updateTask(taskId, { status: 'todo', assignedSessionId: undefined, assignedAgent: undefined, completedAt: undefined })
+      reopenTask(taskId)
     }
   }
 
   const sections = [
     { title: 'Todo', tasks: todoTasks, emptyText: 'No tasks in queue' },
     { title: 'In Progress', tasks: inProgressTasks, emptyText: 'No active tasks' },
-    { title: 'Done', tasks: doneTasks, emptyText: 'No completed tasks' }
+    { title: 'In Review', tasks: inReviewTasks, emptyText: 'No tasks awaiting review' },
+    { title: 'Done', tasks: doneTasks, emptyText: 'No completed tasks' },
+    { title: 'Cancelled', tasks: cancelledTasks, emptyText: 'No cancelled tasks' }
   ]
 
   const isSessionLive = (task: TaskConfig) =>
     !!(task.assignedSessionId && terminals.has(task.assignedSessionId))
 
-  const panelWidth = viewMode === 'kanban' ? 'w-[780px]' : 'w-[420px]'
+  const panelWidth = viewMode === 'kanban' ? 'w-[90vw] max-w-[1100px]' : 'w-[420px]'
 
   return (
     <AnimatePresence>
@@ -418,6 +501,10 @@ export function TaskQueuePanel() {
               onStart={handleStartTask}
               onDrop={handleKanbanDrop}
               onOpenSession={getOpenSessionHandler}
+              onComplete={(id) => { completeTask(id); toast.success('Task completed') }}
+              onCancel={(id) => { cancelTask(id); toast.info('Task cancelled') }}
+              onReopen={(id) => { reopenTask(id); toast.success('Task reopened') }}
+              onReviewDiff={(id) => setDiffReviewTaskId(id)}
               isSessionLive={isSessionLive}
             />
           ) : (
@@ -427,6 +514,10 @@ export function TaskQueuePanel() {
               onDelete={(id) => { removeTask(id); toast.success('Task deleted') }}
               onStart={handleStartTask}
               onOpenSession={getOpenSessionHandler}
+              onComplete={(id) => { completeTask(id); toast.success('Task completed') }}
+              onCancel={(id) => { cancelTask(id); toast.info('Task cancelled') }}
+              onReopen={(id) => { reopenTask(id); toast.success('Task reopened') }}
+              onReviewDiff={(id) => setDiffReviewTaskId(id)}
               isSessionLive={isSessionLive}
             />
           )}

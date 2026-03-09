@@ -1,4 +1,4 @@
-import { AgentStatus, AgentType, AppConfig, ProjectConfig, ShortcutConfig, RemoteHost, TerminalSession, GitDiffStat, TaskConfig } from '../../shared/types'
+import { AgentStatus, AgentType, AppConfig, ProjectConfig, ShortcutConfig, RemoteHost, TerminalSession, GitDiffStat, TaskConfig, ArchivedSession } from '../../shared/types'
 
 export type SortMode = 'manual' | 'created' | 'recent'
 export type StatusFilter = AgentStatus | 'all'
@@ -17,6 +17,7 @@ export interface TerminalsSlice {
   updateStatus: (id: string, status: AgentStatus) => void
   updateLastOutput: (id: string, timestamp: number) => void
   renameTerminal: (id: string, displayName: string) => void
+  togglePinned: (id: string) => void
 }
 
 export interface ProjectsSlice {
@@ -62,6 +63,7 @@ export interface UISlice {
   minimizedTerminals: Set<string>
   isOnboardingOpen: boolean
   diffSidebarTerminalId: string | null
+  diffReviewTaskId: string | null
   gitDiffStats: Map<string, GitDiffStat>
   isTaskPanelOpen: boolean
   isTaskDialogOpen: boolean
@@ -94,6 +96,7 @@ export interface UISlice {
   toggleMinimized: (id: string) => void
   setOnboardingOpen: (open: boolean) => void
   setDiffSidebarTerminalId: (id: string | null) => void
+  setDiffReviewTaskId: (id: string | null) => void
   updateGitDiffStat: (terminalId: string, stat: GitDiffStat) => void
   setTaskPanelOpen: (open: boolean) => void
   setTaskDialogOpen: (open: boolean) => void
@@ -106,6 +109,12 @@ export interface UISlice {
   renameShellTab: (id: string, title: string) => void
   updateVersion: string | null
   setUpdateVersion: (version: string | null) => void
+  archivedSessions: ArchivedSession[]
+  showArchivedSessions: boolean
+  setShowArchivedSessions: (show: boolean) => void
+  loadArchivedSessions: () => Promise<void>
+  archiveSession: (id: string) => Promise<void>
+  unarchiveSession: (id: string) => Promise<void>
 }
 
 export interface TasksSlice {
@@ -116,8 +125,11 @@ export interface TasksSlice {
   removeTask: (id: string) => void
   updateTask: (id: string, updates: Partial<TaskConfig>) => void
   reorderTask: (id: string, newOrder: number) => void
-  startTask: (id: string, sessionId: string, agentType: AgentType) => void
+  startTask: (id: string, sessionId: string, agentType: AgentType, worktreePath?: string) => void
   completeTask: (id: string) => void
+  reviewTask: (id: string) => void
+  cancelTask: (id: string) => void
+  reopenTask: (id: string) => void
 }
 
 export type AppStore = TerminalsSlice & ProjectsSlice & UISlice & TasksSlice

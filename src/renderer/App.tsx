@@ -19,6 +19,7 @@ import { setDefaultFontSize } from './lib/terminal-registry'
 import { KbdHint } from './components/KbdHint'
 import { WorktreeCleanupDialog } from './components/WorktreeCleanupDialog'
 import { DiffSidebar } from './components/DiffSidebar'
+import { TaskDiffReview } from './components/TaskDiffReview'
 import { KeyboardShortcutsPanel } from './components/KeyboardShortcutsPanel'
 import { MissedScheduleDialog } from './components/MissedScheduleDialog'
 import { OnboardingModal } from './components/OnboardingModal'
@@ -140,12 +141,12 @@ export function App() {
       } else {
         state.updateStatus(id, 'idle')
 
-        // Auto-complete any task assigned to this session
+        // Move assigned task to review when agent exits
         const assignedTask = (state.config?.tasks || []).find(
           (t) => t.assignedSessionId === id && t.status === 'in_progress'
         )
         if (assignedTask) {
-          state.completeTask(assignedTask.id)
+          state.reviewTask(assignedTask.id)
         }
       }
     })
@@ -324,6 +325,7 @@ export function App() {
       <WorktreeCleanupDialog />
       <MissedScheduleDialog />
       <DiffSidebar />
+      <TaskDiffReview />
 
       <AnimatePresence>
         {isShortcutsPanelOpen && <KeyboardShortcutsPanel />}

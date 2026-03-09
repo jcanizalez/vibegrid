@@ -25,6 +25,18 @@ export interface TerminalSession {
   remoteHostLabel?: string
   hookSessionId?: string
   statusSource?: 'hooks' | 'pattern'
+  pinned?: boolean
+}
+
+export interface ArchivedSession {
+  id: string
+  agentType: AgentType
+  projectName: string
+  projectPath: string
+  displayName?: string
+  branch?: string
+  agentSessionId?: string
+  archivedAt: number
 }
 
 export interface RemoteHost {
@@ -66,7 +78,7 @@ export interface ShortcutAction {
 }
 
 // Task queue types
-export type TaskStatus = 'todo' | 'in_progress' | 'done'
+export type TaskStatus = 'todo' | 'in_progress' | 'in_review' | 'done' | 'cancelled'
 
 export type TaskViewMode = 'list' | 'kanban'
 
@@ -82,6 +94,8 @@ export interface TaskConfig {
   agentSessionId?: string // Real agent session ID (e.g. Claude session_id from hooks) for resume
   branch?: string
   useWorktree?: boolean
+  worktreePath?: string
+  images?: string[] // filenames relative to task-images/{taskId}/
   createdAt: string
   updatedAt: string
   completedAt?: string
@@ -114,6 +128,8 @@ export interface NotificationConfig {
   onWaiting: boolean
   onError: boolean
   onBell: boolean
+  soundEnabled?: boolean
+  soundVolume?: number // 0.0 – 1.0, default 0.5
 }
 
 export interface AppConfig {
@@ -240,7 +256,15 @@ export const IPC = {
   WIDGET_PERMISSION_CANCELLED: 'widget:permission-cancelled',
   SHELL_CREATE: 'shell:create',
   UPDATE_DOWNLOADED: 'update:downloaded',
-  UPDATE_INSTALL: 'update:install'
+  UPDATE_INSTALL: 'update:install',
+  TASK_IMAGE_SAVE: 'task:imageSave',
+  TASK_IMAGE_DELETE: 'task:imageDelete',
+  TASK_IMAGE_GET_PATH: 'task:imageGetPath',
+  TASK_IMAGE_CLEANUP: 'task:imageCleanup',
+  DIALOG_OPEN_IMAGE: 'dialog:openImage',
+  SESSION_ARCHIVE: 'session:archive',
+  SESSION_UNARCHIVE: 'session:unarchive',
+  SESSION_LIST_ARCHIVED: 'session:listArchived'
 } as const
 
 export interface PermissionSuggestion {

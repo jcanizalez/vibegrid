@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import { CreateTerminalPayload, ResizePayload, AppConfig, RecentSession, IPC, GitDiffStat, GitDiffResult, GitCommitPayload, GitCommitResult, ScheduleLogEntry } from '../shared/types'
+import { CreateTerminalPayload, ResizePayload, AppConfig, RecentSession, IPC, GitDiffStat, GitDiffResult, GitCommitPayload, GitCommitResult, ScheduleLogEntry, ArchivedSession } from '../shared/types'
 
 const api = {
   createTerminal: (payload: CreateTerminalPayload) =>
@@ -94,6 +94,32 @@ const api = {
 
   gitPush: (cwd: string): Promise<GitCommitResult> =>
     ipcRenderer.invoke(IPC.GIT_PUSH, cwd),
+
+  // Task images
+  openImageDialog: (): Promise<string[] | null> =>
+    ipcRenderer.invoke(IPC.DIALOG_OPEN_IMAGE),
+
+  saveTaskImage: (taskId: string, sourcePath: string): Promise<string> =>
+    ipcRenderer.invoke(IPC.TASK_IMAGE_SAVE, { taskId, sourcePath }),
+
+  deleteTaskImage: (taskId: string, filename: string): Promise<void> =>
+    ipcRenderer.invoke(IPC.TASK_IMAGE_DELETE, { taskId, filename }),
+
+  getTaskImagePath: (taskId: string, filename: string): Promise<string> =>
+    ipcRenderer.invoke(IPC.TASK_IMAGE_GET_PATH, { taskId, filename }),
+
+  cleanupTaskImages: (taskId: string): Promise<void> =>
+    ipcRenderer.invoke(IPC.TASK_IMAGE_CLEANUP, taskId),
+
+  // Session archive
+  archiveSession: (session: ArchivedSession): Promise<void> =>
+    ipcRenderer.invoke(IPC.SESSION_ARCHIVE, session),
+
+  unarchiveSession: (id: string): Promise<void> =>
+    ipcRenderer.invoke(IPC.SESSION_UNARCHIVE, id),
+
+  listArchivedSessions: (): Promise<ArchivedSession[]> =>
+    ipcRenderer.invoke(IPC.SESSION_LIST_ARCHIVED),
 
   onWorktreeCleanup: (callback: (session: { id: string; projectPath: string; worktreePath: string }) => void) => {
     const listener = (_: Electron.IpcRendererEvent, session: { id: string; projectPath: string; worktreePath: string }): void => callback(session)

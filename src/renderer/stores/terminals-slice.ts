@@ -56,5 +56,15 @@ export const createTerminalsSlice: StateCreator<AppStore, [], [], TerminalsSlice
         next.set(id, { ...term, session: { ...term.session, displayName } })
       }
       return { terminals: next }
+    }),
+
+  togglePinned: (id) =>
+    set((state) => {
+      const next = new Map(state.terminals)
+      const term = next.get(id)
+      if (term) {
+        next.set(id, { ...term, session: { ...term.session, pinned: !term.session.pinned } })
+      }
+      return { terminals: next }
     })
 })

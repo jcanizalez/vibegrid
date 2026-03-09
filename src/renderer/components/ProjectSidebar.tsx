@@ -10,7 +10,8 @@ import {
   Folder, FolderGit2, Code, Globe, Database, Server, Smartphone, Package,
   FileCode, Terminal, Cpu, Cloud, Shield, Zap, Gamepad2, Music, Image,
   BookOpen, FlaskConical, Rocket, Play, MoreHorizontal, Pencil, Trash2, GitFork, ChevronRight,
-  Clock, Calendar, Repeat, Power, X, ListTodo, Plus, Circle, ChevronDown, LayoutList
+  Clock, Calendar, Repeat, Power, X, ListTodo, Plus, Circle, ChevronDown, LayoutList, Eye,
+  Archive, RotateCcw
 } from 'lucide-react'
 
 const STATUS_DOT_COLOR: Record<AgentStatus, string> = {
@@ -238,6 +239,11 @@ export function ProjectSidebar() {
   const setTaskPanelOpen = useAppStore((s) => s.setTaskPanelOpen)
   const setTaskDialogOpen = useAppStore((s) => s.setTaskDialogOpen)
   const setEditingTask = useAppStore((s) => s.setEditingTask)
+  const archivedSessions = useAppStore((s) => s.archivedSessions)
+  const showArchivedSessions = useAppStore((s) => s.showArchivedSessions)
+  const setShowArchivedSessions = useAppStore((s) => s.setShowArchivedSessions)
+  const loadArchivedSessions = useAppStore((s) => s.loadArchivedSessions)
+  const unarchiveSession = useAppStore((s) => s.unarchiveSession)
 
   const [sidebarWidth, setSidebarWidth] = useState(256)
   const [openMenuProject, setOpenMenuProject] = useState<string | null>(null)
@@ -249,6 +255,9 @@ export function ProjectSidebar() {
   const [workflowsSectionCollapsed, setWorkflowsSectionCollapsed] = useState(false)
   const isResizing = useRef(false)
   const widthBeforeCollapse = useRef(256)
+
+  // Load archived sessions on mount
+  useEffect(() => { loadArchivedSessions() }, [])
 
   // Auto-expand projects that have terminals
   useEffect(() => {
@@ -606,7 +615,10 @@ export function ProjectSidebar() {
                     const inProgressTasks = (config?.tasks || []).filter(
                       (t: TaskConfig) => t.projectName === project.name && t.status === 'in_progress'
                     )
-                    const taskCount = todoTasks.length + inProgressTasks.length
+                    const inReviewTasks = (config?.tasks || []).filter(
+                      (t: TaskConfig) => t.projectName === project.name && t.status === 'in_review'
+                    )
+                    const taskCount = todoTasks.length + inProgressTasks.length + inReviewTasks.length
                     const isTasksCollapsed = collapsedTasks.has(project.name)
                     return (
                       <div>
@@ -719,6 +731,22 @@ export function ProjectSidebar() {
                                   </div>
                                   )
                                 })}
+                                {inReviewTasks.map((task: TaskConfig) => (
+                                  <div key={task.id} className="group/task flex items-center">
+                                    <button
+                                      onClick={() => {
+                                        setEditingTask(task)
+                                        setTaskDialogOpen(true)
+                                      }}
+                                      className="flex-1 text-left px-2 py-1 rounded-md text-[12px] text-purple-400/80
+                                                 hover:text-purple-300 hover:bg-white/[0.04] transition-colors
+                                                 flex items-center gap-2 min-w-0"
+                                    >
+                                      <Eye size={11} strokeWidth={2} className="shrink-0" />
+                                      <span className="truncate">{task.title}</span>
+                                    </button>
+                                  </div>
+                                ))}
                                 {todoTasks.sort((a: TaskConfig, b: TaskConfig) => a.order - b.order).slice(0, 3).map((task: TaskConfig) => (
                                   <div key={task.id} className="group/task flex items-center">
                                     <button
@@ -972,6 +1000,77 @@ export function ProjectSidebar() {
           <Zap size={iconSize} strokeWidth={1.5} className="shrink-0" />
           {!isCollapsed && 'Add Workflow'}
         </button>
+
+        {/* Archived sessions section */}
+        {!isCollapsed && archivedSessions.length > 0 && (
+          <>
+            <div className="pt-5 pb-1.5 flex items-center justify-between">
+              <button
+                onClick={() => setShowArchivedSessions(!showArchivedSessions)}
+                className="flex items-center gap-1.5 hover:text-gray-300 transition-colors"
+              >
+                <ChevronRight
+                  size={10}
+                  strokeWidth={2}
+                  className={`text-gray-600 transition-transform ${showArchivedSessions ? 'rotate-90' : ''}`}
+                />
+                <span className="text-[11px] font-medium text-gray-500 uppercase tracking-wider">
+                  Archived
+                </span>
+                <span className="text-[10px] text-gray-600 bg-white/[0.06] px-1.5 py-0.5 rounded-full">
+                  {archivedSessions.length}
+                </span>
+              </button>
+            </div>
+            {showArchivedSessions && (
+              <div className="space-y-0.5">
+                {archivedSessions.map((session) => (
+                  <div key={session.id} className="group/archived flex items-center">
+                    <div className="flex-1 px-2.5 py-1.5 rounded-md text-[12px] text-gray-500
+                                    flex items-center gap-2 min-w-0 opacity-60">
+                      <AgentIcon agentType={session.agentType} size={14} />
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate">{session.displayName || session.projectName}</div>
+                        {session.branch && (
+                          <div className="text-[10px] text-gray-600 truncate">{session.branch}</div>
+                        )}
+                      </div>
+                    </div>
+                    <Tooltip label="Unarchive" position="right">
+                      <button
+                        onClick={() => unarchiveSession(session.id)}
+                        className="opacity-0 group-hover/archived:opacity-100 text-gray-600 hover:text-gray-300
+                                   p-1 rounded-md hover:bg-white/[0.06] transition-all shrink-0"
+                      >
+                        <RotateCcw size={11} strokeWidth={2} />
+                      </button>
+                    </Tooltip>
+                    <Tooltip label="Resume session" position="right">
+                      <button
+                        onClick={async () => {
+                          const agentType = session.agentType
+                          const newSession = await window.api.createTerminal({
+                            agentType,
+                            projectName: session.projectName,
+                            projectPath: session.projectPath,
+                            resumeSessionId: session.agentSessionId
+                          })
+                          addTerminal(newSession)
+                          await unarchiveSession(session.id)
+                          setFocusedTerminal(newSession.id)
+                        }}
+                        className="opacity-0 group-hover/archived:opacity-100 text-gray-600 hover:text-green-400
+                                   p-1 rounded-md hover:bg-white/[0.06] transition-all shrink-0"
+                      >
+                        <Play size={11} strokeWidth={2} />
+                      </button>
+                    </Tooltip>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
       </div>
 
       {/* Bottom — Help & Settings */}
