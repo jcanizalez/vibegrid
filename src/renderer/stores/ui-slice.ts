@@ -53,6 +53,7 @@ export const createUISlice: StateCreator<AppStore, [], [], UISlice> = (set, get)
   editingTask: null,
   isTerminalPanelOpen: false,
   terminalPanelHeight: 250,
+  activeTabId: null,
   shellTabs: [],
   activeShellTab: null,
 
@@ -147,6 +148,8 @@ export const createUISlice: StateCreator<AppStore, [], [], UISlice> = (set, get)
 
   setTerminalPanelHeight: (height) =>
     set({ terminalPanelHeight: height }),
+
+  setActiveTabId: (id) => set({ activeTabId: id }),
 
   addShellTab: (tab) =>
     set((state) => ({

@@ -70,6 +70,7 @@ export interface UISlice {
   editingTask: TaskConfig | null
   isTerminalPanelOpen: boolean
   terminalPanelHeight: number
+  activeTabId: string | null
   shellTabs: { id: string; title: string }[]
   activeShellTab: string | null
   setFocusedTerminal: (id: string | null) => void
@@ -103,6 +104,7 @@ export interface UISlice {
   setEditingTask: (task: TaskConfig | null) => void
   toggleTerminalPanel: () => void
   setTerminalPanelHeight: (height: number) => void
+  setActiveTabId: (id: string | null) => void
   addShellTab: (tab: { id: string; title: string }) => void
   removeShellTab: (id: string) => void
   setActiveShellTab: (id: string | null) => void

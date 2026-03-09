@@ -16,6 +16,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.27.1",
     "@tiptap/core": "^3.20.1",
     "@tiptap/extension-code-block": "^3.20.1",
     "@tiptap/extension-code-block-lowlight": "^3.20.1",
@@ -43,6 +44,7 @@
     "node-pty": "^1.0.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "zod": "^4.3.6",
     "zustand": "^5.0.0"
   },
   "devDependencies": {

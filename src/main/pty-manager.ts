@@ -1,6 +1,7 @@
 import * as pty from 'node-pty'
 import crypto from 'node:crypto'
 import os from 'node:os'
+import { EventEmitter } from 'node:events'
 import { execFileSync, execSync } from 'node:child_process'
 import { BrowserWindow } from 'electron'
 import { AgentType, AgentStatus, AgentCommandConfig, CreateTerminalPayload, IPC, TerminalSession, RemoteHost } from '../shared/types'
@@ -68,7 +69,7 @@ export function getSafeEnv(): Record<string, string> {
   return env
 }
 
-class PtyManager {
+class PtyManager extends EventEmitter {
   private ptys = new Map<string, pty.IPty>()
   private sessions = new Map<string, TerminalSession>()
   private mainWindow: BrowserWindow | null = null
@@ -319,6 +320,7 @@ class PtyManager {
       this.ptys.delete(id)
       const session = this.sessions.get(id)
       if (session) {
+        this.emit('session-exit', session)
         session.status = 'idle'
         if (session.worktreePath) {
           this.sendToRenderer(IPC.WORKTREE_CONFIRM_CLEANUP, {
@@ -343,12 +345,15 @@ class PtyManager {
   killPty(id: string): void {
     const p = this.ptys.get(id)
     const session = this.sessions.get(id)
-    if (session?.worktreePath) {
-      this.mainWindow?.webContents.send(IPC.WORKTREE_CONFIRM_CLEANUP, {
-        id: session.id,
-        projectPath: session.projectPath,
-        worktreePath: session.worktreePath
-      })
+    if (session) {
+      this.emit('session-exit', session)
+      if (session.worktreePath) {
+        this.mainWindow?.webContents.send(IPC.WORKTREE_CONFIRM_CLEANUP, {
+          id: session.id,
+          projectPath: session.projectPath,
+          worktreePath: session.worktreePath
+        })
+      }
     }
     if (p) {
       p.kill()

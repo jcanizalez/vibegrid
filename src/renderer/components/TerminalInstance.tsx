@@ -1,5 +1,5 @@
 import { useRef, useEffect } from 'react'
-import { attachTerminal, detachTerminal, fitTerminal, focusTerminal } from '../lib/terminal-registry'
+import { attachTerminal, detachTerminal, fitTerminal, focusTerminal, getViewportState, scrollToBottom } from '../lib/terminal-registry'
 import { useStatusDetection } from '../hooks/useStatusDetection'
 import { useAppStore } from '../stores'
 
@@ -18,27 +18,29 @@ export function TerminalInstance({ terminalId, isFocused }: Props) {
     const el = containerRef.current
     if (!el) return
 
+    const hasExistingViewport = getViewportState(terminalId) !== null
     attachTerminal(terminalId, el)
 
     // Fit after a frame so the container has dimensions
-    requestAnimationFrame(() => fitTerminal(terminalId))
+    requestAnimationFrame(() => {
+      fitTerminal(terminalId)
+      if (!hasExistingViewport) scrollToBottom(terminalId)
+      if (isFocused) {
+        focusTerminal(terminalId)
+      }
+    })
 
     return () => {
       if (el) detachTerminal(terminalId, el)
     }
-  }, [terminalId])
+  }, [terminalId, isFocused])
 
-  // Re-fit and focus when isFocused changes
+  // Re-fit and focus when isFocused changes or terminal switches
   useEffect(() => {
     const timer = setTimeout(() => {
       fitTerminal(terminalId)
       if (isFocused) {
-        // Don't steal focus from another xterm or input element
-        const active = document.activeElement
-        const isUserTyping = active?.closest('.xterm') ||
-                             active?.tagName === 'INPUT' ||
-                             active?.tagName === 'TEXTAREA'
-        if (!isUserTyping) focusTerminal(terminalId)
+        focusTerminal(terminalId)
       }
     }, 50)
     return () => clearTimeout(timer)

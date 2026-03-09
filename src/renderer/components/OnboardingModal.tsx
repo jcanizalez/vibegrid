@@ -12,6 +12,11 @@ import {
   GitCompareArrows,
   FileDiff,
   Keyboard,
+  KanbanSquare,
+  Zap,
+  LayoutDashboard,
+  Plug,
+  Bell,
   ChevronDown,
   ChevronRight,
   ArrowLeft,
@@ -27,7 +32,12 @@ const ICON_MAP: Record<string, React.ComponentType<{ size?: number; strokeWidth?
   Columns3,
   GitCompareArrows,
   FileDiff,
-  Keyboard
+  Keyboard,
+  KanbanSquare,
+  Zap,
+  LayoutDashboard,
+  Plug,
+  Bell
 }
 
 export function OnboardingModal() {

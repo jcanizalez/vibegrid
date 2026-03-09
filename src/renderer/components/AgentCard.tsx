@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, forwardRef } from 'react'
+import { useState, useRef, forwardRef } from 'react'
 import { motion } from 'framer-motion'
 import { useAppStore } from '../stores'
 import { AgentIcon } from './AgentIcon'
@@ -8,8 +8,9 @@ import { TrafficLights } from './TrafficLights'
 import { InlineRename } from './InlineRename'
 import { GitChangesIndicator } from './GitChangesIndicator'
 import { AGENT_DEFINITIONS } from '../lib/agent-definitions'
-import { destroyTerminal, scrollToBottom, isAtBottom, onTerminalScroll } from '../lib/terminal-registry'
+import { destroyTerminal } from '../lib/terminal-registry'
 import { getDisplayName } from '../lib/terminal-display'
+import { useTerminalScrollButton } from '../hooks/useTerminalScrollButton'
 import { GitBranch, FolderGit2, Server, Pencil, ListTodo, Pin, Archive } from 'lucide-react'
 import { toast } from './Toast'
 
@@ -68,16 +69,9 @@ export const AgentCard = forwardRef<HTMLDivElement, Props>(
     const togglePinned = useAppStore((s) => s.togglePinned)
     const archiveSession = useAppStore((s) => s.archiveSession)
     const [cardHovered, setCardHovered] = useState(false)
-    const [showScrollBtn, setShowScrollBtn] = useState(false)
+    const { showScrollBtn, handleScrollToBottom } = useTerminalScrollButton(terminalId)
     const [confirmKill, setConfirmKill] = useState(false)
     const confirmKillTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-    useEffect(() => {
-      const check = (): void => setShowScrollBtn(!isAtBottom(terminalId))
-      check()
-      const dispose = onTerminalScroll(terminalId, check)
-      return () => dispose?.()
-    }, [terminalId])
 
     if (!terminal) return null
 
@@ -284,7 +278,7 @@ export const AgentCard = forwardRef<HTMLDivElement, Props>(
                 className="absolute bottom-2 right-2 w-6 h-6 flex items-center justify-center
                            rounded bg-white/[0.08] hover:bg-white/[0.15] text-gray-400 hover:text-white
                            transition-colors z-10"
-                onClick={() => { scrollToBottom(terminalId); setShowScrollBtn(false) }}
+                onClick={handleScrollToBottom}
                 title="Scroll to bottom"
               >
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none">

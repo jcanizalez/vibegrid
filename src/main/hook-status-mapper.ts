@@ -75,6 +75,11 @@ class HookStatusMapper {
     return { terminalId, status }
   }
 
+  /** Pre-link a known session_id → terminalId (used by Copilot where we generate the session ID ourselves) */
+  forceLink(sessionId: string, terminalId: string): void {
+    this.sessionMap.set(sessionId, terminalId)
+  }
+
   removeSession(sessionId: string): void {
     this.sessionMap.delete(sessionId)
   }

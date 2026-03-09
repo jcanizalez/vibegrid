@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "vibegrid": {
+      "type": "http",
+      "url": "http://localhost:56433/mcp"
+    }
+  }
+}

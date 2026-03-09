@@ -13,7 +13,8 @@ export interface OnboardingTopic {
 export const ONBOARDING_SECTIONS = [
   { key: 'getting-started', label: 'Getting Started' },
   { key: 'core-features', label: 'Core Features' },
-  { key: 'advanced', label: 'Advanced' }
+  { key: 'advanced', label: 'Advanced' },
+  { key: 'integrations', label: 'Integrations' }
 ] as const
 
 export const ONBOARDING_TOPICS: OnboardingTopic[] = [
@@ -68,6 +69,14 @@ export const ONBOARDING_TOPICS: OnboardingTopic[] = [
     icon: 'Columns3'
   },
   {
+    id: 'tasks-kanban',
+    title: 'Task Queue & Kanban',
+    section: 'core-features',
+    description:
+      'Manage tasks per project with a full lifecycle: todo, in progress, in review, done, and cancelled. Write rich markdown descriptions, attach images, and switch between list and kanban board views. Launch agents directly from tasks with automatic branch and worktree support.',
+    icon: 'KanbanSquare'
+  },
+  {
     id: 'preview-changes',
     title: 'Preview Changes',
     section: 'advanced',
@@ -84,6 +93,22 @@ export const ONBOARDING_TOPICS: OnboardingTopic[] = [
     icon: 'FileDiff'
   },
   {
+    id: 'workflows',
+    title: 'Workflows & Automation',
+    section: 'advanced',
+    description:
+      'Create multi-step workflows to launch several agents at once. Schedule them to run on a cron expression, at a specific time, or trigger manually. Stagger agent launches with configurable delays between each action.',
+    icon: 'Zap'
+  },
+  {
+    id: 'layouts',
+    title: 'Tab & Grid Layouts',
+    section: 'advanced',
+    description:
+      'Switch between grid view for side-by-side comparison and tab view to maximize terminal real estate. Toggle from the toolbar button or through settings. Each layout preserves your session order and focus state.',
+    icon: 'LayoutDashboard'
+  },
+  {
     id: 'keyboard-shortcuts',
     title: 'Keyboard Shortcuts',
     section: 'advanced',
@@ -91,5 +116,21 @@ export const ONBOARDING_TOPICS: OnboardingTopic[] = [
       'VibeGrid is built for keyboard-first workflows. Nearly every action has a shortcut. Open the shortcuts panel anytime to see all available keybindings, from navigation to filters to session management.',
     icon: 'Keyboard',
     shortcutHint: `${MOD}/`
+  },
+  {
+    id: 'mcp-server',
+    title: 'MCP Server',
+    section: 'integrations',
+    description:
+      'VibeGrid exposes an MCP server so AI agents like Claude Code and Cursor can create tasks, launch sessions, and manage projects programmatically. It auto-starts on port 56433 when the app runs. Add it to your tools with the .mcp.json in your project, or copy the URL from the command palette.',
+    icon: 'Plug'
+  },
+  {
+    id: 'notifications',
+    title: 'Notifications & Sounds',
+    section: 'integrations',
+    description:
+      'Get notified when agents need attention — waiting for input, encountering errors, or triggering a terminal bell. Enable sound effects with adjustable volume for instant audio feedback, even when the app is focused. Configure everything in Settings.',
+    icon: 'Bell'
   }
 ]

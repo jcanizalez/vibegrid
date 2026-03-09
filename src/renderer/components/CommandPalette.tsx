@@ -8,7 +8,8 @@ import { AgentIcon } from './AgentIcon'
 import { getDisplayName } from '../lib/terminal-display'
 import {
   Search, Plus, Settings, PanelLeft, FolderPlus, Zap, Monitor,
-  Filter, ArrowUpDown, Server, Keyboard
+  Filter, ArrowUpDown, Server, Keyboard, ListTodo, BookOpen,
+  Terminal, Archive, Plug, LayoutDashboard
 } from 'lucide-react'
 
 type CommandCategory = 'actions' | 'terminals' | 'recent' | 'projects' | 'workflows' | 'quicklaunch' | 'filter'
@@ -83,6 +84,12 @@ function useCommands(recentSessions: RecentSession[]): Command[] {
   const toggleSidebar = useAppStore((s) => s.toggleSidebar)
   const setSortMode = useAppStore((s) => s.setSortMode)
   const setStatusFilter = useAppStore((s) => s.setStatusFilter)
+  const setTaskPanelOpen = useAppStore((s) => s.setTaskPanelOpen)
+  const setTaskDialogOpen = useAppStore((s) => s.setTaskDialogOpen)
+  const setOnboardingOpen = useAppStore((s) => s.setOnboardingOpen)
+  const toggleTerminalPanel = useAppStore((s) => s.toggleTerminalPanel)
+  const loadArchivedSessions = useAppStore((s) => s.loadArchivedSessions)
+  const setShowArchivedSessions = useAppStore((s) => s.setShowArchivedSessions)
 
   return useMemo(() => {
     const commands: Command[] = []
@@ -140,19 +147,83 @@ function useCommands(recentSessions: RecentSession[]): Command[] {
       keywords: ['new workflow', 'create workflow', 'schedule'],
       onExecute: () => setShortcutDialogOpen(true)
     })
-    if ((config?.remoteHosts ?? []).length > 0) {
-      commands.push({
-        id: 'action:manage-hosts',
-        label: 'Manage Remote Hosts',
-        category: 'actions',
-        icon: <Server size={14} strokeWidth={1.5} />,
-        keywords: ['ssh', 'remote', 'host', 'server'],
-        onExecute: () => {
-          setSettingsOpen(true)
-          useAppStore.getState().setSettingsCategory('hosts')
-        }
-      })
-    }
+    commands.push({
+      id: 'action:open-tasks',
+      label: 'Open Task Panel',
+      category: 'actions',
+      icon: <ListTodo size={14} strokeWidth={1.5} />,
+      keywords: ['task', 'kanban', 'queue', 'todo', 'board'],
+      onExecute: () => setTaskPanelOpen(true)
+    })
+    commands.push({
+      id: 'action:create-task',
+      label: 'Create Task',
+      category: 'actions',
+      icon: <Plus size={14} strokeWidth={1.5} />,
+      keywords: ['new task', 'add task', 'todo'],
+      onExecute: () => setTaskDialogOpen(true)
+    })
+    commands.push({
+      id: 'action:toggle-layout',
+      label: 'Toggle Layout (Grid/Tabs)',
+      category: 'actions',
+      icon: <LayoutDashboard size={14} strokeWidth={1.5} />,
+      keywords: ['grid', 'tabs', 'layout', 'switch', 'view'],
+      onExecute: () => {
+        const cfg = useAppStore.getState().config
+        if (!cfg) return
+        const next = (cfg.defaults.layoutMode ?? 'grid') === 'grid' ? 'tabs' : 'grid'
+        const updated = { ...cfg, defaults: { ...cfg.defaults, layoutMode: next as 'grid' | 'tabs' } }
+        useAppStore.getState().setConfig(updated)
+        window.api.saveConfig(updated)
+      }
+    })
+    commands.push({
+      id: 'action:welcome-guide',
+      label: 'Show Welcome Guide',
+      category: 'actions',
+      icon: <BookOpen size={14} strokeWidth={1.5} />,
+      keywords: ['welcome', 'guide', 'help', 'onboarding', 'tour'],
+      onExecute: () => setOnboardingOpen(true)
+    })
+    commands.push({
+      id: 'action:toggle-terminal-panel',
+      label: 'Toggle Terminal Panel',
+      category: 'actions',
+      icon: <Terminal size={14} strokeWidth={1.5} />,
+      keywords: ['shell', 'terminal', 'panel', 'bottom'],
+      onExecute: () => toggleTerminalPanel()
+    })
+    commands.push({
+      id: 'action:archived-sessions',
+      label: 'Show Archived Sessions',
+      category: 'actions',
+      icon: <Archive size={14} strokeWidth={1.5} />,
+      keywords: ['archive', 'history', 'old sessions', 'past'],
+      onExecute: () => {
+        setShowArchivedSessions(true)
+        loadArchivedSessions()
+      }
+    })
+    commands.push({
+      id: 'action:copy-mcp-url',
+      label: 'Copy MCP Server URL',
+      category: 'actions',
+      icon: <Plug size={14} strokeWidth={1.5} />,
+      keywords: ['mcp', 'api', 'integration', 'claude', 'cursor', 'server', 'url'],
+      onExecute: () => navigator.clipboard.writeText('http://localhost:56433/mcp')
+    })
+    commands.push({
+      id: 'action:manage-hosts',
+      label: 'Manage Remote Hosts',
+      category: 'actions',
+      icon: <Server size={14} strokeWidth={1.5} />,
+      keywords: ['ssh', 'remote', 'host', 'server'],
+      onExecute: () => {
+        setSettingsOpen(true)
+        useAppStore.getState().setSettingsCategory('hosts')
+      }
+    })
 
     // --- Terminals ---
     for (const [id, term] of terminals) {
@@ -344,7 +415,9 @@ function useCommands(recentSessions: RecentSession[]): Command[] {
     return commands
   }, [terminals, config, recentSessions, addTerminal, setFocusedTerminal, setActiveProject,
       setNewAgentDialogOpen, setAddProjectDialogOpen, setShortcutDialogOpen,
-      setSettingsOpen, toggleSidebar, setSortMode, setStatusFilter])
+      setSettingsOpen, toggleSidebar, setSortMode, setStatusFilter,
+      setTaskPanelOpen, setTaskDialogOpen, setOnboardingOpen, toggleTerminalPanel,
+      loadArchivedSessions, setShowArchivedSessions])
 }
 
 export function CommandPalette() {

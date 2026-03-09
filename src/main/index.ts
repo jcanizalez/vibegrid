@@ -8,12 +8,16 @@ import { scheduler } from './scheduler'
 import { createMenu } from './menu'
 import { hookServer } from './hook-server'
 import { installHooks, uninstallHooks } from './hook-installer'
+import { installCopilotHooks, uninstallCopilotHooks, uninstallAllCopilotHooks, CopilotHookInstallation } from './copilot-hook-installer'
 import { hookStatusMapper } from './hook-status-mapper'
 import { updateManager } from './update-manager'
+import { VibeGridMcpServer } from './mcp-server'
 import { IPC, WidgetAgentInfo, PermissionRequestInfo } from '../shared/types'
 
 let mainWindow: BrowserWindow | null = null
 let widgetWindow: BrowserWindow | null = null
+const mcpServer = new VibeGridMcpServer({ configManager, ptyManager, scheduler })
+const copilotInstallations = new Map<string, CopilotHookInstallation>()
 
 function createWindow(): void {
   const isMac = process.platform === 'darwin'
@@ -194,7 +198,30 @@ function toggleWidget(): void {
 
 app.whenReady().then(() => {
   configManager.init()
-  registerIpcHandlers()
+  registerIpcHandlers({
+    onSessionCreated: (session, payload) => {
+      if (payload.agentType === 'copilot') {
+        const port = hookServer.getPort()
+        if (port <= 0) return
+        const cwd = session.worktreePath || session.projectPath
+        const installation = installCopilotHooks(cwd, port)
+        copilotInstallations.set(session.id, installation)
+        hookStatusMapper.forceLink(installation.sessionId, session.id)
+        session.hookSessionId = installation.sessionId
+        session.statusSource = 'hooks'
+      }
+    }
+  })
+
+  // Clean up Copilot hooks.json when sessions exit
+  ptyManager.on('session-exit', (session) => {
+    const inst = copilotInstallations.get(session.id)
+    if (inst) {
+      uninstallCopilotHooks(inst)
+      copilotInstallations.delete(session.id)
+    }
+  })
+
   createMenu(toggleWidget)
   createWindow()
   createWidgetWindow()
@@ -356,14 +383,23 @@ app.whenReady().then(() => {
       ptyManager.updateSessionStatus(terminalId, 'waiting')
       sendWidgetUpdate()
 
-      // Show widget without stealing focus from the main window
-      showWidget()
+      // Show widget only when main window is not focused (permission already sent to main renderer)
+      if (!mainWindow || mainWindow.isDestroyed() || !mainWindow.isFocused()) {
+        showWidget()
+      }
 
       // Register global shortcuts for quick approval
       updatePermissionShortcuts()
     })
   }).catch((err) => {
     console.error('Failed to start hook server:', err)
+  })
+
+  // Start MCP server for external tool integration (Claude Code, Cursor, etc.)
+  mcpServer.start().then((port) => {
+    console.log(`[mcp] server listening on http://127.0.0.1:${port}/mcp`)
+  }).catch((err) => {
+    console.error('Failed to start MCP server:', err)
   })
 
   // Permission response from widget or main window
@@ -407,8 +443,10 @@ app.on('before-quit', () => {
     sessionManager.saveSessions(sessions)
   }
   globalShortcut.unregisterAll()
+  mcpServer.stop()
   hookServer.stop()
   uninstallHooks()
+  uninstallAllCopilotHooks()
   hookStatusMapper.clear()
   updateManager.stop()
   scheduler.stopAll()

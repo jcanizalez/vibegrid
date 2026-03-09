@@ -145,6 +145,7 @@ export interface AppConfig {
     reopenSessions?: boolean
     widgetEnabled?: boolean
     taskViewMode?: TaskViewMode
+    layoutMode?: 'grid' | 'tabs'
   }
   projects: ProjectConfig[]
   agentCommands?: Partial<Record<AgentType, AgentCommandConfig>>

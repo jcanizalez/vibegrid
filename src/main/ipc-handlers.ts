@@ -6,15 +6,21 @@ import { scheduleLogManager } from './schedule-log'
 import { scheduler } from './scheduler'
 import { getRecentSessions } from './agent-history'
 import { detectIDEs, openInIDE } from './ide-detector'
-import { CreateTerminalPayload, IPC, ResizePayload, AppConfig, ArchivedSession } from '../shared/types'
+import { CreateTerminalPayload, IPC, ResizePayload, AppConfig, ArchivedSession, TerminalSession } from '../shared/types'
 import { listBranches, listRemoteBranches, getGitBranch, createWorktree, removeWorktree, listWorktrees, getGitDiffStat, getGitDiffFull, gitCommit, gitPush } from './git-utils'
 import { saveTaskImage, deleteTaskImage, getTaskImagePath, cleanupTaskImages } from './task-images'
 import { archiveSession, unarchiveSession, listArchivedSessions } from './database'
 
-export function registerIpcHandlers(): void {
-  ipcMain.handle(IPC.TERMINAL_CREATE, (_, payload: CreateTerminalPayload) =>
-    ptyManager.createPty(payload)
-  )
+export interface IpcHandlerOptions {
+  onSessionCreated?: (session: TerminalSession, payload: CreateTerminalPayload) => void
+}
+
+export function registerIpcHandlers(options?: IpcHandlerOptions): void {
+  ipcMain.handle(IPC.TERMINAL_CREATE, (_, payload: CreateTerminalPayload) => {
+    const session = ptyManager.createPty(payload)
+    options?.onSessionCreated?.(session, payload)
+    return session
+  })
 
   ipcMain.handle(IPC.TERMINAL_KILL, (_, id: string) =>
     ptyManager.killPty(id)

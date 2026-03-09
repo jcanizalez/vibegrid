@@ -212,6 +212,32 @@ export function GeneralSettings() {
           </div>
         </div>
 
+        {/* Layout Mode */}
+        <div className="flex items-center justify-between py-4 border-b border-white/[0.06]">
+          <div>
+            <div className="text-sm font-medium text-gray-200">Layout Mode</div>
+            <div className="text-xs text-gray-500 mt-0.5">Choose between grid or tab layout for sessions</div>
+          </div>
+          <div className="flex bg-white/[0.04] rounded-lg p-0.5 gap-0.5">
+            {([
+              { value: 'grid' as const, label: 'Grid' },
+              { value: 'tabs' as const, label: 'Tabs' }
+            ]).map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => updateDefaults({ layoutMode: opt.value })}
+                className={`px-3 py-1 rounded-md text-xs transition-colors ${
+                  (config.defaults.layoutMode || 'grid') === opt.value
+                    ? 'bg-white/[0.1] text-white'
+                    : 'text-gray-500 hover:text-gray-300'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Floating Widget */}
         <div className="flex items-center justify-between py-4 border-b border-white/[0.06]">
           <div>

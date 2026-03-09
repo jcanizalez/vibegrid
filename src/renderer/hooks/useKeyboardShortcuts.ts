@@ -110,13 +110,17 @@ export function useKeyboardShortcuts() {
         e.preventDefault()
         const ids = state.visibleTerminalIds
         if (ids.length === 0) return
+        const layoutMode = state.config?.defaults?.layoutMode ?? 'grid'
         if (state.focusedTerminalId) {
-          // In overlay: cycle which terminal is expanded
           const current = ids.indexOf(state.focusedTerminalId)
           const next = current === -1 ? 0 : (current + 1) % ids.length
           state.setFocusedTerminal(ids[next])
+        } else if (layoutMode === 'tabs') {
+          const currentTab = state.activeTabId
+          const current = currentTab ? ids.indexOf(currentTab) : -1
+          const next = current === -1 ? 0 : (current + 1) % ids.length
+          state.setActiveTabId(ids[next])
         } else {
-          // In grid: cycle selection
           const currentSel = state.selectedTerminalId
           if (!currentSel) {
             state.setSelectedTerminal(ids[0])
@@ -134,13 +138,17 @@ export function useKeyboardShortcuts() {
         e.preventDefault()
         const ids = state.visibleTerminalIds
         if (ids.length === 0) return
+        const layoutMode = state.config?.defaults?.layoutMode ?? 'grid'
         if (state.focusedTerminalId) {
-          // In overlay: cycle which terminal is expanded
           const current = ids.indexOf(state.focusedTerminalId)
           const prev = current === -1 ? ids.length - 1 : (current - 1 + ids.length) % ids.length
           state.setFocusedTerminal(ids[prev])
+        } else if (layoutMode === 'tabs') {
+          const currentTab = state.activeTabId
+          const current = currentTab ? ids.indexOf(currentTab) : -1
+          const prev = current === -1 ? ids.length - 1 : (current - 1 + ids.length) % ids.length
+          state.setActiveTabId(ids[prev])
         } else {
-          // In grid: cycle selection
           const currentSel = state.selectedTerminalId
           if (!currentSel) {
             state.setSelectedTerminal(ids[ids.length - 1])

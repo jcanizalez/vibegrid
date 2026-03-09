@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import { useAppStore } from './stores'
 import { GridView } from './components/GridView'
+import { TabView } from './components/TabView'
 import { FocusedTerminal } from './components/FocusedTerminal'
 import { ProjectSidebar } from './components/ProjectSidebar'
 import { PromptLauncher } from './components/PromptLauncher'
@@ -78,6 +79,7 @@ export function App() {
   const isOnboardingOpen = useAppStore((s) => s.isOnboardingOpen)
   const toggleTerminalPanel = useAppStore((s) => s.toggleTerminalPanel)
   const isTerminalPanelOpen = useAppStore((s) => s.isTerminalPanelOpen)
+  const layoutMode = useAppStore((s) => s.config?.defaults?.layoutMode ?? 'grid')
   const [recentOpen, setRecentOpen] = useState(false)
 
   useKeyboardShortcuts()
@@ -309,7 +311,7 @@ export function App() {
 
         {showBanner && <SessionRestoredBanner />}
         <UpdateBanner />
-        <GridView />
+        {layoutMode === 'tabs' ? <TabView /> : <GridView />}
         <TerminalPanel />
       </main>
 

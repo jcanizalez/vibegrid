@@ -484,22 +484,56 @@ export function ProjectSidebar() {
                   )}
                 </button>
                 {!isCollapsed && (
-                  <div className="relative">
-                    <button
-                      onClick={() => setOpenMenuProject(openMenuProject === project.name ? null : project.name)}
-                      className="opacity-0 group-hover:opacity-100 text-gray-600 hover:text-white
-                                 p-1 transition-all shrink-0"
-                    >
-                      <MoreHorizontal size={12} strokeWidth={2} />
-                    </button>
-                    {openMenuProject === project.name && (
-                      <ProjectContextMenu
-                        project={project}
-                        onEdit={() => handleEditProject(project)}
-                        onDelete={() => removeProject(project.name)}
-                        onClose={() => setOpenMenuProject(null)}
-                      />
-                    )}
+                  <div className="flex items-center gap-0.5 shrink-0">
+                    <Tooltip label="Quick launch session" position="right">
+                      <button
+                        onClick={async (e) => {
+                          e.stopPropagation()
+                          const agentType = config?.defaults.defaultAgent || 'claude'
+                          const session = await window.api.createTerminal({
+                            agentType,
+                            projectName: project.name,
+                            projectPath: project.path
+                          })
+                          addTerminal(session)
+                        }}
+                        className="opacity-0 group-hover:opacity-100 text-gray-600 hover:text-green-400
+                                   p-1 rounded-md hover:bg-white/[0.06] transition-all"
+                      >
+                        <Play size={11} strokeWidth={2} />
+                      </button>
+                    </Tooltip>
+                    <Tooltip label="Add task" position="right">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setActiveProject(project.name)
+                          setEditingTask(null)
+                          setTaskDialogOpen(true)
+                        }}
+                        className="opacity-0 group-hover:opacity-100 text-gray-600 hover:text-blue-400
+                                   p-1 rounded-md hover:bg-white/[0.06] transition-all"
+                      >
+                        <ListTodo size={11} strokeWidth={2} />
+                      </button>
+                    </Tooltip>
+                    <div className="relative">
+                      <button
+                        onClick={() => setOpenMenuProject(openMenuProject === project.name ? null : project.name)}
+                        className="opacity-0 group-hover:opacity-100 text-gray-600 hover:text-white
+                                   p-1 transition-all"
+                      >
+                        <MoreHorizontal size={12} strokeWidth={2} />
+                      </button>
+                      {openMenuProject === project.name && (
+                        <ProjectContextMenu
+                          project={project}
+                          onEdit={() => handleEditProject(project)}
+                          onDelete={() => removeProject(project.name)}
+                          onClose={() => setOpenMenuProject(null)}
+                        />
+                      )}
+                    </div>
                   </div>
                 )}
               </div>

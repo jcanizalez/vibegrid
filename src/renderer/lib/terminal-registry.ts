@@ -9,7 +9,13 @@ interface TerminalEntry {
   currentContainer: HTMLDivElement | null
 }
 
+export interface TerminalViewportState {
+  line: number
+  atBottom: boolean
+}
+
 const registry = new Map<string, TerminalEntry>()
+const readyCallbacks = new Map<string, Set<() => void>>()
 
 const TERM_OPTIONS = {
   cursorBlink: true,
@@ -103,6 +109,13 @@ function createTerminalEntry(terminalId: string): TerminalEntry {
   ;(entry as any)._loadRenderer = loadRenderer
 
   registry.set(terminalId, entry)
+
+  const cbs = readyCallbacks.get(terminalId)
+  if (cbs) {
+    cbs.forEach((cb) => cb())
+    readyCallbacks.delete(terminalId)
+  }
+
   return entry
 }
 
@@ -155,8 +168,10 @@ export function detachTerminal(terminalId: string, container: HTMLDivElement): v
 export function fitTerminal(terminalId: string): void {
   const entry = registry.get(terminalId)
   if (!entry || !entry.currentContainer) return
+  const viewportState = getViewportState(terminalId)
   try {
     entry.fitAddon.fit()
+    if (viewportState) restoreViewportState(terminalId, viewportState)
     const { cols, rows } = entry.term
     window.api.resizeTerminal({ id: terminalId, cols, rows })
   } catch {
@@ -171,6 +186,26 @@ export function focusTerminal(terminalId: string): void {
   registry.get(terminalId)?.term.focus()
 }
 
+export function getViewportState(terminalId: string): TerminalViewportState | null {
+  const entry = registry.get(terminalId)
+  if (!entry) return null
+  const buf = entry.term.buffer.active
+  return {
+    line: buf.viewportY,
+    atBottom: buf.viewportY >= buf.baseY
+  }
+}
+
+export function restoreViewportState(terminalId: string, state: TerminalViewportState): void {
+  const entry = registry.get(terminalId)
+  if (!entry) return
+  if (state.atBottom) {
+    entry.term.scrollToBottom()
+    return
+  }
+  entry.term.scrollToLine(Math.max(0, state.line))
+}
+
 export function scrollToBottom(terminalId: string): void {
   const entry = registry.get(terminalId)
   if (!entry) return
@@ -181,14 +216,36 @@ export function isAtBottom(terminalId: string): boolean {
   const entry = registry.get(terminalId)
   if (!entry) return true
   const buf = entry.term.buffer.active
-  return buf.baseY + entry.term.rows >= buf.length
+  return buf.viewportY >= buf.baseY
+}
+
+export function onTerminalReady(terminalId: string, callback: () => void): () => void {
+  if (registry.has(terminalId)) {
+    callback()
+    return () => {}
+  }
+  if (!readyCallbacks.has(terminalId)) readyCallbacks.set(terminalId, new Set())
+  readyCallbacks.get(terminalId)!.add(callback)
+  return () => { readyCallbacks.get(terminalId)?.delete(callback) }
 }
 
 export function onTerminalScroll(terminalId: string, callback: () => void): (() => void) | undefined {
   const entry = registry.get(terminalId)
   if (!entry) return undefined
-  const disposable = entry.term.onScroll(callback)
-  return () => disposable.dispose()
+  const scrollDisposable = entry.term.onScroll(callback)
+  let writeTimer: ReturnType<typeof setTimeout> | null = null
+  const writeDisposable = entry.term.onWriteParsed(() => {
+    if (writeTimer) return
+    writeTimer = setTimeout(() => {
+      writeTimer = null
+      callback()
+    }, 300)
+  })
+  return () => {
+    scrollDisposable.dispose()
+    writeDisposable.dispose()
+    if (writeTimer) clearTimeout(writeTimer)
+  }
 }
 
 /**

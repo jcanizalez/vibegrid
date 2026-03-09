@@ -1,13 +1,13 @@
 import { useState, useRef, useEffect } from 'react'
 import { useAppStore } from '../stores'
 import { SortMode, StatusFilter } from '../stores/types'
-import { KbdHint } from './KbdHint'
 
 /* ── Dropdown menu primitive ─────────────────────────────────── */
 
 interface MenuOption<T extends string> {
   value: T
   label: string
+  dot?: string
 }
 
 interface DropdownProps<T extends string> {
@@ -32,7 +32,9 @@ function Dropdown<T extends string>({ icon, options, value, onChange, title, lab
     return () => document.removeEventListener('mousedown', handleClick)
   }, [open])
 
-  const activeLabel = options.find((o) => o.value === value)?.label ?? ''
+  const active = options.find((o) => o.value === value)
+  const activeLabel = active?.label ?? ''
+  const activeDot = active?.dot
   const isDefault = value === options[0].value
 
   return (
@@ -47,6 +49,7 @@ function Dropdown<T extends string>({ icon, options, value, onChange, title, lab
         title={title}
       >
         {icon}
+        {activeDot && <span className={`w-1.5 h-1.5 rounded-full ${activeDot} shrink-0`} />}
         <span>{activeLabel}</span>
         <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
              stroke="currentColor" strokeWidth="2.5" className="opacity-50">
@@ -78,6 +81,7 @@ function Dropdown<T extends string>({ icon, options, value, onChange, title, lab
                 </svg>
               )}
               {value !== opt.value && <span className="w-3" />}
+              {opt.dot && <span className={`w-1.5 h-1.5 rounded-full ${opt.dot} shrink-0`} />}
               {opt.label}
             </button>
           ))}
@@ -103,12 +107,12 @@ const COLUMN_OPTIONS: MenuOption<string>[] = [
   { value: '4', label: '4 Columns' }
 ]
 
-const STATUS_FILTERS: { value: StatusFilter; label: string; dot: string; shortcutId: string }[] = [
-  { value: 'all', label: 'All', dot: 'bg-gray-400', shortcutId: 'filter-all' },
-  { value: 'running', label: 'Running', dot: 'bg-green-500', shortcutId: 'filter-running' },
-  { value: 'waiting', label: 'Waiting', dot: 'bg-yellow-500', shortcutId: 'filter-waiting' },
-  { value: 'idle', label: 'Idle', dot: 'bg-gray-500', shortcutId: 'filter-idle' },
-  { value: 'error', label: 'Error', dot: 'bg-red-500', shortcutId: 'filter-error' }
+const STATUS_OPTIONS: MenuOption<StatusFilter>[] = [
+  { value: 'all', label: 'All', dot: 'bg-gray-400' },
+  { value: 'running', label: 'Running', dot: 'bg-green-500' },
+  { value: 'waiting', label: 'Waiting', dot: 'bg-yellow-500' },
+  { value: 'idle', label: 'Idle', dot: 'bg-gray-500' },
+  { value: 'error', label: 'Error', dot: 'bg-red-500' }
 ]
 
 /* ── Icons ───────────────────────────────────────────────────── */
@@ -130,6 +134,22 @@ const GridIcon = (
   </svg>
 )
 
+const FilterIcon = (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+       stroke="currentColor" strokeWidth="2">
+    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+  </svg>
+)
+
+const TabIcon = (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+       stroke="currentColor" strokeWidth="2">
+    <rect x="3" y="3" width="18" height="18" rx="2" />
+    <path d="M3 9h18" />
+    <path d="M9 3v6" />
+  </svg>
+)
+
 /* ── Component ───────────────────────────────────────────────── */
 
 export function GridToolbar() {
@@ -139,27 +159,32 @@ export function GridToolbar() {
   const setStatusFilter = useAppStore((s) => s.setStatusFilter)
   const gridColumns = useAppStore((s) => s.gridColumns)
   const setGridColumns = useAppStore((s) => s.setGridColumns)
+  const config = useAppStore((s) => s.config)
+  const setConfig = useAppStore((s) => s.setConfig)
+  const layoutMode = config?.defaults?.layoutMode ?? 'grid'
+
+  const toggleLayout = (): void => {
+    if (!config) return
+    const next = layoutMode === 'grid' ? 'tabs' : 'grid'
+    const updated = {
+      ...config,
+      defaults: { ...config.defaults, layoutMode: next as 'grid' | 'tabs' }
+    }
+    window.api.saveConfig(updated)
+    setConfig(updated)
+  }
 
   return (
     <div className="flex items-center gap-2">
-      {/* Status filter — toggle pills with colored dots */}
-      <div className="flex bg-white/[0.04] rounded-lg p-0.5">
-        {STATUS_FILTERS.map((opt) => (
-          <button
-            key={opt.value}
-            onClick={() => setStatusFilter(opt.value)}
-            className={`flex items-center gap-1.5 px-2.5 py-1 text-[13px] rounded-md transition-colors ${
-              statusFilter === opt.value
-                ? 'bg-white/[0.1] text-white'
-                : 'text-gray-500 hover:text-gray-300'
-            }`}
-          >
-            <span className={`w-1.5 h-1.5 rounded-full ${opt.dot} shrink-0`} />
-            {opt.label}
-            <KbdHint shortcutId={opt.shortcutId} />
-          </button>
-        ))}
-      </div>
+      {/* Status filter — dropdown */}
+      <Dropdown
+        icon={FilterIcon}
+        options={STATUS_OPTIONS}
+        value={statusFilter}
+        onChange={setStatusFilter}
+        title="Filter by status"
+        label="Status"
+      />
 
       {/* Sort — dropdown */}
       <Dropdown
@@ -171,15 +196,27 @@ export function GridToolbar() {
         label="Sort by"
       />
 
-      {/* Columns — dropdown */}
-      <Dropdown
-        icon={GridIcon}
-        options={COLUMN_OPTIONS}
-        value={String(gridColumns)}
-        onChange={(v) => setGridColumns(Number(v))}
-        title="Grid columns"
-        label="Columns"
-      />
+      {/* Columns — dropdown (grid mode only) */}
+      {layoutMode !== 'tabs' && (
+        <Dropdown
+          icon={GridIcon}
+          options={COLUMN_OPTIONS}
+          value={String(gridColumns)}
+          onChange={(v) => setGridColumns(Number(v))}
+          title="Grid columns"
+          label="Columns"
+        />
+      )}
+
+      {/* Layout toggle */}
+      <button
+        onClick={toggleLayout}
+        className="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs transition-colors
+                   text-gray-400 hover:text-white hover:bg-white/[0.06]"
+        title={layoutMode === 'grid' ? 'Switch to tabs' : 'Switch to grid'}
+      >
+        {layoutMode === 'grid' ? TabIcon : GridIcon}
+      </button>
     </div>
   )
 }

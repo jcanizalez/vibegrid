@@ -1,17 +1,54 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest'
 
 // Mock heavy dependencies so the module loads without node-pty/electron
 vi.mock('node-pty', () => ({ default: {} }))
 vi.mock('electron', () => ({ BrowserWindow: vi.fn() }))
+vi.mock('node:child_process', async () => {
+  const actual = await vi.importActual<typeof import('node:child_process')>('node:child_process')
+  return {
+    ...actual,
+    execSync: vi.fn(() => {
+      throw new Error('mock shell env')
+    })
+  }
+})
 vi.mock('../src/main/git-utils', () => ({
   getGitBranch: vi.fn(),
   checkoutBranch: vi.fn(),
   createWorktree: vi.fn()
 }))
 
-import { shellEscape, getSafeEnv } from '../src/main/pty-manager'
+let shellEscape: typeof import('../src/main/pty-manager').shellEscape
+let getSafeEnv: typeof import('../src/main/pty-manager').getSafeEnv
+
+const TEST_ENV = {
+  HOME: '/home/user',
+  PATH: '/usr/bin',
+  SHELL: '/bin/zsh',
+  GITHUB_TOKEN: 'ghp_secret123',
+  GH_TOKEN: 'ghp_secret456',
+  AWS_SECRET_ACCESS_KEY: 'aws-secret',
+  AWS_SESSION_TOKEN: 'aws-session',
+  OPENAI_API_KEY: 'sk-openai',
+  ANTHROPIC_API_KEY: 'sk-ant',
+  GOOGLE_API_KEY: 'google-key',
+  STRIPE_SECRET_KEY: 'sk_stripe',
+  DATABASE_URL: 'postgres://localhost/db',
+  DB_PASSWORD: 'dbpass',
+  SECRET_KEY: 'mysecret',
+  PRIVATE_KEY_PATH: '/path/to/key',
+  NPM_TOKEN: 'npm-token',
+  NODE_AUTH_TOKEN: 'node-auth',
+  EDITOR: 'vim',
+  TERM: 'xterm-256color'
+}
 
 describe('shellEscape', () => {
+  beforeAll(async () => {
+    vi.resetModules()
+    ;({ shellEscape } = await import('../src/main/pty-manager'))
+  })
+
   it('wraps simple string in single quotes', () => {
     expect(shellEscape('hello')).toBe("'hello'")
   })
@@ -48,28 +85,10 @@ describe('shellEscape', () => {
 describe('getSafeEnv', () => {
   const originalEnv = process.env
 
-  beforeEach(() => {
-    process.env = {
-      HOME: '/home/user',
-      PATH: '/usr/bin',
-      SHELL: '/bin/zsh',
-      GITHUB_TOKEN: 'ghp_secret123',
-      GH_TOKEN: 'ghp_secret456',
-      AWS_SECRET_ACCESS_KEY: 'aws-secret',
-      AWS_SESSION_TOKEN: 'aws-session',
-      OPENAI_API_KEY: 'sk-openai',
-      ANTHROPIC_API_KEY: 'sk-ant',
-      GOOGLE_API_KEY: 'google-key',
-      STRIPE_SECRET_KEY: 'sk_stripe',
-      DATABASE_URL: 'postgres://localhost/db',
-      DB_PASSWORD: 'dbpass',
-      SECRET_KEY: 'mysecret',
-      PRIVATE_KEY_PATH: '/path/to/key',
-      NPM_TOKEN: 'npm-token',
-      NODE_AUTH_TOKEN: 'node-auth',
-      EDITOR: 'vim',
-      TERM: 'xterm-256color'
-    }
+  beforeEach(async () => {
+    vi.resetModules()
+    process.env = { ...TEST_ENV }
+    ;({ getSafeEnv } = await import('../src/main/pty-manager'))
   })
 
   afterEach(() => {
