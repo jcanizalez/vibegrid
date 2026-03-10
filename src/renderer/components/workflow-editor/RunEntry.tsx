@@ -156,7 +156,7 @@ export function RunEntry({ execution, nodes, workflowName, tasks, onViewFullOutp
                       {ns.logs.length > 2000 ? ns.logs.slice(0, 2000) + '\n...' : ns.logs}
                     </pre>
                     <div className="flex items-center gap-2 mt-1.5">
-                      {ns.logs.length > 500 && onViewFullOutput && (
+                      {onViewFullOutput && (
                         <button
                           onClick={() => onViewFullOutput(ns.logs!)}
                           className="flex items-center gap-1 text-[11px] text-blue-400 hover:text-blue-300 transition-colors"

@@ -105,10 +105,26 @@ export function TaskDetailPanel() {
 
   // Load workflow runs related to this task from the database
   const [relatedRuns, setRelatedRuns] = useState<(WorkflowExecution & { workflowName?: string })[]>([])
+  const workflowExecutions = useAppStore((s) => s.workflowExecutions)
   useEffect(() => {
     if (!task) { setRelatedRuns([]); return }
     window.api.listWorkflowRunsByTask(task.id, 20).then(setRelatedRuns)
   }, [task?.id])
+
+  // Live refresh: re-query when any related workflow execution changes
+  useEffect(() => {
+    if (!task) return
+    let relevant = false
+    for (const [, exec] of workflowExecutions) {
+      if (exec.triggerTaskId === task.id || exec.nodeStates.some(ns => ns.taskId === task.id)) {
+        relevant = true
+        break
+      }
+    }
+    if (relevant) {
+      window.api.listWorkflowRunsByTask(task.id, 20).then(setRelatedRuns)
+    }
+  }, [task?.id, workflowExecutions])
 
   // Initialize form when entering edit mode
   useEffect(() => {

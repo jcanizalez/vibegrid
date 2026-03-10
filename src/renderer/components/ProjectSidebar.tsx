@@ -902,7 +902,7 @@ export function ProjectSidebar() {
             return (
               <div key={wf.id} className={`group relative flex items-center ${isDisabled ? 'opacity-40' : ''}`}>
                 <button
-                  onClick={() => executeWorkflow(wf)}
+                  onClick={() => { setEditingWorkflowId(wf.id); setWorkflowEditorOpen(true) }}
                   className={`flex-1 text-left px-2.5 py-1.5 rounded-md text-[13px] transition-colors
                              flex items-center gap-2 text-gray-300 hover:text-white hover:bg-white/[0.04]
                              ${isCollapsed ? 'justify-center px-0' : ''}`}
@@ -924,7 +924,18 @@ export function ProjectSidebar() {
                   )}
                 </button>
                 {!isCollapsed && (
-                  <div className="relative">
+                  <div className="flex items-center">
+                    {!isScheduled && (
+                      <button
+                        onClick={() => executeWorkflow(wf)}
+                        className="opacity-0 group-hover:opacity-100 text-green-500 hover:text-green-400
+                                   p-1 transition-all shrink-0"
+                        title="Run workflow"
+                      >
+                        <Play size={11} strokeWidth={2.5} />
+                      </button>
+                    )}
+                    <div className="relative">
                     <button
                       onClick={() => setOpenMenuShortcut(openMenuShortcut === wf.id ? null : wf.id)}
                       className="opacity-0 group-hover:opacity-100 text-gray-600 hover:text-white
@@ -948,6 +959,7 @@ export function ProjectSidebar() {
                         onClose={() => setOpenMenuShortcut(null)}
                       />
                     )}
+                    </div>
                   </div>
                 )}
               </div>
