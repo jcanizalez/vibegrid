@@ -90,6 +90,16 @@ export interface TaskConfig {
 
 // --- Workflow engine types (Logic Apps-style) ---
 
+// Execution context passed from triggers to the execution engine
+export interface WorkflowExecutionContext {
+  task?: TaskConfig
+  trigger?: {
+    type: TriggerConfig['triggerType']
+    fromStatus?: TaskStatus
+    toStatus?: TaskStatus
+  }
+}
+
 export type WorkflowNodeType = 'trigger' | 'launchAgent'
 
 export interface WorkflowNodePosition { x: number; y: number }
@@ -126,6 +136,7 @@ export interface LaunchAgentConfig {
   promptDelayMs?: number
   taskId?: string
   taskFromQueue?: boolean
+  headless?: boolean
 }
 
 export type WorkflowNodeConfig = TriggerConfig | LaunchAgentConfig
@@ -154,6 +165,9 @@ export interface NodeExecutionState {
   completedAt?: string
   sessionId?: string
   error?: string
+  logs?: string
+  taskId?: string
+  agentSessionId?: string
 }
 
 export interface WorkflowDefinition {
@@ -175,6 +189,7 @@ export interface WorkflowExecution {
   completedAt?: string
   status: 'running' | 'success' | 'error'
   nodeStates: NodeExecutionState[]
+  triggerTaskId?: string
 }
 
 export interface NotificationConfig {
@@ -229,6 +244,21 @@ export interface CreateTerminalPayload {
   remoteHostId?: string
   initialPrompt?: string
   promptDelayMs?: number
+  headless?: boolean
+}
+
+export interface HeadlessSession {
+  id: string
+  pid: number
+  agentType: AgentType
+  projectName: string
+  projectPath: string
+  displayName?: string
+  branch?: string
+  status: 'running' | 'exited'
+  exitCode?: number
+  startedAt: number
+  endedAt?: number
 }
 
 export interface ResizePayload {
@@ -320,7 +350,14 @@ export const IPC = {
   DIALOG_OPEN_IMAGE: 'dialog:openImage',
   SESSION_ARCHIVE: 'session:archive',
   SESSION_UNARCHIVE: 'session:unarchive',
-  SESSION_LIST_ARCHIVED: 'session:listArchived'
+  SESSION_LIST_ARCHIVED: 'session:listArchived',
+  HEADLESS_CREATE: 'headless:create',
+  HEADLESS_KILL: 'headless:kill',
+  HEADLESS_DATA: 'headless:data',
+  HEADLESS_EXIT: 'headless:exit',
+  WORKFLOW_RUN_SAVE: 'workflowRun:save',
+  WORKFLOW_RUN_LIST: 'workflowRun:list',
+  WORKFLOW_RUN_LIST_BY_TASK: 'workflowRun:listByTask'
 } as const
 
 export interface PermissionSuggestion {

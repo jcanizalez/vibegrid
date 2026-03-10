@@ -6,6 +6,8 @@ import {
   AppConfig,
   ProjectConfig,
   WorkflowDefinition,
+  WorkflowExecution,
+  NodeExecutionState,
   AgentCommandConfig,
   RemoteHost,
   TaskConfig,
@@ -53,7 +55,6 @@ function createSchema(): void {
   if (cols.some((c) => c.name === 'actions')) {
     d.exec('DROP TABLE workflows')
   }
-
   d.exec(`
     CREATE TABLE IF NOT EXISTS schema_meta (
       key TEXT PRIMARY KEY,
@@ -164,6 +165,35 @@ function createSchema(): void {
       agent_session_id TEXT,
       archived_at INTEGER NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS workflow_runs (
+      id TEXT PRIMARY KEY,
+      workflow_id TEXT NOT NULL,
+      started_at TEXT NOT NULL,
+      completed_at TEXT,
+      status TEXT NOT NULL DEFAULT 'running',
+      trigger_task_id TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS workflow_run_nodes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      run_id TEXT NOT NULL,
+      node_id TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending',
+      started_at TEXT,
+      completed_at TEXT,
+      session_id TEXT,
+      error TEXT,
+      logs TEXT,
+      task_id TEXT,
+      agent_session_id TEXT,
+      FOREIGN KEY (run_id) REFERENCES workflow_runs(id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_workflow_runs_workflow ON workflow_runs(workflow_id);
+    CREATE INDEX IF NOT EXISTS idx_workflow_runs_task ON workflow_runs(trigger_task_id);
+    CREATE INDEX IF NOT EXISTS idx_workflow_run_nodes_run ON workflow_run_nodes(run_id);
+    CREATE INDEX IF NOT EXISTS idx_workflow_run_nodes_task ON workflow_run_nodes(task_id);
   `)
 }
 
@@ -229,7 +259,7 @@ function loadProjects(d: Database.Database): ProjectConfig[] {
 }
 
 function loadWorkflows(d: Database.Database): WorkflowDefinition[] {
-  const rows = d.prepare('SELECT * FROM workflows').all() as Array<{
+  const rows = d.prepare('SELECT id, name, icon, icon_color, nodes, edges, enabled, last_run_at, last_run_status, stagger_delay_ms FROM workflows').all() as Array<{
     id: string; name: string; icon: string; icon_color: string
     nodes: string; edges: string; enabled: number
     last_run_at: string | null; last_run_status: string | null
@@ -563,4 +593,155 @@ export function listArchivedSessions(): Array<{
     agentSessionId: r.agent_session_id,
     archivedAt: r.archived_at
   }))
+}
+
+// ---------------------------------------------------------------------------
+// Workflow runs
+// ---------------------------------------------------------------------------
+
+const MAX_WORKFLOW_RUNS = 50
+
+export function saveWorkflowRun(execution: WorkflowExecution): void {
+  const d = getDb()
+
+  const run = d.transaction(() => {
+    d.prepare(
+      `INSERT OR REPLACE INTO workflow_runs (id, workflow_id, started_at, completed_at, status, trigger_task_id)
+       VALUES (?, ?, ?, ?, ?, ?)`
+    ).run(
+      execution.workflowId + ':' + execution.startedAt,
+      execution.workflowId,
+      execution.startedAt,
+      execution.completedAt ?? null,
+      execution.status,
+      execution.triggerTaskId ?? null
+    )
+
+    const runId = execution.workflowId + ':' + execution.startedAt
+
+    // Delete existing nodes for this run (for upsert behavior)
+    d.prepare('DELETE FROM workflow_run_nodes WHERE run_id = ?').run(runId)
+
+    const insertNode = d.prepare(
+      `INSERT INTO workflow_run_nodes (run_id, node_id, status, started_at, completed_at, session_id, error, logs, task_id, agent_session_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    )
+    for (const ns of execution.nodeStates) {
+      insertNode.run(
+        runId,
+        ns.nodeId,
+        ns.status,
+        ns.startedAt ?? null,
+        ns.completedAt ?? null,
+        ns.sessionId ?? null,
+        ns.error ?? null,
+        ns.logs ?? null,
+        ns.taskId ?? null,
+        ns.agentSessionId ?? null
+      )
+    }
+
+    // Trim old runs for this workflow
+    const count = (d.prepare('SELECT COUNT(*) as c FROM workflow_runs WHERE workflow_id = ?').get(execution.workflowId) as { c: number }).c
+    if (count > MAX_WORKFLOW_RUNS) {
+      d.prepare(
+        `DELETE FROM workflow_runs WHERE id IN (
+          SELECT id FROM workflow_runs WHERE workflow_id = ? ORDER BY started_at ASC LIMIT ?
+        )`
+      ).run(execution.workflowId, count - MAX_WORKFLOW_RUNS)
+    }
+  })
+
+  run()
+}
+
+export function listWorkflowRuns(workflowId: string, limit = 20): WorkflowExecution[] {
+  const d = getDb()
+
+  const rows = d.prepare(
+    'SELECT * FROM workflow_runs WHERE workflow_id = ? ORDER BY started_at DESC LIMIT ?'
+  ).all(workflowId, limit) as Array<{
+    id: string; workflow_id: string; started_at: string
+    completed_at: string | null; status: string; trigger_task_id: string | null
+  }>
+
+  return rows.map((r) => {
+    const nodeRows = d.prepare(
+      'SELECT * FROM workflow_run_nodes WHERE run_id = ?'
+    ).all(r.id) as Array<{
+      node_id: string; status: string; started_at: string | null
+      completed_at: string | null; session_id: string | null
+      error: string | null; logs: string | null
+      task_id: string | null; agent_session_id: string | null
+    }>
+
+    return {
+      workflowId: r.workflow_id,
+      startedAt: r.started_at,
+      ...(r.completed_at != null && { completedAt: r.completed_at }),
+      status: r.status as WorkflowExecution['status'],
+      ...(r.trigger_task_id != null && { triggerTaskId: r.trigger_task_id }),
+      nodeStates: nodeRows.map((n) => ({
+        nodeId: n.node_id,
+        status: n.status as NodeExecutionState['status'],
+        ...(n.started_at != null && { startedAt: n.started_at }),
+        ...(n.completed_at != null && { completedAt: n.completed_at }),
+        ...(n.session_id != null && { sessionId: n.session_id }),
+        ...(n.error != null && { error: n.error }),
+        ...(n.logs != null && { logs: n.logs }),
+        ...(n.task_id != null && { taskId: n.task_id }),
+        ...(n.agent_session_id != null && { agentSessionId: n.agent_session_id })
+      }))
+    }
+  })
+}
+
+export function listWorkflowRunsByTask(taskId: string, limit = 20): (WorkflowExecution & { workflowName?: string })[] {
+  const d = getDb()
+
+  // Find runs where the task triggered the workflow OR a node executed the task
+  const rows = d.prepare(`
+    SELECT DISTINCT wr.*, w.name as workflow_name
+    FROM workflow_runs wr
+    LEFT JOIN workflows w ON w.id = wr.workflow_id
+    WHERE wr.trigger_task_id = ?
+       OR wr.id IN (SELECT run_id FROM workflow_run_nodes WHERE task_id = ?)
+    ORDER BY wr.started_at DESC
+    LIMIT ?
+  `).all(taskId, taskId, limit) as Array<{
+    id: string; workflow_id: string; started_at: string
+    completed_at: string | null; status: string; trigger_task_id: string | null
+    workflow_name: string | null
+  }>
+
+  return rows.map((r) => {
+    const nodeRows = d.prepare(
+      'SELECT * FROM workflow_run_nodes WHERE run_id = ?'
+    ).all(r.id) as Array<{
+      node_id: string; status: string; started_at: string | null
+      completed_at: string | null; session_id: string | null
+      error: string | null; logs: string | null
+      task_id: string | null; agent_session_id: string | null
+    }>
+
+    return {
+      workflowId: r.workflow_id,
+      startedAt: r.started_at,
+      ...(r.completed_at != null && { completedAt: r.completed_at }),
+      status: r.status as WorkflowExecution['status'],
+      ...(r.trigger_task_id != null && { triggerTaskId: r.trigger_task_id }),
+      ...(r.workflow_name != null && { workflowName: r.workflow_name }),
+      nodeStates: nodeRows.map((n) => ({
+        nodeId: n.node_id,
+        status: n.status as NodeExecutionState['status'],
+        ...(n.started_at != null && { startedAt: n.started_at }),
+        ...(n.completed_at != null && { completedAt: n.completed_at }),
+        ...(n.session_id != null && { sessionId: n.session_id }),
+        ...(n.error != null && { error: n.error }),
+        ...(n.logs != null && { logs: n.logs }),
+        ...(n.task_id != null && { taskId: n.task_id }),
+        ...(n.agent_session_id != null && { agentSessionId: n.agent_session_id })
+      }))
+    }
+  })
 }

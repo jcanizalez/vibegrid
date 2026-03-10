@@ -1,5 +1,6 @@
 import { ipcMain, dialog, BrowserWindow } from 'electron'
 import { ptyManager } from './pty-manager'
+import { headlessManager } from './headless-manager'
 import { configManager } from './config-manager'
 import { sessionManager } from './session-persistence'
 import { scheduleLogManager } from './schedule-log'
@@ -9,7 +10,8 @@ import { detectIDEs, openInIDE } from './ide-detector'
 import { CreateTerminalPayload, IPC, ResizePayload, AppConfig, ArchivedSession, TerminalSession } from '../shared/types'
 import { listBranches, listRemoteBranches, getGitBranch, createWorktree, removeWorktree, listWorktrees, getGitDiffStat, getGitDiffFull, gitCommit, gitPush } from './git-utils'
 import { saveTaskImage, deleteTaskImage, getTaskImagePath, cleanupTaskImages } from './task-images'
-import { archiveSession, unarchiveSession, listArchivedSessions } from './database'
+import { archiveSession, unarchiveSession, listArchivedSessions, saveWorkflowRun, listWorkflowRuns, listWorkflowRunsByTask } from './database'
+import { WorkflowExecution } from '../shared/types'
 
 export interface IpcHandlerOptions {
   onSessionCreated?: (session: TerminalSession, payload: CreateTerminalPayload) => void
@@ -173,6 +175,28 @@ export function registerIpcHandlers(options?: IpcHandlerOptions): void {
 
   ipcMain.handle(IPC.SESSION_LIST_ARCHIVED, () =>
     listArchivedSessions()
+  )
+
+  // Headless sessions
+  ipcMain.handle(IPC.HEADLESS_CREATE, (_, payload: CreateTerminalPayload) =>
+    headlessManager.createHeadless(payload)
+  )
+
+  ipcMain.handle(IPC.HEADLESS_KILL, (_, id: string) =>
+    headlessManager.killHeadless(id)
+  )
+
+  // Workflow runs
+  ipcMain.handle(IPC.WORKFLOW_RUN_SAVE, (_, execution: WorkflowExecution) =>
+    saveWorkflowRun(execution)
+  )
+
+  ipcMain.handle(IPC.WORKFLOW_RUN_LIST, (_, workflowId: string, limit?: number) =>
+    listWorkflowRuns(workflowId, limit)
+  )
+
+  ipcMain.handle(IPC.WORKFLOW_RUN_LIST_BY_TASK, (_, taskId: string, limit?: number) =>
+    listWorkflowRunsByTask(taskId, limit)
   )
 
   // High-frequency fire-and-forget channels

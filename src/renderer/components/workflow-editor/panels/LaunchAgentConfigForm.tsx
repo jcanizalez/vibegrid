@@ -1,20 +1,50 @@
-import { LaunchAgentConfig, AgentType } from '../../../../shared/types'
+import { useRef } from 'react'
+import { LaunchAgentConfig, AgentType, TriggerConfig } from '../../../../shared/types'
 import { AgentIcon } from '../../AgentIcon'
 import { useAppStore } from '../../../stores'
+import { TEMPLATE_VARIABLES } from '../../../lib/template-vars'
 
 interface Props {
   config: LaunchAgentConfig
   onChange: (config: LaunchAgentConfig) => void
+  triggerType?: TriggerConfig['triggerType']
 }
 
 const AGENT_TYPES: AgentType[] = ['claude', 'copilot', 'codex', 'opencode', 'gemini']
+const EMPTY_PROJECTS: import('../../../../shared/types').ProjectConfig[] = []
+const EMPTY_TASKS: import('../../../../shared/types').TaskConfig[] = []
 
-export function LaunchAgentConfigForm({ config, onChange }: Props) {
-  const projects = useAppStore((s) => s.config?.projects || [])
-  const tasks = useAppStore((s) => s.config?.tasks || [])
+export function LaunchAgentConfigForm({ config, onChange, triggerType }: Props) {
+  const projects = useAppStore((s) => s.config?.projects ?? EMPTY_PROJECTS)
+  const tasks = useAppStore((s) => s.config?.tasks ?? EMPTY_TASKS)
   const projectTasks = tasks.filter((t) => t.projectName === config.projectName && t.status === 'todo')
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   const promptSource = config.taskId ? 'task' : config.taskFromQueue ? 'queue' : 'inline'
+  const isTaskTrigger = triggerType === 'taskCreated' || triggerType === 'taskStatusChanged'
+
+  const availableVars = isTaskTrigger
+    ? TEMPLATE_VARIABLES.filter((v) =>
+        v.category === 'task' || (v.category === 'trigger' && triggerType === 'taskStatusChanged')
+      )
+    : []
+
+  function insertVariable(varKey: string) {
+    const el = textareaRef.current
+    if (!el) {
+      onChange({ ...config, prompt: (config.prompt || '') + varKey })
+      return
+    }
+    const start = el.selectionStart
+    const end = el.selectionEnd
+    const current = config.prompt || ''
+    const newPrompt = current.slice(0, start) + varKey + current.slice(end)
+    onChange({ ...config, prompt: newPrompt })
+    requestAnimationFrame(() => {
+      el.selectionStart = el.selectionEnd = start + varKey.length
+      el.focus()
+    })
+  }
 
   return (
     <div className="space-y-4">
@@ -102,6 +132,23 @@ export function LaunchAgentConfigForm({ config, onChange }: Props) {
         </div>
       </div>
 
+      {/* Headless Mode */}
+      <div>
+        <label className={`flex items-center gap-2 text-[12px] cursor-pointer ${config.remoteHostId ? 'text-gray-600' : 'text-gray-400'}`}>
+          <input
+            type="checkbox"
+            checked={config.headless || false}
+            onChange={(e) => onChange({ ...config, headless: e.target.checked || undefined })}
+            disabled={!!config.remoteHostId}
+            className="rounded"
+          />
+          Run headless (no terminal)
+        </label>
+        <p className="text-[11px] text-gray-600 mt-1 ml-5">
+          Runs agent in background without a visible terminal
+        </p>
+      </div>
+
       {/* Prompt Source */}
       <div>
         <label className="text-[11px] text-gray-500 uppercase tracking-wider font-medium block mb-1.5">
@@ -127,15 +174,41 @@ export function LaunchAgentConfigForm({ config, onChange }: Props) {
         </div>
 
         {promptSource === 'inline' && (
-          <textarea
-            value={config.prompt || ''}
-            onChange={(e) => onChange({ ...config, prompt: e.target.value || undefined })}
-            placeholder="Enter prompt..."
-            rows={4}
-            className="w-full px-3 py-2 text-[13px] bg-white/[0.06] border border-white/[0.1] rounded-md
-                       text-white placeholder:text-gray-600 focus:outline-none focus:border-blue-500/50
-                       resize-none"
-          />
+          <>
+            <textarea
+              ref={textareaRef}
+              value={config.prompt || ''}
+              onChange={(e) => onChange({ ...config, prompt: e.target.value || undefined })}
+              placeholder="Enter prompt..."
+              rows={4}
+              className="w-full px-3 py-2 text-[13px] bg-white/[0.06] border border-white/[0.1] rounded-md
+                         text-white placeholder:text-gray-600 focus:outline-none focus:border-blue-500/50
+                         resize-none"
+            />
+
+            {/* Template variable chips */}
+            {availableVars.length > 0 && (
+              <div className="mt-2">
+                <p className="text-[10px] text-gray-600 mb-1.5">
+                  Variables — click to insert (resolve on task trigger)
+                </p>
+                <div className="flex flex-wrap gap-1">
+                  {availableVars.map((v) => (
+                    <button
+                      key={v.key}
+                      onClick={() => insertVariable(v.key)}
+                      className="px-1.5 py-0.5 text-[10px] rounded bg-purple-500/10 text-purple-400
+                                 border border-purple-500/20 hover:bg-purple-500/20 transition-colors
+                                 font-mono"
+                      title={v.key}
+                    >
+                      {v.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
         )}
 
         {promptSource === 'task' && (

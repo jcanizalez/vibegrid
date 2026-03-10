@@ -40,8 +40,10 @@ function switchTriggerType(type: TriggerConfig['triggerType']): TriggerConfig {
   }
 }
 
+const EMPTY_PROJECTS: import('../../../../shared/types').ProjectConfig[] = []
+
 export function TriggerConfigForm({ config, onChange }: Props) {
-  const projects = useAppStore((s) => s.config?.projects || [])
+  const projects = useAppStore((s) => s.config?.projects ?? EMPTY_PROJECTS)
 
   return (
     <div className="space-y-4">

@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import { CreateTerminalPayload, ResizePayload, AppConfig, RecentSession, IPC, GitDiffStat, GitDiffResult, GitCommitPayload, GitCommitResult, ScheduleLogEntry, ArchivedSession } from '../shared/types'
+import { CreateTerminalPayload, ResizePayload, AppConfig, RecentSession, IPC, GitDiffStat, GitDiffResult, GitCommitPayload, GitCommitResult, ScheduleLogEntry, ArchivedSession, HeadlessSession, WorkflowExecution } from '../shared/types'
 
 const api = {
   createTerminal: (payload: CreateTerminalPayload) =>
@@ -121,6 +121,25 @@ const api = {
   listArchivedSessions: (): Promise<ArchivedSession[]> =>
     ipcRenderer.invoke(IPC.SESSION_LIST_ARCHIVED),
 
+  // Headless sessions
+  createHeadlessSession: (payload: CreateTerminalPayload): Promise<HeadlessSession> =>
+    ipcRenderer.invoke(IPC.HEADLESS_CREATE, payload),
+
+  killHeadlessSession: (id: string): Promise<void> =>
+    ipcRenderer.invoke(IPC.HEADLESS_KILL, id),
+
+  onHeadlessData: (callback: (event: { id: string; data: string }) => void) => {
+    const listener = (_: Electron.IpcRendererEvent, event: { id: string; data: string }): void => callback(event)
+    ipcRenderer.on(IPC.HEADLESS_DATA, listener)
+    return () => { ipcRenderer.removeListener(IPC.HEADLESS_DATA, listener) }
+  },
+
+  onHeadlessExit: (callback: (event: { id: string; exitCode: number }) => void) => {
+    const listener = (_: Electron.IpcRendererEvent, event: { id: string; exitCode: number }): void => callback(event)
+    ipcRenderer.on(IPC.HEADLESS_EXIT, listener)
+    return () => { ipcRenderer.removeListener(IPC.HEADLESS_EXIT, listener) }
+  },
+
   onWorktreeCleanup: (callback: (session: { id: string; projectPath: string; worktreePath: string }) => void) => {
     const listener = (_: Electron.IpcRendererEvent, session: { id: string; projectPath: string; worktreePath: string }): void => callback(session)
     ipcRenderer.on(IPC.WORKTREE_CONFIRM_CLEANUP, listener)
@@ -160,6 +179,16 @@ const api = {
     ipcRenderer.on('widget:select-terminal', listener)
     return () => { ipcRenderer.removeListener('widget:select-terminal', listener) }
   },
+
+  // Workflow runs
+  saveWorkflowRun: (execution: WorkflowExecution): Promise<void> =>
+    ipcRenderer.invoke(IPC.WORKFLOW_RUN_SAVE, execution),
+
+  listWorkflowRuns: (workflowId: string, limit?: number): Promise<WorkflowExecution[]> =>
+    ipcRenderer.invoke(IPC.WORKFLOW_RUN_LIST, workflowId, limit),
+
+  listWorkflowRunsByTask: (taskId: string, limit?: number): Promise<(WorkflowExecution & { workflowName?: string })[]> =>
+    ipcRenderer.invoke(IPC.WORKFLOW_RUN_LIST_BY_TASK, taskId, limit),
 
   // Auto-update
   onUpdateDownloaded: (callback: (info: { version: string }) => void) => {

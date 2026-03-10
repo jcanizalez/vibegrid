@@ -2,6 +2,7 @@ import { app, BrowserWindow, ipcMain, nativeImage, screen, globalShortcut } from
 import path from 'node:path'
 import { registerIpcHandlers } from './ipc-handlers'
 import { ptyManager } from './pty-manager'
+import { headlessManager } from './headless-manager'
 import { configManager } from './config-manager'
 import { sessionManager } from './session-persistence'
 import { scheduler } from './scheduler'
@@ -13,6 +14,12 @@ import { hookStatusMapper } from './hook-status-mapper'
 import { updateManager } from './update-manager'
 import { VibeGridMcpServer } from './mcp-server'
 import { IPC, WidgetAgentInfo, PermissionRequestInfo } from '../shared/types'
+
+// Prevent EPIPE and other uncaught errors from crashing the main process
+process.on('uncaughtException', (err) => {
+  if ((err as NodeJS.ErrnoException).code === 'EPIPE') return
+  console.error('[main] uncaughtException:', err)
+})
 
 let mainWindow: BrowserWindow | null = null
 let widgetWindow: BrowserWindow | null = null
@@ -51,12 +58,14 @@ function createWindow(): void {
   }
 
   ptyManager.setMainWindow(mainWindow)
+  headlessManager.setMainWindow(mainWindow)
   scheduler.setMainWindow(mainWindow)
 
   // Load config and sync agent commands + remote hosts + schedules
   const config = configManager.loadConfig()
   if (config.agentCommands) {
     ptyManager.setAgentCommands(config.agentCommands)
+    headlessManager.setAgentCommands(config.agentCommands)
   }
   ptyManager.setRemoteHosts(config.remoteHosts ?? [])
   scheduler.syncSchedules(config.workflows ?? [])
@@ -73,6 +82,7 @@ function createWindow(): void {
   configManager.onConfigChanged((updatedConfig) => {
     if (updatedConfig.agentCommands) {
       ptyManager.setAgentCommands(updatedConfig.agentCommands)
+      headlessManager.setAgentCommands(updatedConfig.agentCommands)
     }
     ptyManager.setRemoteHosts(updatedConfig.remoteHosts ?? [])
     scheduler.syncSchedules(updatedConfig.workflows ?? [])
@@ -450,6 +460,7 @@ app.on('before-quit', () => {
   hookStatusMapper.clear()
   updateManager.stop()
   scheduler.stopAll()
+  headlessManager.killAll()
   ptyManager.killAll()
   configManager.close()
 })

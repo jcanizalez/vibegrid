@@ -2,11 +2,12 @@ import * as pty from 'node-pty'
 import crypto from 'node:crypto'
 import os from 'node:os'
 import { EventEmitter } from 'node:events'
-import { execFileSync, execSync } from 'node:child_process'
+import { execSync } from 'node:child_process'
 import { BrowserWindow } from 'electron'
 import { AgentType, AgentStatus, AgentCommandConfig, CreateTerminalPayload, IPC, TerminalSession, RemoteHost } from '../shared/types'
 import { getGitBranch, checkoutBranch, createWorktree } from './git-utils'
 import { DEFAULT_AGENT_COMMANDS } from '../shared/agent-defaults'
+import { buildAgentLaunchLine as buildLaunchLine } from './agent-launch'
 
 function getUserShellEnv(): Record<string, string> {
   if (process.platform === 'win32') return { ...process.env } as Record<string, string>
@@ -32,16 +33,6 @@ function getUserShellEnv(): Record<string, string> {
 
 const resolvedEnv = getUserShellEnv()
 
-function commandExists(cmd: string): boolean {
-  try {
-    const bin = process.platform === 'win32' ? 'where' : 'which'
-    execFileSync(bin, [cmd], { stdio: 'pipe', timeout: 3000, env: resolvedEnv })
-    return true
-  } catch {
-    return false
-  }
-}
-
 function getDefaultShell(): string {
   if (process.platform === 'win32') {
     return process.env.COMSPEC || 'powershell.exe'
@@ -59,11 +50,15 @@ const SENSITIVE_ENV_PREFIXES = [
   'SECRET_', 'PRIVATE_KEY', 'NPM_TOKEN', 'NODE_AUTH_TOKEN'
 ]
 
+// Env vars to strip so agent CLIs don't refuse to launch (e.g. nested session detection)
+const STRIP_ENV_KEYS = ['CLAUDECODE']
+
 export function getSafeEnv(): Record<string, string> {
   const env: Record<string, string> = {}
   for (const [key, val] of Object.entries(resolvedEnv)) {
     if (val === undefined) continue
     if (SENSITIVE_ENV_PREFIXES.some((p) => key.toUpperCase().startsWith(p))) continue
+    if (STRIP_ENV_KEYS.includes(key)) continue
     env[key] = val
   }
   return env
@@ -95,61 +90,8 @@ class PtyManager extends EventEmitter {
     }
   }
 
-  private resolveAgentCommand(config: AgentCommandConfig): { command: string; args: string[] } {
-    if (commandExists(config.command)) {
-      return { command: config.command, args: config.args }
-    }
-    if (config.fallbackCommand && commandExists(config.fallbackCommand)) {
-      return { command: config.fallbackCommand, args: config.fallbackArgs ?? [] }
-    }
-    // Return original even if not found — let it fail visibly in the terminal
-    return { command: config.command, args: config.args }
-  }
-
   private buildAgentLaunchLine(payload: CreateTerminalPayload): string {
-    const cmdConfig = this.agentCommands[payload.agentType] || DEFAULT_AGENT_COMMANDS[payload.agentType]
-    const cmd = this.resolveAgentCommand(cmdConfig)
-    let launchLine = [cmd.command, ...cmd.args].join(' ')
-    if (payload.resumeSessionId) {
-      switch (payload.agentType) {
-        case 'claude':   // claude --resume <sessionId>
-          launchLine += ` --resume ${payload.resumeSessionId}`
-          break
-        case 'copilot':  // copilot --resume <sessionId>
-          launchLine += ` --resume ${payload.resumeSessionId}`
-          break
-        case 'codex':    // codex resume <sessionId>
-          launchLine = `${cmd.command} resume ${payload.resumeSessionId}`
-          break
-        case 'opencode': // opencode --session <sessionId>
-          launchLine += ` --session ${payload.resumeSessionId}`
-          break
-        case 'gemini':   // gemini --resume latest (no UUID support, index-based)
-          launchLine += ` --resume latest`
-          break
-      }
-    }
-
-    // Append initial prompt as CLI argument
-    if (payload.initialPrompt) {
-      const escaped = payload.initialPrompt.replace(/'/g, "'\\''")
-      switch (payload.agentType) {
-        case 'copilot':  // copilot -i "prompt" (interactive + auto-execute)
-          launchLine += ` -i '${escaped}'`
-          break
-        case 'gemini':   // gemini -i "prompt" (interactive + auto-execute)
-          launchLine += ` -i '${escaped}'`
-          break
-        case 'opencode': // opencode --prompt "prompt"
-          launchLine += ` --prompt '${escaped}'`
-          break
-        default:         // claude "prompt", codex "prompt" (positional)
-          launchLine += ` '${escaped}'`
-          break
-      }
-    }
-
-    return launchLine
+    return buildLaunchLine(payload, this.agentCommands, getSafeEnv())
   }
 
   createPty(payload: CreateTerminalPayload): TerminalSession {

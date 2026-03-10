@@ -165,10 +165,10 @@ export function detachTerminal(terminalId: string, container: HTMLDivElement): v
 /**
  * Fit the terminal to its current container and notify the pty of new size.
  */
-export function fitTerminal(terminalId: string): void {
+export function fitTerminal(terminalId: string, preState?: TerminalViewportState | null): void {
   const entry = registry.get(terminalId)
   if (!entry || !entry.currentContainer) return
-  const viewportState = getViewportState(terminalId)
+  const viewportState = preState !== undefined ? preState : getViewportState(terminalId)
   try {
     entry.fitAddon.fit()
     if (viewportState) restoreViewportState(terminalId, viewportState)

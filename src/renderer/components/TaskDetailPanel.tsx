@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useAppStore } from '../stores'
-import { AgentType, GitDiffResult } from '../../shared/types'
+import { AgentType, GitDiffResult, WorkflowExecution } from '../../shared/types'
 import { MarkdownPreview, TASK_TEMPLATE } from './MarkdownEditor'
 import { RichMarkdownEditor } from './rich-editor/RichMarkdownEditor'
 import { AgentIcon } from './AgentIcon'
@@ -12,8 +12,10 @@ import {
   X, Play, CheckCircle2, XCircle, RotateCcw, Terminal, Pencil, Trash2,
   GitBranch, Clock, Calendar, ImageIcon, ImagePlus, FileCode, RefreshCw, Loader2,
   GitCommitHorizontal, Send, MessageSquare, ChevronDown, ChevronRight, FolderGit2,
-  Save, ArrowLeft
+  Save, ArrowLeft, Workflow
 } from 'lucide-react'
+import { RunEntry } from './workflow-editor/RunEntry'
+import { LogReplayModal } from './LogReplayModal'
 import { ConfirmPopover } from './ConfirmPopover'
 
 interface DiffComment {
@@ -42,6 +44,9 @@ function formatReviewFeedback(comments: DiffComment[]): string {
   return feedback
 }
 
+const EMPTY_TASKS: import('../../shared/types').TaskConfig[] = []
+const EMPTY_WORKFLOWS: import('../../shared/types').WorkflowDefinition[] = []
+
 export function TaskDetailPanel() {
   const selectedTaskId = useAppStore((s) => s.selectedTaskId)
   const isCreateMode = selectedTaskId === 'new'
@@ -63,6 +68,8 @@ export function TaskDetailPanel() {
   const addTerminal = useAppStore((s) => s.addTerminal)
   const setFocusedTerminal = useAppStore((s) => s.setFocusedTerminal)
   const terminals = useAppStore((s) => s.terminals)
+  const allTasks = useAppStore((s) => s.config?.tasks ?? EMPTY_TASKS)
+  const workflows = useAppStore((s) => s.config?.workflows ?? EMPTY_WORKFLOWS)
 
   const [isEditing, setIsEditing] = useState(false)
   const [panelWidth, setPanelWidth] = useState(420)
@@ -73,6 +80,8 @@ export function TaskDetailPanel() {
   const [comments, setComments] = useState<DiffComment[]>([])
   const [commentingLine, setCommentingLine] = useState<{ filePath: string; lineIndex: number; lineContent: string } | null>(null)
   const [showDiffSection, setShowDiffSection] = useState(true)
+  const [showWorkflowRuns, setShowWorkflowRuns] = useState(true)
+  const [fullOutputLogs, setFullOutputLogs] = useState<string | null>(null)
   const [taskImagePaths, setTaskImagePaths] = useState<Map<string, string>>(new Map())
 
   // Form state (edit/create modes)
@@ -93,6 +102,13 @@ export function TaskDetailPanel() {
   const showDiff = !inEditOrCreate && (task?.status === 'in_review' || task?.status === 'in_progress')
   const sessionIsLive = !!(task?.assignedSessionId && terminals.has(task.assignedSessionId))
   const canResume = !sessionIsLive && !!task?.agentSessionId && !!task?.assignedAgent
+
+  // Load workflow runs related to this task from the database
+  const [relatedRuns, setRelatedRuns] = useState<(WorkflowExecution & { workflowName?: string })[]>([])
+  useEffect(() => {
+    if (!task) { setRelatedRuns([]); return }
+    window.api.listWorkflowRunsByTask(task.id, 20).then(setRelatedRuns)
+  }, [task?.id])
 
   // Initialize form when entering edit mode
   useEffect(() => {
@@ -232,6 +248,26 @@ export function TaskDetailPanel() {
     if (task.status === 'in_progress') {
       startTask(task.id, session.id, task.assignedAgent as AgentType)
     }
+    setFocusedTerminal(session.id)
+  }
+
+  const handleRunResumeSession = async (
+    agentSessionId: string,
+    agentType: AgentType,
+    projectName: string,
+    projectPath: string,
+    branch?: string,
+    useWorktree?: boolean
+  ) => {
+    const session = await window.api.createTerminal({
+      agentType,
+      projectName,
+      projectPath,
+      branch,
+      useWorktree,
+      resumeSessionId: agentSessionId
+    })
+    addTerminal(session)
     setFocusedTerminal(session.id)
   }
 
@@ -745,6 +781,40 @@ export function TaskDetailPanel() {
               </div>
             )}
 
+            {/* Workflow Runs section */}
+            {relatedRuns.length > 0 && (
+              <div className="border-b border-white/[0.06]">
+                <button
+                  onClick={() => setShowWorkflowRuns(!showWorkflowRuns)}
+                  className="w-full px-4 py-2.5 flex items-center gap-2 text-[11px] font-medium text-gray-500
+                             uppercase tracking-wider hover:text-gray-300 transition-colors"
+                >
+                  {showWorkflowRuns ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
+                  <Workflow size={12} strokeWidth={2} />
+                  Workflow Runs ({relatedRuns.length})
+                </button>
+
+                {showWorkflowRuns && (
+                  <div className="px-3 pb-3 space-y-2">
+                    {relatedRuns.map((run, i) => {
+                      const wf = workflows.find((w) => w.id === run.workflowId)
+                      return (
+                        <RunEntry
+                          key={`${run.workflowId}-${run.startedAt}-${i}`}
+                          execution={run}
+                          nodes={wf?.nodes || []}
+                          workflowName={run.workflowName || wf?.name}
+                          tasks={allTasks}
+                          onViewFullOutput={setFullOutputLogs}
+                          onResumeSession={handleRunResumeSession}
+                        />
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Diff review section */}
             {showDiff && (
               <div className="border-b border-white/[0.06]">
@@ -878,6 +948,13 @@ export function TaskDetailPanel() {
             fetchDiff()
             setShowCommitDialog(false)
           }}
+        />
+      )}
+
+      {fullOutputLogs !== null && (
+        <LogReplayModal
+          logs={fullOutputLogs}
+          onClose={() => setFullOutputLogs(null)}
         />
       )}
     </div>

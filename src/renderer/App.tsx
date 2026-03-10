@@ -230,6 +230,7 @@ export function App() {
               >
                 <Monitor size={13} strokeWidth={2} />
                 Sessions
+                <KbdHint shortcutId="view-sessions" />
               </button>
               <button
                 onClick={() => setMainViewMode('tasks')}
@@ -239,14 +240,9 @@ export function App() {
               >
                 <ListTodo size={13} strokeWidth={2} />
                 Tasks
+                <KbdHint shortcutId="view-tasks" />
               </button>
             </div>
-            <span className="text-sm text-gray-400">
-              {mainViewMode === 'sessions'
-                ? `${terminals.size} agent${terminals.size !== 1 ? 's' : ''}`
-                : `${taskCount} task${taskCount !== 1 ? 's' : ''}`
-              }
-            </span>
           </div>
           <div className="flex items-center gap-3 titlebar-no-drag">
             {mainViewMode === 'sessions' ? (

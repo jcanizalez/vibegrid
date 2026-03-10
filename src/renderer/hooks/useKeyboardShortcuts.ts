@@ -161,6 +161,20 @@ export function useKeyboardShortcuts() {
         return
       }
 
+      // Cmd+S — sessions view
+      if (modKey(e) && !e.shiftKey && e.key.toLowerCase() === 's') {
+        e.preventDefault()
+        state.setMainViewMode('sessions')
+        return
+      }
+
+      // Cmd+T — tasks view
+      if (modKey(e) && !e.shiftKey && e.key.toLowerCase() === 't') {
+        e.preventDefault()
+        state.setMainViewMode('tasks')
+        return
+      }
+
       // Cmd+1-5 — status filters
       if (modKey(e) && e.key >= '1' && e.key <= '5') {
         e.preventDefault()

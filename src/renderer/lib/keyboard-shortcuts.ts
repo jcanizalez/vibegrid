@@ -4,6 +4,7 @@ export interface ShortcutDef {
   id: string
   key: string
   meta?: boolean
+  shift?: boolean
   display: string
   requireNoFocus?: boolean
   category?: ShortcutCategory
@@ -29,6 +30,8 @@ export const SHORTCUTS: ShortcutDef[] = [
   { id: 'settings', key: ',', meta: true, display: `${MOD},`, category: 'view', description: 'Settings' },
   { id: 'toggle-sidebar', key: 'b', meta: true, display: `${MOD}B`, category: 'view', description: 'Toggle sidebar' },
   { id: 'toggle-terminal', key: '`', display: 'Ctrl+`', category: 'view', description: 'Toggle terminal panel' },
+  { id: 'view-sessions', key: 's', meta: true, display: `${MOD}S`, category: 'view', description: 'Sessions view' },
+  { id: 'view-tasks', key: 't', meta: true, display: `${MOD}T`, category: 'view', description: 'Tasks view' },
 
   // Filters
   { id: 'filter-all', key: '1', meta: true, display: `${MOD}1`, category: 'filter', description: 'Show all' },

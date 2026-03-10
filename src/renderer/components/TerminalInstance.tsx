@@ -18,13 +18,14 @@ export function TerminalInstance({ terminalId, isFocused }: Props) {
     const el = containerRef.current
     if (!el) return
 
-    const hasExistingViewport = getViewportState(terminalId) !== null
+    // Capture viewport state BEFORE attaching — DOM move resets xterm's viewport
+    const savedViewport = getViewportState(terminalId)
     attachTerminal(terminalId, el)
 
     // Fit after a frame so the container has dimensions
     requestAnimationFrame(() => {
-      fitTerminal(terminalId)
-      if (!hasExistingViewport) scrollToBottom(terminalId)
+      fitTerminal(terminalId, savedViewport)
+      if (!savedViewport) scrollToBottom(terminalId)
       if (isFocused) {
         focusTerminal(terminalId)
       }

@@ -1,17 +1,19 @@
-import { useState, useCallback, useEffect, useMemo } from 'react'
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { motion } from 'framer-motion'
-import { ArrowLeft, Save, Play, Trash2 } from 'lucide-react'
+import { ArrowLeft, Save, Play, Trash2, History } from 'lucide-react'
 import { useAppStore } from '../../stores'
 import {
   WorkflowDefinition,
   WorkflowNode,
   WorkflowEdge,
   TriggerConfig,
-  LaunchAgentConfig
+  LaunchAgentConfig,
+  AgentType
 } from '../../../shared/types'
 import { WorkflowCanvas } from './WorkflowCanvas'
 import { NodePalette } from './panels/NodePalette'
 import { NodeConfigPanel } from './panels/NodeConfigPanel'
+import { RunHistoryPanel } from './panels/RunHistoryPanel'
 import {
   createTriggerNode,
   createLaunchAgentNode,
@@ -24,6 +26,8 @@ import { executeWorkflow } from '../../lib/workflow-execution'
 const ICON_MAP: Record<string, any> = {}
 // We reuse the same icon approach as sidebar — icon name stored as string
 
+const EMPTY_TASKS: import('../../../shared/types').TaskConfig[] = []
+
 export function WorkflowEditor() {
   const isOpen = useAppStore((s) => s.isWorkflowEditorOpen)
   const editingId = useAppStore((s) => s.editingWorkflowId)
@@ -35,6 +39,10 @@ export function WorkflowEditor() {
   const existingWorkflow = useAppStore((s) =>
     editingId ? (s.config?.workflows || []).find((w) => w.id === editingId) : null
   )
+  const tasks = useAppStore((s) => s.config?.tasks ?? EMPTY_TASKS)
+  const addTerminal = useAppStore((s) => s.addTerminal)
+  const setFocusedTerminal = useAppStore((s) => s.setFocusedTerminal)
+  const setSelectedTaskId = useAppStore((s) => s.setSelectedTaskId)
 
   const [name, setName] = useState('New Workflow')
   const [icon, setIcon] = useState('Zap')
@@ -44,6 +52,9 @@ export function WorkflowEditor() {
   const [enabled, setEnabled] = useState(true)
   const [staggerDelayMs, setStaggerDelayMs] = useState<number | undefined>(undefined)
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
+  const [showRunHistory, setShowRunHistory] = useState(false)
+  const [executionHistory, setExecutionHistory] = useState<import('../../../shared/types').WorkflowExecution[]>([])
+  const loadedRunsForId = useRef<string | null>(null)
 
   const selectedNode = useMemo(
     () => nodes.find((n) => n.id === selectedNodeId) || null,
@@ -51,6 +62,25 @@ export function WorkflowEditor() {
   )
 
   const hasTrigger = nodes.some((n) => n.type === 'trigger')
+
+  // Compute the current trigger type from nodes
+  const triggerType = useMemo(() => {
+    const triggerNode = nodes.find((n) => n.type === 'trigger')
+    if (!triggerNode) return undefined
+    return (triggerNode.config as TriggerConfig).triggerType
+  }, [nodes])
+
+  // Load execution history from database
+  useEffect(() => {
+    if (editingId && isOpen && loadedRunsForId.current !== editingId) {
+      loadedRunsForId.current = editingId
+      window.api.listWorkflowRuns(editingId, 20).then(setExecutionHistory)
+    }
+    if (!isOpen) {
+      loadedRunsForId.current = null
+      setExecutionHistory([])
+    }
+  }, [editingId, isOpen])
 
   // Load existing workflow when editing
   useEffect(() => {
@@ -74,12 +104,14 @@ export function WorkflowEditor() {
       setStaggerDelayMs(undefined)
     }
     setSelectedNodeId(null)
+    setShowRunHistory(false)
   }, [existingWorkflow, editingId, isOpen])
 
   const handleClose = useCallback(() => {
     setOpen(false)
     setEditingId(null)
     setSelectedNodeId(null)
+    setShowRunHistory(false)
   }, [setOpen, setEditingId])
 
   const handleSave = useCallback(() => {
@@ -123,7 +155,7 @@ export function WorkflowEditor() {
     }
     handleClose()
     await executeWorkflow(workflow)
-  }, [editingId, name, icon, iconColor, nodes, edges, enabled, staggerDelayMs, updateWorkflow, addWorkflow, handleClose])
+  }, [editingId, name, icon, iconColor, nodes, edges, enabled, staggerDelayMs, existingWorkflow, updateWorkflow, addWorkflow, handleClose])
 
   const handleDelete = useCallback(() => {
     if (editingId) {
@@ -170,6 +202,7 @@ export function WorkflowEditor() {
 
   const handleNodeClick = useCallback((nodeId: string) => {
     setSelectedNodeId(nodeId || null)
+    setShowRunHistory(false)
   }, [])
 
   const handleNodeConfigChange = useCallback((nodeId: string, config: WorkflowNode['config']) => {
@@ -190,6 +223,32 @@ export function WorkflowEditor() {
     setEdges(result.edges)
     setSelectedNodeId(null)
   }, [nodes, edges])
+
+  const handleResumeSession = useCallback(async (
+    agentSessionId: string,
+    agentType: AgentType,
+    projectName: string,
+    projectPath: string,
+    branch?: string,
+    useWorktree?: boolean
+  ) => {
+    const session = await window.api.createTerminal({
+      agentType,
+      projectName,
+      projectPath,
+      branch,
+      useWorktree,
+      resumeSessionId: agentSessionId
+    })
+    addTerminal(session)
+    setFocusedTerminal(session.id)
+    handleClose()
+  }, [addTerminal, setFocusedTerminal, handleClose])
+
+  const handleClickTask = useCallback((taskId: string) => {
+    setSelectedTaskId(taskId)
+    handleClose()
+  }, [setSelectedTaskId, handleClose])
 
   if (!isOpen) return null
 
@@ -256,6 +315,24 @@ export function WorkflowEditor() {
               Delete
             </button>
           )}
+
+          {/* Run History toggle */}
+          {editingId && executionHistory.length > 0 && (
+            <button
+              onClick={() => {
+                setShowRunHistory(!showRunHistory)
+                if (!showRunHistory) setSelectedNodeId(null)
+              }}
+              className={`px-3 py-1.5 text-[12px] rounded-md transition-colors flex items-center gap-1.5
+                         ${showRunHistory
+                           ? 'text-purple-400 bg-purple-500/20 hover:bg-purple-500/30'
+                           : 'text-gray-400 hover:text-gray-300 bg-white/[0.06] hover:bg-white/[0.1]'}`}
+            >
+              <History size={13} />
+              Runs ({executionHistory.length})
+            </button>
+          )}
+
           <button
             onClick={handleRun}
             className="px-3 py-1.5 text-[12px] text-green-400 hover:text-green-300
@@ -277,7 +354,7 @@ export function WorkflowEditor() {
         </div>
       </div>
 
-      {/* Main content: palette + canvas + config panel */}
+      {/* Main content: palette + canvas + config/history panel */}
       <div className="flex-1 flex overflow-hidden titlebar-no-drag">
         <NodePalette
           onAddTrigger={handleAddTrigger}
@@ -293,13 +370,25 @@ export function WorkflowEditor() {
           selectedNodeId={selectedNodeId}
         />
 
-        {selectedNode && (
+        {showRunHistory && (
+          <RunHistoryPanel
+            executions={executionHistory}
+            nodes={nodes}
+            tasks={tasks}
+            onClose={() => setShowRunHistory(false)}
+            onClickTask={handleClickTask}
+            onResumeSession={handleResumeSession}
+          />
+        )}
+
+        {selectedNode && !showRunHistory && (
           <NodeConfigPanel
             node={selectedNode}
             onChange={handleNodeConfigChange}
             onLabelChange={handleNodeLabelChange}
             onDelete={handleDeleteNode}
             onClose={() => setSelectedNodeId(null)}
+            triggerType={triggerType}
           />
         )}
       </div>

@@ -2,7 +2,8 @@ import {
   WorkflowDefinition,
   TriggerConfig,
   TaskConfig,
-  TaskStatus
+  TaskStatus,
+  WorkflowExecutionContext
 } from '../../shared/types'
 import { executeWorkflow } from './workflow-execution'
 import { useAppStore } from '../stores'
@@ -19,13 +20,24 @@ function getTriggerConfig(wf: WorkflowDefinition): TriggerConfig | null {
  */
 export function fireTaskCreatedTrigger(task: TaskConfig): void {
   const workflows = (useAppStore.getState().config?.workflows || []).filter((wf) => wf.enabled)
+  console.log(`[triggers] fireTaskCreatedTrigger: task="${task.title}" project="${task.projectName}" workflows=${workflows.length}`)
 
   for (const wf of workflows) {
     const trigger = getTriggerConfig(wf)
-    if (!trigger || trigger.triggerType !== 'taskCreated') continue
-    if (trigger.projectFilter && trigger.projectFilter !== task.projectName) continue
+    if (!trigger || trigger.triggerType !== 'taskCreated') {
+      console.log(`[triggers] skip "${wf.name}": triggerType=${trigger?.triggerType}`)
+      continue
+    }
+    if (trigger.projectFilter && trigger.projectFilter !== task.projectName) {
+      console.log(`[triggers] skip "${wf.name}": projectFilter=${trigger.projectFilter} != ${task.projectName}`)
+      continue
+    }
 
-    executeWorkflow(wf)
+    console.log(`[triggers] executing "${wf.name}" for task "${task.title}"`)
+    executeWorkflow(wf, {
+      task,
+      trigger: { type: 'taskCreated' }
+    }).catch((err) => console.error(`[triggers] executeWorkflow error:`, err))
   }
 }
 
@@ -49,6 +61,10 @@ export function fireTaskStatusChangedTrigger(
     if (trigger.fromStatus && trigger.fromStatus !== fromStatus) continue
     if (trigger.toStatus && trigger.toStatus !== toStatus) continue
 
-    executeWorkflow(wf)
+    const context: WorkflowExecutionContext = {
+      task,
+      trigger: { type: 'taskStatusChanged', fromStatus, toStatus }
+    }
+    executeWorkflow(wf, context)
   }
 }
