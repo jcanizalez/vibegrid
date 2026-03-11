@@ -1,14 +1,14 @@
 import { useState } from 'react'
+import { ConfirmPopover } from './ConfirmPopover'
 
 interface Props {
   onClose: () => void
   onMinimize: () => void
   onExpand: () => void
   expanded?: boolean
-  confirmClose?: boolean
 }
 
-export function TrafficLights({ onClose, onMinimize, onExpand, expanded, confirmClose }: Props) {
+export function TrafficLights({ onClose, onMinimize, onExpand, expanded }: Props) {
   const [hovered, setHovered] = useState(false)
 
   return (
@@ -18,19 +18,24 @@ export function TrafficLights({ onClose, onMinimize, onExpand, expanded, confirm
       onMouseLeave={() => setHovered(false)}
     >
       {/* Red — Close/Kill */}
-      <button
-        onClick={(e) => { e.stopPropagation(); onClose() }}
-        className={`traffic-light-dot ${confirmClose ? 'bg-[#ff5f57] animate-pulse' : 'bg-[#ff5f57]'}`}
-        title={confirmClose ? 'Click again to kill' : 'Kill'}
-        aria-label={confirmClose ? 'Confirm kill' : 'Close session'}
+      <ConfirmPopover
+        message="Close this session?"
+        confirmLabel="Close"
+        onConfirm={onClose}
       >
-        {(hovered || confirmClose) && (
-          <svg width="6" height="6" viewBox="0 0 24 24" fill="none"
-               stroke="rgba(80,0,0,0.8)" strokeWidth="4" strokeLinecap="round">
-            <path d="M18 6L6 18M6 6l12 12" />
-          </svg>
-        )}
-      </button>
+        <button
+          className="traffic-light-dot bg-[#ff5f57]"
+          title="Close session"
+          aria-label="Close session"
+        >
+          {hovered && (
+            <svg width="6" height="6" viewBox="0 0 24 24" fill="none"
+                 stroke="rgba(80,0,0,0.8)" strokeWidth="4" strokeLinecap="round">
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+          )}
+        </button>
+      </ConfirmPopover>
 
       {/* Yellow — Minimize (disabled when expanded, like macOS fullscreen) */}
       <button

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useAppStore } from '../stores'
 import { useVisibleTerminals } from '../hooks/useVisibleTerminals'
 import { AgentIcon } from './AgentIcon'
@@ -7,6 +7,7 @@ import { PromptLauncher } from './PromptLauncher'
 import { getDisplayName } from '../lib/terminal-display'
 import { destroyTerminal } from '../lib/terminal-registry'
 import { AgentStatus } from '../../shared/types'
+import { ConfirmPopover } from './ConfirmPopover'
 import { toast } from './Toast'
 
 const STATUS_DOT: Record<AgentStatus, string> = {
@@ -28,8 +29,6 @@ export function TabView() {
   const statusFilter = useAppStore((s) => s.statusFilter)
 
   const setDialogOpen = useAppStore((s) => s.setNewAgentDialogOpen)
-  const [confirmKillId, setConfirmKillId] = useState<string | null>(null)
-  const confirmTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const isFiltered = statusFilter !== 'all'
 
@@ -53,19 +52,7 @@ export function TabView() {
     setFocused(id)
   }
 
-  const handleCloseTab = async (id: string, e: React.MouseEvent): Promise<void> => {
-    e.stopPropagation()
-
-    if (confirmKillId !== id) {
-      setConfirmKillId(id)
-      if (confirmTimer.current) clearTimeout(confirmTimer.current)
-      confirmTimer.current = setTimeout(() => setConfirmKillId(null), 2000)
-      return
-    }
-
-    if (confirmTimer.current) clearTimeout(confirmTimer.current)
-    setConfirmKillId(null)
-
+  const handleCloseTab = async (id: string): Promise<void> => {
     const terminal = terminals.get(id)
     const name = terminal ? getDisplayName(terminal.session) : id
 
@@ -119,7 +106,6 @@ export function TabView() {
           const terminal = terminals.get(id)
           if (!terminal) return null
           const isActive = id === activeTabId
-          const isConfirming = confirmKillId === id
           const assignedTask = useAppStore.getState().config?.tasks?.find(
             (t) => t.assignedSessionId === id && t.status === 'in_progress'
           )
@@ -144,20 +130,21 @@ export function TabView() {
               <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${STATUS_DOT[terminal.status]}`} />
               <AgentIcon agentType={terminal.session.agentType} size={12} />
               <span className="truncate">{displayName}</span>
-              <span
-                onClick={(e) => handleCloseTab(id, e)}
-                className={`ml-1 shrink-0 w-4 h-4 flex items-center justify-center rounded
-                           transition-colors ${
-                  isConfirming
-                    ? 'bg-red-500/20 text-red-400'
-                    : 'opacity-0 group-hover:opacity-100 text-gray-500 hover:text-gray-200 hover:bg-white/[0.1]'
-                }`}
-                title={isConfirming ? 'Click again to close' : 'Close session'}
+              <ConfirmPopover
+                message="Close this session?"
+                confirmLabel="Close"
+                onConfirm={() => handleCloseTab(id)}
               >
-                <svg width="8" height="8" viewBox="0 0 8 8" fill="none" stroke="currentColor" strokeWidth="1.5">
-                  <path d="M1 1l6 6M7 1l-6 6" />
-                </svg>
-              </span>
+                <span
+                  className="ml-1 shrink-0 w-4 h-4 flex items-center justify-center rounded
+                             transition-colors opacity-0 group-hover:opacity-100 text-gray-500 hover:text-gray-200 hover:bg-white/[0.1]"
+                  title="Close session"
+                >
+                  <svg width="8" height="8" viewBox="0 0 8 8" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <path d="M1 1l6 6M7 1l-6 6" />
+                  </svg>
+                </span>
+              </ConfirmPopover>
             </button>
           )
         })}

@@ -18,6 +18,7 @@ import log from './logger'
 import { safeHandle } from './ipc-safe-handle'
 
 const isMcpMode = process.argv.includes('--mcp')
+let isQuitting = false
 if (isMcpMode) app.disableHardwareAcceleration()
 
 // Singleton lock (GUI only) — prevents duplicate windows, hook servers, etc.
@@ -125,18 +126,25 @@ function createWindow(): void {
     mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'))
   }
 
+  // macOS: close hides window, app stays alive (quit via Cmd+Q)
+  // Windows/Linux: close quits the app
   mainWindow.on('close', (e) => {
-    // If widget is alive and agents are running, hide main window instead of closing
-    if (widgetEnabled && ptyManager.getActiveSessions().length > 0) {
+    if (process.platform === 'darwin' && !isQuitting) {
       e.preventDefault()
       mainWindow?.hide()
       showWidget()
+      // Keep dock icon visible so user can click to reopen
+      app.dock.show().catch(() => {})
       return
     }
   })
 
   mainWindow.on('closed', () => {
     mainWindow = null
+    if (widgetWindow && !widgetWindow.isDestroyed()) {
+      widgetWindow.destroy()
+      widgetWindow = null
+    }
   })
 }
 
@@ -494,7 +502,10 @@ app.whenReady().then(async () => {
   })
 
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.show()
+      mainWindow.focus()
+    } else if (BrowserWindow.getAllWindows().length === 0) {
       createWindow()
     }
   })
@@ -523,6 +534,7 @@ function updatePermissionShortcuts(): void {
 }
 
 app.on('before-quit', () => {
+  isQuitting = true
   if (isMcpMode) {
     scheduler.stopAll()
     ptyManager.killAll()
@@ -548,10 +560,9 @@ app.on('before-quit', () => {
 
 app.on('window-all-closed', () => {
   if (isMcpMode) return
-  // Don't quit if widget is still showing (hidden windows don't count)
+  // macOS: app stays alive (reopen via dock click or Cmd+Q to quit)
+  // Windows/Linux: quit when all windows close
   if (process.platform !== 'darwin') {
-    if (!widgetWindow || widgetWindow.isDestroyed()) {
-      app.quit()
-    }
+    app.quit()
   }
 })

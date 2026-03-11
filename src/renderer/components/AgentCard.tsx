@@ -1,4 +1,4 @@
-import { useState, useRef, forwardRef } from 'react'
+import { useState, forwardRef } from 'react'
 import { motion } from 'framer-motion'
 import { useAppStore } from '../stores'
 import { AgentIcon } from './AgentIcon'
@@ -12,6 +12,7 @@ import { destroyTerminal } from '../lib/terminal-registry'
 import { getDisplayName } from '../lib/terminal-display'
 import { useTerminalScrollButton } from '../hooks/useTerminalScrollButton'
 import { GitBranch, FolderGit2, Server, Pencil, ListTodo, Pin, Archive } from 'lucide-react'
+import { ConfirmPopover } from './ConfirmPopover'
 import { toast } from './Toast'
 
 interface Props {
@@ -70,8 +71,6 @@ export const AgentCard = forwardRef<HTMLDivElement, Props>(
     const archiveSession = useAppStore((s) => s.archiveSession)
     const [cardHovered, setCardHovered] = useState(false)
     const { showScrollBtn, handleScrollToBottom } = useTerminalScrollButton(terminalId)
-    const [confirmKill, setConfirmKill] = useState(false)
-    const confirmKillTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
     if (!terminal) return null
 
@@ -82,13 +81,6 @@ export const AgentCard = forwardRef<HTMLDivElement, Props>(
     const def = AGENT_DEFINITIONS[terminal.session.agentType]
 
     const handleKill = async (): Promise<void> => {
-      if (!confirmKill) {
-        setConfirmKill(true)
-        if (confirmKillTimer.current) clearTimeout(confirmKillTimer.current)
-        confirmKillTimer.current = setTimeout(() => setConfirmKill(false), 2000)
-        return
-      }
-      if (confirmKillTimer.current) clearTimeout(confirmKillTimer.current)
       const name = getDisplayName(terminal.session)
       if (focusedId === terminalId) setFocused(null)
       await window.api.killTerminal(terminalId)
@@ -251,7 +243,6 @@ export const AgentCard = forwardRef<HTMLDivElement, Props>(
               onClose={handleKill}
               onMinimize={handleMinimize}
               onExpand={handleExpand}
-              confirmClose={confirmKill}
             />
           </div>
         </div>
