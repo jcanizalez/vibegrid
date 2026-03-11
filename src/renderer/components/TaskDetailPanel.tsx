@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useAppStore } from '../stores'
 import { AgentType, GitDiffResult, WorkflowExecution } from '../../shared/types'
+import { buildTaskPrompt, buildFeedbackPrompt } from '../../shared/prompt-builder'
 import { MarkdownPreview, TASK_TEMPLATE } from './MarkdownEditor'
 import { RichMarkdownEditor } from './rich-editor/RichMarkdownEditor'
 import { AgentIcon } from './AgentIcon'
@@ -234,13 +235,15 @@ export function TaskDetailPanel() {
   const handleStartTask = async () => {
     if (!project || !task) return
     const agentType = config?.defaults.defaultAgent || 'claude'
+    const siblingTasks = (config?.tasks || []).filter(t => t.projectName === task.projectName)
     const session = await window.api.createTerminal({
       agentType,
       projectName: project.name,
       projectPath: project.path,
       branch: task.branch,
       useWorktree: task.useWorktree,
-      initialPrompt: task.description
+      initialPrompt: buildTaskPrompt({ task, project, siblingTasks }),
+      taskId: task.id
     })
     addTerminal(session)
     startTask(task.id, session.id, agentType, session.worktreePath)
@@ -318,7 +321,8 @@ export function TaskDetailPanel() {
         branch: task.branch,
         useWorktree: task.useWorktree,
         resumeSessionId: task.agentSessionId,
-        initialPrompt: feedback
+        initialPrompt: buildFeedbackPrompt(feedback, task, project),
+        taskId: task.id
       })
       addTerminal(session)
       startTask(task.id, session.id, task.assignedAgent, session.worktreePath)

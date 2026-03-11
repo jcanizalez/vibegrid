@@ -4,6 +4,7 @@ import {
   WorkflowEdge,
   TriggerConfig,
   LaunchAgentConfig,
+  ScriptConfig,
   WorkflowNodePosition
 } from '../../shared/types'
 
@@ -125,6 +126,25 @@ export function createLaunchAgentNode(config: Partial<LaunchAgentConfig> = {}): 
       projectPath: '',
       ...config
     } as LaunchAgentConfig,
+    position: { x: 0, y: 0 }
+  }
+}
+
+/**
+ * Create a default script node.
+ */
+export function createScriptNode(config: Partial<ScriptConfig> = {}): WorkflowNode {
+  return {
+    id: crypto.randomUUID(),
+    type: 'script',
+    label: 'Execute Script',
+    config: {
+      scriptType: 'bash',
+      scriptContent: '# Write your script here\n',
+      projectName: '',
+      projectPath: '',
+      ...config
+    } as ScriptConfig,
     position: { x: 0, y: 0 }
   }
 }

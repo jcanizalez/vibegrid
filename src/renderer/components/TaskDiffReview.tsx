@@ -5,6 +5,7 @@ import { GitDiffResult } from '../../shared/types'
 import { DiffFileList, DiffContent } from './DiffSidebar'
 import { CommitDialog } from './CommitDialog'
 import { toast } from './Toast'
+import { buildFeedbackPrompt } from '../../shared/prompt-builder'
 import { X, RefreshCw, Loader2, GitCommitHorizontal, CheckCircle2, Send, MessageSquare } from 'lucide-react'
 
 interface DiffComment {
@@ -124,7 +125,8 @@ export function TaskDiffReview() {
         branch: task.branch,
         useWorktree: task.useWorktree,
         resumeSessionId: task.agentSessionId,
-        initialPrompt: feedback
+        initialPrompt: buildFeedbackPrompt(feedback, task, project),
+        taskId: task.id
       })
       addTerminal(session)
       startTask(task.id, session.id, task.assignedAgent, session.worktreePath)

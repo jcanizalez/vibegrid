@@ -100,7 +100,7 @@ export interface WorkflowExecutionContext {
   }
 }
 
-export type WorkflowNodeType = 'trigger' | 'launchAgent'
+export type WorkflowNodeType = 'trigger' | 'launchAgent' | 'script'
 
 export interface WorkflowNodePosition { x: number; y: number }
 
@@ -139,7 +139,16 @@ export interface LaunchAgentConfig {
   headless?: boolean
 }
 
-export type WorkflowNodeConfig = TriggerConfig | LaunchAgentConfig
+export interface ScriptConfig {
+  scriptType: 'bash' | 'powershell' | 'python' | 'node'
+  scriptContent: string
+  cwd?: string
+  projectName?: string // for resolving cwd
+  projectPath?: string
+  args?: string[]
+}
+
+export type WorkflowNodeConfig = TriggerConfig | LaunchAgentConfig | ScriptConfig
 
 export interface WorkflowNode {
   id: string
@@ -245,6 +254,8 @@ export interface CreateTerminalPayload {
   initialPrompt?: string
   promptDelayMs?: number
   headless?: boolean
+  /** Task ID — when set, the main process writes a .vibegrid/context.md file before agent spawn */
+  taskId?: string
 }
 
 export interface HeadlessSession {
@@ -355,6 +366,7 @@ export const IPC = {
   HEADLESS_KILL: 'headless:kill',
   HEADLESS_DATA: 'headless:data',
   HEADLESS_EXIT: 'headless:exit',
+  SCRIPT_EXECUTE: 'script:execute',
   WORKFLOW_RUN_SAVE: 'workflowRun:save',
   WORKFLOW_RUN_LIST: 'workflowRun:list',
   WORKFLOW_RUN_LIST_BY_TASK: 'workflowRun:listByTask'

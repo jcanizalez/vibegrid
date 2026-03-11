@@ -5,12 +5,11 @@
 <h1 align="center">VibeGrid</h1>
 
 <p align="center">
-  <strong>Terminal Manager for AI Coding Agents</strong>
+  <strong>Your personal space for coding with AI agents</strong>
 </p>
 
 <p align="center">
-  Run multiple AI agents side by side — no wrappers, no API keys, no middleman.<br/>
-  Just your CLI tools, organized.
+  Run agents interactively or let them work autonomously — everything local, everything yours.
 </p>
 
 <p align="center">
@@ -18,6 +17,7 @@
   <a href="https://github.com/jcanizalez/vibegrid/blob/main/LICENSE"><img src="https://img.shields.io/github/license/jcanizalez/vibegrid?style=flat-square" alt="License"></a>
   <a href="https://github.com/jcanizalez/vibegrid/stargazers"><img src="https://img.shields.io/github/stars/jcanizalez/vibegrid?style=flat-square" alt="Stars"></a>
   <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-blue?style=flat-square" alt="Platform">
+  <img src="https://img.shields.io/badge/status-alpha-orange?style=flat-square" alt="Alpha">
 </p>
 
 <p align="center">
@@ -29,20 +29,23 @@
 
 ---
 
-<!-- SCREENSHOT_HERO: Replace with a full-window screenshot of VibeGrid in action -->
 <p align="center">
   <img src="docs/screenshots/hero.png" alt="VibeGrid screenshot" width="800" />
 </p>
 
 ## Why VibeGrid?
 
-VibeGrid is a terminal manager built for developers who vibecode from the terminal. It spawns real CLI processes — `claude`, `codex`, `gh copilot` — and lets you see them all at once in a grid layout.
+VibeGrid is your personal space for coding with AI agents. How you work is up to you.
 
-**Terminal-native, not a wrapper.** Every agent runs in its own PTY with full native output. When Claude Code ships a new feature, you get it immediately. No reimplementation needed, no API keys required.
+**Like vibecoding interactively?** Open multiple terminals and pair with several agents at once — Claude on one task, Copilot on another, Codex on a third. Every agent runs in its own PTY with full native output. No wrappers, no API keys, no reimplementation.
 
-**Multi-agent by design.** See 4, 6, or 10 agents working simultaneously across different projects. No other tool does this — most show one agent at a time.
+**Prefer to stay hands-off?** Define your tasks and workflows, then let agents work headlessly in the background. Set up a workflow that automatically reviews code when a task moves to "in review", spins up another agent to generate documentation, runs your test suite after every implementation.
 
-**Orchestration built in.** Schedule workflows on a cron, queue tasks for agents to consume automatically, and review changes across all sessions from one place.
+**Chain agents together.** A workflow can launch an agent to implement a feature, then trigger a second agent to review the diff, then run a script to deploy, all on a schedule or triggered by task status changes. Everything happens on your machine, orchestrated by you.
+
+**MCP-powered.** Agents can read and write tasks, trigger workflows, and query project state through the built-in MCP server, no extra configuration needed.
+
+> **Early stages.** VibeGrid is in alpha. The focus right now is stabilizing the core and expanding from there. On the roadmap: SSH remote sessions, shared workspaces for team collaboration, connectors to pull tasks from GitHub Issues, Linear, Jira and more, and a companion web/mobile app so you can monitor your workflows and connect remotely while away from your computer.
 
 ## Install
 
@@ -68,66 +71,75 @@ Or download directly from [GitHub Releases](https://github.com/jcanizalez/vibegr
 
 ## Features
 
+VibeGrid supports two ways of working. **Interactive**: open a grid of terminals and pair with agents hands-on. **Autonomous**: define tasks and workflows, and let agents run headlessly while you focus on something else. Mix both freely — they share the same projects, tasks, and git integration.
+
 ### Multi-Agent Grid
 
-Run Claude, Copilot, Codex, OpenCode, and Gemini in a responsive grid layout. Resize, reorder, minimize, and filter by status. Focus any terminal fullscreen with one click.
-
-<!-- SCREENSHOT: Grid view with multiple agents running -->
-<p align="center">
-  <img src="docs/screenshots/grid.png" alt="Multi-agent grid" width="700" />
-</p>
+Run Claude, Copilot, Codex, OpenCode, and Gemini in a responsive grid layout. Resize, reorder, minimize, and filter by status. Focus any terminal fullscreen with one click, or switch to a tab view for sequential browsing. Real-time status detection shows whether each agent is running, waiting, idle, or in an error state.
 
 ### Task Queue & Kanban Board
 
-Manage tasks per project with a list view or a drag-and-drop kanban board (Todo, In Progress, Done). Tasks use markdown with a built-in template for descriptions and acceptance criteria. Start a task and it launches an agent with the description as the prompt — auto-completes when the agent finishes.
+Manage tasks per project with a list view or a drag-and-drop kanban board. Tasks support markdown descriptions, image attachments, git branch targeting, and worktree isolation. Start a task and it launches an agent with the description as the prompt. Tasks can also trigger workflows automatically when created or when their status changes.
 
-<!-- SCREENSHOT: Kanban board with tasks -->
 <p align="center">
-  <img src="docs/screenshots/kanban.png" alt="Task kanban board" width="700" />
+  <img src="docs/screenshots/tasks.png" alt="Task queue and kanban board" width="700" />
 </p>
 
 ### Workflow Automation
 
-Create multi-step workflows that launch agents with prompts, consume tasks from the queue, or target specific tasks. Schedule them manually, once, or on a recurring cron. Workflows are organized into Manual and Scheduled groups in the sidebar.
+Create multi-step workflows with a visual node editor. Chain together agent launches, script executions (Bash, Python, Node.js, PowerShell), and task queue operations. Schedule them manually, once at a specific time, or on a recurring cron. Workflows can also trigger automatically when tasks are created or change status.
 
-<!-- SCREENSHOT: Workflow editor with scheduled actions -->
 <p align="center">
-  <img src="docs/screenshots/workflows.png" alt="Workflow automation" width="700" />
+  <img src="docs/screenshots/workflows.png" alt="Workflow editor" width="700" />
 </p>
 
-### Inline Diff Review
+### Headless Execution
 
-View git changes in a side panel. Click on any changed line to add a review comment. When you're done, send all comments to the agent as structured feedback with one click — the agent receives them as a follow-up prompt.
+Run agents and scripts in the background without a visible terminal. Headless sessions capture full output logs for later review. Combine with workflow stagger delays to orchestrate multiple agents sequentially, each one picks up where the last left off.
 
-<!-- SCREENSHOT: Diff sidebar with inline comments -->
 <p align="center">
-  <img src="docs/screenshots/diff-review.png" alt="Inline diff review" width="700" />
+  <img src="docs/screenshots/headless.png" alt="Headless workflow execution" width="700" />
 </p>
 
-### Project Management
+### Inline Diff Review & Git Integration
 
-Organize sessions by project with custom icons and colors. Quick-launch agents or worktree sessions from the sidebar. Each project shows running sessions and task status at a glance.
+View git changes in a side panel with file-level stats. Click on any changed line to add a review comment, then send all comments to the agent as structured feedback with one click. Stage, commit, and push directly from the terminal session. Full worktree support for safe parallel work on different branches.
 
-<!-- SCREENSHOT: Sidebar with projects and active sessions -->
+### Command Palette
+
+Fuzzy search for actions, terminals, recent sessions, projects, and workflows. Quick-launch agents, run workflows, and navigate the app without leaving the keyboard.
+
 <p align="center">
-  <img src="docs/screenshots/projects.png" alt="Project management" width="700" />
+  <img src="docs/screenshots/command-palette.png" alt="Command palette" width="700" />
 </p>
 
-### Git Integration
+### Session Persistence
 
-View diffs, track file changes, stage, commit, and push directly from the terminal session. Full worktree support for safe parallel work on different branches.
+Restore previous agent sessions on restart. VibeGrid tracks session history and matches agent sessions for accurate resumption, so you can pick up right where you left off.
 
-### Claude Code Hooks
+<p align="center">
+  <img src="docs/screenshots/resume-sessions.png" alt="Resume sessions" width="700" />
+</p>
 
-Deep integration with Claude Code via hooks. See real-time agent status (running, waiting, idle, error), handle permission requests, and respond to agent questions — all from VibeGrid or the floating widget.
+### MCP Server
+
+Agents running inside VibeGrid can access tasks, projects, workflows, sessions, and git state through the built-in MCP server. Create and update tasks, trigger workflows, launch new agents, and query configuration — all from within an agent session.
 
 ### More
 
-- **Command Palette** — fuzzy search for actions, terminals, recent sessions, and workflows
-- **Floating Widget** — minimal always-on-top overlay showing agent status
+- **Claude Code Hooks** — real-time agent status, permission request handling, and agent question responses
+### Floating Widget
+
+A minimal always-on-top overlay that stays visible while you work in other apps. See agent status at a glance, get notified on permission requests, and jump back into any session with one click.
+
+<p align="center">
+  <img src="docs/screenshots/floating-widget.png" alt="Floating widget" width="400" />
+</p>
+
+### More
 - **Remote Hosts** — launch terminals on remote machines via SSH
 - **Terminal Panel** — lightweight shell tabs for quick operations
-- **Session Persistence** — restore previous sessions on restart
+- **Project Management** — organize sessions by project with custom icons, colors, and preferred agents
 - **Auto-Update** — built-in update checking and installation
 - **Cross-Platform** — macOS, Windows, and Linux
 

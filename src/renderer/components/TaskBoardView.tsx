@@ -1,5 +1,6 @@
 import { useAppStore } from '../stores'
 import { TaskConfig, TaskStatus } from '../../shared/types'
+import { buildTaskPrompt } from '../../shared/prompt-builder'
 import { TaskKanbanBoard } from './task-board/TaskKanbanBoard'
 import { TaskListView } from './task-board/TaskListView'
 import { ListTodo } from 'lucide-react'
@@ -41,13 +42,15 @@ export function TaskBoardView() {
     const project = config?.projects.find((p) => p.name === task.projectName)
     if (!project) return
     const agentType = config?.defaults.defaultAgent || 'claude'
+    const siblingTasks = (config?.tasks || []).filter(t => t.projectName === task.projectName)
     const session = await window.api.createTerminal({
       agentType,
       projectName: project.name,
       projectPath: project.path,
       branch: task.branch,
       useWorktree: task.useWorktree,
-      initialPrompt: task.description
+      initialPrompt: buildTaskPrompt({ task, project, siblingTasks }),
+      taskId: task.id
     })
     addTerminal(session)
     startTask(task.id, session.id, agentType, session.worktreePath)

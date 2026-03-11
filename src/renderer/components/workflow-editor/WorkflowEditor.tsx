@@ -17,6 +17,7 @@ import { RunHistoryPanel } from './panels/RunHistoryPanel'
 import {
   createTriggerNode,
   createLaunchAgentNode,
+  createScriptNode,
   appendNode,
   removeNode,
   autoLayoutNodes
@@ -197,6 +198,14 @@ export function WorkflowEditor() {
     setSelectedNodeId(agent.id)
   }, [nodes, edges])
 
+  const handleAddScript = useCallback(() => {
+    const script = createScriptNode()
+    const result = appendNode(nodes, edges, script)
+    setNodes(result.nodes)
+    setEdges(result.edges)
+    setSelectedNodeId(script.id)
+  }, [nodes, edges])
+
   const handleNodeClick = useCallback((nodeId: string) => {
     setSelectedNodeId(nodeId || null)
     setShowRunHistory(false)
@@ -356,6 +365,7 @@ export function WorkflowEditor() {
         <NodePalette
           onAddTrigger={handleAddTrigger}
           onAddLaunchAgent={handleAddLaunchAgent}
+          onAddScript={handleAddScript}
           hasTrigger={hasTrigger}
         />
 

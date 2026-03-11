@@ -13,7 +13,8 @@ import { CreateTerminalPayload, IPC, ResizePayload, AppConfig, ArchivedSession, 
 import { listBranches, listRemoteBranches, getGitBranch, createWorktree, removeWorktree, listWorktrees, getGitDiffStat, getGitDiffFull, gitCommit, gitPush } from './git-utils'
 import { saveTaskImage, deleteTaskImage, getTaskImagePath, cleanupTaskImages } from './task-images'
 import { archiveSession, unarchiveSession, listArchivedSessions, saveWorkflowRun, listWorkflowRuns, listWorkflowRunsByTask } from './database'
-import { WorkflowExecution } from '../shared/types'
+import { executeScript } from './script-runner'
+import { WorkflowExecution, ScriptConfig } from '../shared/types'
 
 export interface IpcHandlerOptions {
   onSessionCreated?: (session: TerminalSession, payload: CreateTerminalPayload) => void
@@ -188,6 +189,10 @@ export function registerIpcHandlers(options?: IpcHandlerOptions): void {
 
   safeHandle(IPC.HEADLESS_KILL, (_, id: string) =>
     headlessManager.killHeadless(id)
+  )
+
+  safeHandle(IPC.SCRIPT_EXECUTE, (_, config: ScriptConfig) =>
+    executeScript(config)
   )
 
   // Workflow runs

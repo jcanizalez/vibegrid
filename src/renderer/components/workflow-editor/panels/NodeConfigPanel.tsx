@@ -1,7 +1,8 @@
 import { X, Trash2 } from 'lucide-react'
-import { WorkflowNode, TriggerConfig, LaunchAgentConfig } from '../../../../shared/types'
+import { WorkflowNode, TriggerConfig, LaunchAgentConfig, ScriptConfig } from '../../../../shared/types'
 import { TriggerConfigForm } from './TriggerConfigForm'
 import { LaunchAgentConfigForm } from './LaunchAgentConfigForm'
+import { ScriptConfigForm } from './ScriptConfigForm'
 
 interface Props {
   node: WorkflowNode
@@ -55,6 +56,13 @@ export function NodeConfigPanel({ node, onChange, onLabelChange, onDelete, onClo
             config={node.config as LaunchAgentConfig}
             onChange={(config) => onChange(node.id, config)}
             triggerType={triggerType}
+          />
+        )}
+
+        {node.type === 'script' && (
+          <ScriptConfigForm
+            config={node.config as ScriptConfig}
+            onChange={(config) => onChange(node.id, config)}
           />
         )}
       </div>

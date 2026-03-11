@@ -1,11 +1,12 @@
 import crypto from 'node:crypto'
+import path from 'node:path'
 import { z } from 'zod'
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import type { configManager as ConfigManagerInstance } from '../config-manager'
 import type { TaskConfig, TaskStatus, AgentType } from '../../shared/types'
 import {
   dbListTasks, dbGetTask, dbInsertTask, dbUpdateTask, dbDeleteTask,
-  dbGetMaxTaskOrder, dbGetProject
+  dbGetMaxTaskOrder, dbGetProject, dbListProjects
 } from '../database'
 
 type ConfigManager = typeof ConfigManagerInstance
@@ -143,6 +144,118 @@ export function registerTaskTools(server: McpServer, deps: { configManager: Conf
       configManager.notifyChanged()
 
       return { content: [{ type: 'text', text: `Deleted task: ${task.title}` }] }
+    }
+  )
+
+  server.tool(
+    'get_my_context',
+    'Get your current task and project context. Auto-detects based on your working directory. ' +
+    'Call this at the start of a session to understand what you are working on.',
+    {
+      cwd: z.string().optional().describe(
+        'Your current working directory (auto-detected if omitted). ' +
+        'Used to match against known projects and task worktrees.'
+      ),
+      task_id: z.string().optional().describe(
+        'Specific task ID to get context for (overrides auto-detection)'
+      )
+    },
+    async (args) => {
+      // If a specific task ID is provided, return its context directly
+      if (args.task_id) {
+        const task = dbGetTask(args.task_id)
+        if (!task) {
+          return { content: [{ type: 'text', text: `Error: task "${args.task_id}" not found` }], isError: true }
+        }
+        const project = dbGetProject(task.projectName)
+        const siblingTasks = dbListTasks(task.projectName)
+        return {
+          content: [{
+            type: 'text',
+            text: JSON.stringify({
+              task,
+              project: project ?? undefined,
+              siblingTasks: siblingTasks.filter(t => t.id !== task.id).map(t => ({
+                id: t.id, title: t.title, status: t.status, branch: t.branch
+              }))
+            }, null, 2)
+          }]
+        }
+      }
+
+      // Auto-detect by matching cwd to projects and task worktrees
+      const cwd = args.cwd || process.cwd()
+      const normalizedCwd = path.resolve(cwd)
+      const projects = dbListProjects()
+
+      // Find the best matching project (longest path prefix match)
+      let matchedProject = null
+      let matchLen = 0
+      for (const p of projects) {
+        const normalizedPath = path.resolve(p.path)
+        if (normalizedCwd.startsWith(normalizedPath) && normalizedPath.length > matchLen) {
+          matchedProject = p
+          matchLen = normalizedPath.length
+        }
+      }
+
+      if (!matchedProject) {
+        return {
+          content: [{
+            type: 'text',
+            text: JSON.stringify({
+              message: 'No matching project found for current directory.',
+              cwd: normalizedCwd,
+              hint: 'Use list_projects to see available projects, or pass a task_id directly.'
+            }, null, 2)
+          }]
+        }
+      }
+
+      // Get all tasks for this project
+      const projectTasks = dbListTasks(matchedProject.name)
+
+      // Try to find the specific task by matching worktree path or assigned session
+      let matchedTask: TaskConfig | null = null
+
+      // 1. Check if cwd matches a task's worktree path
+      for (const t of projectTasks) {
+        if (t.worktreePath) {
+          const normalizedWorktree = path.resolve(t.worktreePath)
+          if (normalizedCwd.startsWith(normalizedWorktree)) {
+            matchedTask = t
+            break
+          }
+        }
+      }
+
+      // 2. If no worktree match, look for an in_progress task assigned to this project
+      if (!matchedTask) {
+        matchedTask = projectTasks.find(t => t.status === 'in_progress') ?? null
+      }
+
+      const result: Record<string, unknown> = {
+        project: {
+          name: matchedProject.name,
+          path: matchedProject.path,
+          preferredAgents: matchedProject.preferredAgents
+        },
+        cwd: normalizedCwd
+      }
+
+      if (matchedTask) {
+        result.task = matchedTask
+        result.siblingTasks = projectTasks
+          .filter(t => t.id !== matchedTask!.id)
+          .map(t => ({ id: t.id, title: t.title, status: t.status, branch: t.branch }))
+      } else {
+        result.message = 'No specific task matched. Showing all project tasks.'
+        result.tasks = projectTasks.map(t => ({
+          id: t.id, title: t.title, status: t.status, branch: t.branch
+        }))
+      }
+
+      return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] }
     }
   )
 }

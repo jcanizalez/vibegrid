@@ -1,13 +1,14 @@
-import { Zap, Clock, Play, ListPlus, ArrowRightLeft } from 'lucide-react'
+import { Zap, Clock, Play, ListPlus, ArrowRightLeft, Terminal } from 'lucide-react'
 import type { TriggerConfig } from '../../../../shared/types'
 
 interface Props {
   onAddTrigger: (type: TriggerConfig['triggerType']) => void
   onAddLaunchAgent: () => void
+  onAddScript: () => void
   hasTrigger: boolean
 }
 
-export function NodePalette({ onAddTrigger, onAddLaunchAgent, hasTrigger }: Props) {
+export function NodePalette({ onAddTrigger, onAddLaunchAgent, onAddScript, hasTrigger }: Props) {
   return (
     <div className="w-[180px] border-r border-white/[0.08] bg-[#1e1e22] flex flex-col h-full overflow-hidden titlebar-no-drag">
       <div className="px-3 py-3 border-b border-white/[0.08]">
@@ -58,6 +59,11 @@ export function NodePalette({ onAddTrigger, onAddLaunchAgent, hasTrigger }: Prop
               icon={<Play size={14} className="text-green-400" />}
               label="Launch Agent"
               onClick={onAddLaunchAgent}
+            />
+            <PaletteItem
+              icon={<Terminal size={14} className="text-yellow-400" />}
+              label="Run Script"
+              onClick={onAddScript}
             />
           </div>
         </div>

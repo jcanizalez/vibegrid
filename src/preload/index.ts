@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import { CreateTerminalPayload, ResizePayload, AppConfig, RecentSession, IPC, GitDiffStat, GitDiffResult, GitCommitPayload, GitCommitResult, ScheduleLogEntry, ArchivedSession, HeadlessSession, WorkflowExecution } from '../shared/types'
+import { CreateTerminalPayload, ResizePayload, AppConfig, RecentSession, IPC, GitDiffStat, GitDiffResult, GitCommitPayload, GitCommitResult, ScheduleLogEntry, ArchivedSession, HeadlessSession, WorkflowExecution, ScriptConfig } from '../shared/types'
 
 const api = {
   createTerminal: (payload: CreateTerminalPayload) =>
@@ -139,6 +139,9 @@ const api = {
     ipcRenderer.on(IPC.HEADLESS_EXIT, listener)
     return () => { ipcRenderer.removeListener(IPC.HEADLESS_EXIT, listener) }
   },
+
+  executeScript: (config: ScriptConfig): Promise<{ success: boolean; output: string; error?: string; exitCode?: number }> =>
+    ipcRenderer.invoke(IPC.SCRIPT_EXECUTE, config),
 
   onWorktreeCleanup: (callback: (session: { id: string; projectPath: string; worktreePath: string }) => void) => {
     const listener = (_: Electron.IpcRendererEvent, session: { id: string; projectPath: string; worktreePath: string }): void => callback(session)

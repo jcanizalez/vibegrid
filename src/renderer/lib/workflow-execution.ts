@@ -3,11 +3,33 @@ import {
   WorkflowExecution,
   WorkflowExecutionContext,
   NodeExecutionState,
-  LaunchAgentConfig
+  LaunchAgentConfig,
+  ScriptConfig,
+  TaskConfig
 } from '../../shared/types'
 import { getOrderedActionNodes } from './workflow-helpers'
 import { resolveTemplateVars } from './template-vars'
+import { buildTaskPrompt } from '../../shared/prompt-builder'
 import { useAppStore } from '../stores'
+
+/** Resolve prompt, branch, and worktree from a task config */
+function resolveTaskContext(task: TaskConfig, fallbackBranch?: string, fallbackWorktree?: boolean) {
+  const state = useAppStore.getState()
+  const project = state.config?.projects.find((p) => p.name === task.projectName)
+  let initialPrompt: string
+  if (project) {
+    const siblingTasks = (state.config?.tasks || []).filter((t) => t.projectName === task.projectName)
+    initialPrompt = buildTaskPrompt({ task, project, siblingTasks })
+  } else {
+    initialPrompt = task.description
+  }
+  return {
+    initialPrompt,
+    resolvedTaskId: task.id,
+    branch: task.branch || fallbackBranch,
+    useWorktree: task.useWorktree || fallbackWorktree
+  }
+}
 
 /** Save execution to both in-memory store and database */
 function persistExecution(workflowId: string, execution: WorkflowExecution): void {
@@ -39,8 +61,7 @@ export async function executeWorkflow(
   try {
     for (let i = 0; i < actionNodes.length; i++) {
       const node = actionNodes[i]
-      const config = node.config as LaunchAgentConfig
-      console.log(`[workflow] node ${i}: ${node.label} headless=${config.headless} prompt="${(config.prompt || '').slice(0, 50)}"`)
+      console.log(`[workflow] executing node ${i}: ${node.label} type=${node.type}`)
 
       if (i > 0 && workflow.staggerDelayMs) {
         await new Promise((r) => setTimeout(r, workflow.staggerDelayMs))
@@ -49,6 +70,35 @@ export async function executeWorkflow(
       // Update node status to running
       updateNodeState(execution, node.id, { status: 'running', startedAt: new Date().toISOString() })
       persistExecution(workflow.id, execution)
+
+      if (node.type === 'script') {
+        const config = node.config as ScriptConfig
+        console.log(`[workflow] executing script: ${config.scriptType}`)
+
+        try {
+          const result = await window.api.executeScript(config)
+          
+          updateNodeState(execution, node.id, {
+            status: result.success ? 'success' : 'error',
+            completedAt: new Date().toISOString(),
+            logs: result.output + (result.error ? `\nError: ${result.error}` : ''),
+            error: result.error
+          })
+        } catch (err) {
+          console.error(`[workflow] script execution error:`, err)
+          updateNodeState(execution, node.id, {
+            status: 'error',
+            completedAt: new Date().toISOString(),
+            error: err instanceof Error ? err.message : String(err)
+          })
+        }
+        persistExecution(workflow.id, execution)
+        continue
+      }
+
+      // Default: Launch Agent
+      const config = node.config as LaunchAgentConfig
+      console.log(`[workflow] launch agent: ${node.label} headless=${config.headless} prompt="${(config.prompt || '').slice(0, 50)}"`)
 
       // Resolve prompt from task if applicable
       let initialPrompt = config.prompt
@@ -62,18 +112,20 @@ export async function executeWorkflow(
           (t) => t.id === config.taskId && t.status === 'todo'
         )
         if (task) {
-          initialPrompt = task.description
-          resolvedTaskId = task.id
-          branch = task.branch || branch
-          useWorktree = task.useWorktree || useWorktree
+          const ctx = resolveTaskContext(task, branch, useWorktree)
+          initialPrompt = ctx.initialPrompt
+          resolvedTaskId = ctx.resolvedTaskId
+          branch = ctx.branch
+          useWorktree = ctx.useWorktree
         }
       } else if (config.taskFromQueue) {
         const task = currentState.getNextTask(config.projectName)
         if (task) {
-          initialPrompt = task.description
-          resolvedTaskId = task.id
-          branch = task.branch || branch
-          useWorktree = task.useWorktree || useWorktree
+          const ctx = resolveTaskContext(task, branch, useWorktree)
+          initialPrompt = ctx.initialPrompt
+          resolvedTaskId = ctx.resolvedTaskId
+          branch = ctx.branch
+          useWorktree = ctx.useWorktree
         }
       }
 
@@ -121,7 +173,8 @@ export async function executeWorkflow(
             useWorktree,
             initialPrompt,
             promptDelayMs: config.promptDelayMs,
-            headless: true
+            headless: true,
+            taskId: resolvedTaskId
           })
 
           // Set sessionId so the pre-registered listeners start matching
@@ -164,7 +217,8 @@ export async function executeWorkflow(
           branch,
           useWorktree,
           initialPrompt,
-          promptDelayMs: config.promptDelayMs
+          promptDelayMs: config.promptDelayMs,
+          taskId: resolvedTaskId
         })
         useAppStore.getState().addTerminal(session)
 
@@ -205,8 +259,8 @@ export async function executeWorkflow(
   for (const ns of execution.nodeStates) {
     if (ns.sessionId && !ns.agentSessionId) {
       const terminal = terminals.get(ns.sessionId)
-      if (terminal?.hookSessionId) {
-        ns.agentSessionId = terminal.hookSessionId
+      if (terminal?.session.hookSessionId) {
+        ns.agentSessionId = terminal.session.hookSessionId
       }
     }
   }

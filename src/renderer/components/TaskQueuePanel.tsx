@@ -2,6 +2,7 @@ import { useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAppStore } from '../stores'
 import { TaskConfig, TaskStatus, TaskViewMode } from '../../shared/types'
+import { buildTaskPrompt } from '../../shared/prompt-builder'
 import { AgentIcon } from './AgentIcon'
 import { MarkdownPreview } from './MarkdownEditor'
 import { Pencil, Trash2, Play, CheckCircle2, Clock, Circle, X, LayoutList, Columns3, Terminal, Eye, XCircle, RotateCcw, FileCode, ImageIcon } from 'lucide-react'
@@ -346,13 +347,15 @@ export function TaskQueuePanel() {
   const handleStartTask = async (task: TaskConfig) => {
     if (!project) return
     const agentType = config?.defaults.defaultAgent || 'claude'
+    const siblingTasks = (config?.tasks || []).filter(t => t.projectName === task.projectName)
     const session = await window.api.createTerminal({
       agentType,
       projectName: project.name,
       projectPath: project.path,
       branch: task.branch,
       useWorktree: task.useWorktree,
-      initialPrompt: task.description
+      initialPrompt: buildTaskPrompt({ task, project, siblingTasks }),
+      taskId: task.id
     })
     addTerminal(session)
     startTask(task.id, session.id, agentType, session.worktreePath)

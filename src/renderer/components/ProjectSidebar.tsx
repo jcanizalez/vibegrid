@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useAppStore } from '../stores'
 import { WorkflowDefinition, ProjectConfig, AgentStatus, AgentType, TaskConfig } from '../../shared/types'
+import { buildTaskPrompt } from '../../shared/prompt-builder'
 import { getDisplayName } from '../lib/terminal-display'
 import { getTriggerConfig, getActionCount, isScheduledWorkflow, getTriggerLabel } from '../lib/workflow-helpers'
 import { executeWorkflow } from '../lib/workflow-execution'
@@ -807,13 +808,15 @@ export function ProjectSidebar() {
                                         onClick={async (e) => {
                                           e.stopPropagation()
                                           const agentType = config?.defaults.defaultAgent || 'claude'
+                                          const allTasks = (config?.tasks || []).filter(t => t.projectName === project.name)
                                           const session = await window.api.createTerminal({
                                             agentType,
                                             projectName: project.name,
                                             projectPath: project.path,
                                             branch: task.branch,
                                             useWorktree: task.useWorktree,
-                                            initialPrompt: task.description
+                                            initialPrompt: buildTaskPrompt({ task, project, siblingTasks: allTasks }),
+                                            taskId: task.id
                                           })
                                           addTerminal(session)
                                           useAppStore.getState().startTask(task.id, session.id, agentType as AgentType)
