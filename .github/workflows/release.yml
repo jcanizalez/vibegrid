@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -44,15 +45,27 @@ jobs:
       - name: Install dependencies
         run: yarn install
 
-      - name: Build and publish
+      - name: Build
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           yarn build
-          yarn dist --publish always
+          yarn dist --publish never
+
+      - name: Upload to release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            tag="${GITHUB_REF_NAME}"
+          else
+            tag="v$(node -p 'require("./package.json").version')"
+          fi
+          for f in dist/*.dmg dist/*.dmg.blockmap dist/*.zip dist/*.zip.blockmap dist/latest-mac.yml; do
+            [ -f "$f" ] && gh release upload "$tag" "$f" --clobber
+          done
 
       - name: Clean up keychain
         if: always()
@@ -89,7 +102,11 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          $tag = "${env:GITHUB_REF_NAME}"
+          if ($env:GITHUB_REF -match '^refs/tags/') {
+            $tag = $env:GITHUB_REF_NAME
+          } else {
+            $tag = "v" + (node -p "require('./package.json').version")
+          }
           Get-ChildItem dist\*.exe, dist\*.blockmap, dist\latest*.yml | ForEach-Object {
             gh release upload $tag $_.FullName --clobber
           }
@@ -116,9 +133,20 @@ jobs:
       - name: Install dependencies
         run: yarn install
 
-      - name: Build and publish
+      - name: Build
+        run: |
+          yarn build
+          yarn dist --publish never
+
+      - name: Upload to release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          yarn build
-          yarn dist --publish always
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            tag="${GITHUB_REF_NAME}"
+          else
+            tag="v$(node -p 'require("./package.json").version')"
+          fi
+          for f in dist/*.AppImage dist/*.deb dist/*.rpm dist/latest-linux.yml; do
+            [ -f "$f" ] && gh release upload "$tag" "$f" --clobber
+          done
