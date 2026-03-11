@@ -1,8 +1,6 @@
 <p align="center">
-  <img src="resources/icon.png" alt="VibeGrid" width="128" />
+  <img src="docs/vibegrid-logo.png" alt="VibeGrid" width="300" />
 </p>
-
-<h1 align="center">VibeGrid</h1>
 
 <p align="center">
   <strong>Your personal space for coding with AI agents</strong>
