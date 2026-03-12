@@ -11,9 +11,14 @@ export function registerGitTools(server: McpServer): void {
       try {
         const local = listBranches(args.project_path)
         const current = getGitBranch(args.project_path)
-        return { content: [{ type: 'text', text: JSON.stringify({ current, branches: local }, null, 2) }] }
+        return {
+          content: [{ type: 'text', text: JSON.stringify({ current, branches: local }, null, 2) }]
+        }
       } catch (err) {
-        return { content: [{ type: 'text', text: `Error listing branches: ${err}` }], isError: true }
+        return {
+          content: [{ type: 'text', text: `Error listing branches: ${err}` }],
+          isError: true
+        }
       }
     }
   )
@@ -26,7 +31,9 @@ export function registerGitTools(server: McpServer): void {
       try {
         const result = getGitDiffFull(args.project_path)
         if (!result) {
-          return { content: [{ type: 'text', text: 'No changes detected or not a git repository' }] }
+          return {
+            content: [{ type: 'text', text: 'No changes detected or not a git repository' }]
+          }
         }
         return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] }
       } catch (err) {

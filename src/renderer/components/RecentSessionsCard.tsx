@@ -27,7 +27,10 @@ export function RecentSessionsCard() {
       if (project) projectPath = project.path
     }
 
-    window.api.getRecentSessions(projectPath).then(setSessions).catch(() => setSessions([]))
+    window.api
+      .getRecentSessions(projectPath)
+      .then(setSessions)
+      .catch(() => setSessions([]))
   }, [activeProject, config])
 
   const handleResume = async (session: RecentSession): Promise<void> => {
@@ -96,8 +99,10 @@ export function RecentSessionsCard() {
                       </span>
                     </div>
                   </div>
-                  <span className="text-[10px] text-gray-700 opacity-0 group-hover:opacity-100
-                                   transition-opacity shrink-0 mt-0.5">
+                  <span
+                    className="text-[10px] text-gray-700 opacity-0 group-hover:opacity-100
+                                   transition-opacity shrink-0 mt-0.5"
+                  >
                     resume
                   </span>
                 </button>

@@ -55,13 +55,17 @@ export function WorktreeCleanupDialog() {
               <FolderGit2 size={18} className="text-amber-400 shrink-0" />
               <div>
                 <h3 className="text-sm font-medium text-white">Worktree Session Ended</h3>
-                <p className="text-xs text-gray-500 mt-0.5">Would you like to keep or remove the worktree?</p>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Would you like to keep or remove the worktree?
+                </p>
               </div>
             </div>
 
             <div className="px-5 py-3">
               <div className="px-3 py-2 bg-white/[0.03] border border-white/[0.06] rounded-lg">
-                <p className="text-[11px] text-gray-500 font-mono truncate">{pending.worktreePath}</p>
+                <p className="text-[11px] text-gray-500 font-mono truncate">
+                  {pending.worktreePath}
+                </p>
               </div>
             </div>
 

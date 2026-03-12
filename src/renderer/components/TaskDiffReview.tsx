@@ -6,7 +6,15 @@ import { DiffFileList, DiffContent } from './DiffSidebar'
 import { CommitDialog } from './CommitDialog'
 import { toast } from './Toast'
 import { buildFeedbackPrompt } from '../../shared/prompt-builder'
-import { X, RefreshCw, Loader2, GitCommitHorizontal, CheckCircle2, Send, MessageSquare } from 'lucide-react'
+import {
+  X,
+  RefreshCw,
+  Loader2,
+  GitCommitHorizontal,
+  CheckCircle2,
+  Send,
+  MessageSquare
+} from 'lucide-react'
 
 interface DiffComment {
   filePath: string
@@ -52,7 +60,11 @@ export function TaskDiffReview() {
   const [sidebarWidth, setSidebarWidth] = useState(520)
   const [showCommitDialog, setShowCommitDialog] = useState(false)
   const [comments, setComments] = useState<DiffComment[]>([])
-  const [commentingLine, setCommentingLine] = useState<{ filePath: string; lineIndex: number; lineContent: string } | null>(null)
+  const [commentingLine, setCommentingLine] = useState<{
+    filePath: string
+    lineIndex: number
+    lineContent: string
+  } | null>(null)
 
   const project = config?.projects.find((p) => p.name === task?.projectName)
   const cwd = task?.worktreePath || project?.path || ''
@@ -103,12 +115,15 @@ export function TaskDiffReview() {
 
   const handleAddComment = (text: string): void => {
     if (!commentingLine) return
-    setComments((prev) => [...prev, {
-      filePath: commentingLine.filePath,
-      lineIndex: commentingLine.lineIndex,
-      lineContent: commentingLine.lineContent,
-      comment: text
-    }])
+    setComments((prev) => [
+      ...prev,
+      {
+        filePath: commentingLine.filePath,
+        lineIndex: commentingLine.lineIndex,
+        lineContent: commentingLine.lineContent,
+        comment: text
+      }
+    ])
     setCommentingLine(null)
   }
 
@@ -162,11 +177,13 @@ export function TaskDiffReview() {
     document.addEventListener('pointerup', onUp)
   }
 
-  const stat = diffResult ? {
-    filesChanged: diffResult.files.length,
-    insertions: diffResult.files.reduce((s, f) => s + f.insertions, 0),
-    deletions: diffResult.files.reduce((s, f) => s + f.deletions, 0)
-  } : null
+  const stat = diffResult
+    ? {
+        filesChanged: diffResult.files.length,
+        insertions: diffResult.files.reduce((s, f) => s + f.insertions, 0),
+        deletions: diffResult.files.reduce((s, f) => s + f.deletions, 0)
+      }
+    : null
 
   const hasChanges = stat && (stat.insertions > 0 || stat.deletions > 0)
 
@@ -201,14 +218,18 @@ export function TaskDiffReview() {
             <div className="px-3 py-2.5 border-b border-white/[0.06] shrink-0">
               <div className="flex items-center gap-3">
                 <div className="flex-1 min-w-0">
-                  <span className="text-[13px] font-medium text-gray-200 truncate block">{task.title}</span>
+                  <span className="text-[13px] font-medium text-gray-200 truncate block">
+                    {task.title}
+                  </span>
                   <span className="text-[11px] text-purple-400">Review Changes</span>
                 </div>
                 {stat && (
                   <span className="flex items-center gap-1.5 text-[11px] font-mono shrink-0">
                     <span className="text-green-400">+{stat.insertions}</span>
                     <span className="text-red-400">-{stat.deletions}</span>
-                    <span className="text-gray-500">{stat.filesChanged} file{stat.filesChanged !== 1 ? 's' : ''}</span>
+                    <span className="text-gray-500">
+                      {stat.filesChanged} file{stat.filesChanged !== 1 ? 's' : ''}
+                    </span>
                   </span>
                 )}
                 {hasChanges && (
@@ -239,7 +260,11 @@ export function TaskDiffReview() {
                   className="p-1 text-gray-400 hover:text-white rounded transition-colors shrink-0"
                   title="Refresh"
                 >
-                  <RefreshCw size={14} className={loading ? 'animate-spin' : ''} strokeWidth={1.5} />
+                  <RefreshCw
+                    size={14}
+                    className={loading ? 'animate-spin' : ''}
+                    strokeWidth={1.5}
+                  />
                 </button>
                 <button
                   onClick={handleClose}

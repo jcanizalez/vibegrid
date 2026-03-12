@@ -34,23 +34,22 @@ export function Tooltip({ label, children, position = 'top', delay = 400 }: Prop
   return (
     <div ref={wrapperRef} className="inline-flex" onMouseEnter={show} onMouseLeave={hide}>
       {children}
-      {visible && createPortal(
-        <div
-          className="fixed z-[100] px-2 py-1 rounded-md text-[11px] text-gray-200 whitespace-nowrap
+      {visible &&
+        createPortal(
+          <div
+            className="fixed z-[100] px-2 py-1 rounded-md text-[11px] text-gray-200 whitespace-nowrap
                      border border-white/[0.08] shadow-lg pointer-events-none"
-          style={{
-            background: '#1e1e22',
-            left: coords.x,
-            top: coords.y,
-            transform: position === 'top'
-              ? 'translate(-50%, -100%)'
-              : 'translate(-50%, 0)'
-          }}
-        >
-          {label}
-        </div>,
-        document.body
-      )}
+            style={{
+              background: '#1e1e22',
+              left: coords.x,
+              top: coords.y,
+              transform: position === 'top' ? 'translate(-50%, -100%)' : 'translate(-50%, 0)'
+            }}
+          >
+            {label}
+          </div>,
+          document.body
+        )}
     </div>
   )
 }

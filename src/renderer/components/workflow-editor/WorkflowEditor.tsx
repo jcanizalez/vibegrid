@@ -51,7 +51,9 @@ export function WorkflowEditor() {
   const [staggerDelayMs, setStaggerDelayMs] = useState<number | undefined>(undefined)
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
   const [showRunHistory, setShowRunHistory] = useState(false)
-  const [executionHistory, setExecutionHistory] = useState<import('../../../shared/types').WorkflowExecution[]>([])
+  const [executionHistory, setExecutionHistory] = useState<
+    import('../../../shared/types').WorkflowExecution[]
+  >([])
   const loadedRunsForId = useRef<string | null>(null)
 
   const selectedNode = useMemo(
@@ -132,7 +134,20 @@ export function WorkflowEditor() {
       addWorkflow(workflow)
     }
     handleClose()
-  }, [editingId, name, icon, iconColor, nodes, edges, enabled, staggerDelayMs, existingWorkflow, updateWorkflow, addWorkflow, handleClose])
+  }, [
+    editingId,
+    name,
+    icon,
+    iconColor,
+    nodes,
+    edges,
+    enabled,
+    staggerDelayMs,
+    existingWorkflow,
+    updateWorkflow,
+    addWorkflow,
+    handleClose
+  ])
 
   const handleRun = useCallback(async () => {
     // Save first, then execute
@@ -153,7 +168,20 @@ export function WorkflowEditor() {
     }
     handleClose()
     await executeWorkflow(workflow)
-  }, [editingId, name, icon, iconColor, nodes, edges, enabled, staggerDelayMs, existingWorkflow, updateWorkflow, addWorkflow, handleClose])
+  }, [
+    editingId,
+    name,
+    icon,
+    iconColor,
+    nodes,
+    edges,
+    enabled,
+    staggerDelayMs,
+    existingWorkflow,
+    updateWorkflow,
+    addWorkflow,
+    handleClose
+  ])
 
   const handleDelete = useCallback(() => {
     if (editingId) {
@@ -163,33 +191,34 @@ export function WorkflowEditor() {
   }, [editingId, removeWorkflowFromStore, handleClose])
 
   // Node management
-  const handleAddTrigger = useCallback((type: TriggerConfig['triggerType']) => {
-    const configMap: Record<TriggerConfig['triggerType'], TriggerConfig> = {
-      manual: { triggerType: 'manual' },
-      once: { triggerType: 'once', runAt: new Date().toISOString() },
-      recurring: { triggerType: 'recurring', cron: '0 9 * * *' },
-      taskCreated: { triggerType: 'taskCreated' },
-      taskStatusChanged: { triggerType: 'taskStatusChanged' }
-    }
-    const trigger = createTriggerNode(configMap[type])
+  const handleAddTrigger = useCallback(
+    (type: TriggerConfig['triggerType']) => {
+      const configMap: Record<TriggerConfig['triggerType'], TriggerConfig> = {
+        manual: { triggerType: 'manual' },
+        once: { triggerType: 'once', runAt: new Date().toISOString() },
+        recurring: { triggerType: 'recurring', cron: '0 9 * * *' },
+        taskCreated: { triggerType: 'taskCreated' },
+        taskStatusChanged: { triggerType: 'taskStatusChanged' }
+      }
+      const trigger = createTriggerNode(configMap[type])
 
-    if (nodes.length === 0) {
-      setNodes([trigger])
-    } else {
-      const result = appendNode(nodes, edges, trigger)
-      setNodes(result.nodes)
-      setEdges(result.edges)
-    }
-    setSelectedNodeId(trigger.id)
-  }, [nodes, edges])
+      if (nodes.length === 0) {
+        setNodes([trigger])
+      } else {
+        const result = appendNode(nodes, edges, trigger)
+        setNodes(result.nodes)
+        setEdges(result.edges)
+      }
+      setSelectedNodeId(trigger.id)
+    },
+    [nodes, edges]
+  )
 
   const handleAddLaunchAgent = useCallback(() => {
     const projects = useAppStore.getState().config?.projects || []
     const firstProject = projects[0]
     const agent = createLaunchAgentNode(
-      firstProject
-        ? { projectName: firstProject.name, projectPath: firstProject.path }
-        : {}
+      firstProject ? { projectName: firstProject.name, projectPath: firstProject.path } : {}
     )
 
     const result = appendNode(nodes, edges, agent)
@@ -212,49 +241,54 @@ export function WorkflowEditor() {
   }, [])
 
   const handleNodeConfigChange = useCallback((nodeId: string, config: WorkflowNode['config']) => {
-    setNodes((nds) => nds.map((n) =>
-      n.id === nodeId ? { ...n, config } : n
-    ))
+    setNodes((nds) => nds.map((n) => (n.id === nodeId ? { ...n, config } : n)))
   }, [])
 
   const handleNodeLabelChange = useCallback((nodeId: string, label: string) => {
-    setNodes((nds) => nds.map((n) =>
-      n.id === nodeId ? { ...n, label } : n
-    ))
+    setNodes((nds) => nds.map((n) => (n.id === nodeId ? { ...n, label } : n)))
   }, [])
 
-  const handleDeleteNode = useCallback((nodeId: string) => {
-    const result = removeNode(nodes, edges, nodeId)
-    setNodes(result.nodes)
-    setEdges(result.edges)
-    setSelectedNodeId(null)
-  }, [nodes, edges])
+  const handleDeleteNode = useCallback(
+    (nodeId: string) => {
+      const result = removeNode(nodes, edges, nodeId)
+      setNodes(result.nodes)
+      setEdges(result.edges)
+      setSelectedNodeId(null)
+    },
+    [nodes, edges]
+  )
 
-  const handleResumeSession = useCallback(async (
-    agentSessionId: string,
-    agentType: AgentType,
-    projectName: string,
-    projectPath: string,
-    branch?: string,
-    useWorktree?: boolean
-  ) => {
-    const session = await window.api.createTerminal({
-      agentType,
-      projectName,
-      projectPath,
-      branch,
-      useWorktree,
-      resumeSessionId: agentSessionId
-    })
-    addTerminal(session)
-    setFocusedTerminal(session.id)
-    handleClose()
-  }, [addTerminal, setFocusedTerminal, handleClose])
+  const handleResumeSession = useCallback(
+    async (
+      agentSessionId: string,
+      agentType: AgentType,
+      projectName: string,
+      projectPath: string,
+      branch?: string,
+      useWorktree?: boolean
+    ) => {
+      const session = await window.api.createTerminal({
+        agentType,
+        projectName,
+        projectPath,
+        branch,
+        useWorktree,
+        resumeSessionId: agentSessionId
+      })
+      addTerminal(session)
+      setFocusedTerminal(session.id)
+      handleClose()
+    },
+    [addTerminal, setFocusedTerminal, handleClose]
+  )
 
-  const handleClickTask = useCallback((taskId: string) => {
-    setSelectedTaskId(taskId)
-    handleClose()
-  }, [setSelectedTaskId, handleClose])
+  const handleClickTask = useCallback(
+    (taskId: string) => {
+      setSelectedTaskId(taskId)
+      handleClose()
+    },
+    [setSelectedTaskId, handleClose]
+  )
 
   if (!isOpen) return null
 
@@ -293,7 +327,9 @@ export function WorkflowEditor() {
             <input
               type="number"
               value={staggerDelayMs || ''}
-              onChange={(e) => setStaggerDelayMs(e.target.value ? parseInt(e.target.value) : undefined)}
+              onChange={(e) =>
+                setStaggerDelayMs(e.target.value ? parseInt(e.target.value) : undefined)
+              }
               placeholder="0ms"
               className="w-[70px] px-2 py-1 text-[12px] bg-white/[0.06] border border-white/[0.08] rounded-md
                          text-gray-300 focus:outline-none focus:border-blue-500/50"
@@ -330,9 +366,11 @@ export function WorkflowEditor() {
                 if (!showRunHistory) setSelectedNodeId(null)
               }}
               className={`px-3 py-1.5 text-[12px] rounded-md transition-colors flex items-center gap-1.5
-                         ${showRunHistory
-                           ? 'text-purple-400 bg-purple-500/20 hover:bg-purple-500/30'
-                           : 'text-gray-400 hover:text-gray-300 bg-white/[0.06] hover:bg-white/[0.1]'}`}
+                         ${
+                           showRunHistory
+                             ? 'text-purple-400 bg-purple-500/20 hover:bg-purple-500/30'
+                             : 'text-gray-400 hover:text-gray-300 bg-white/[0.06] hover:bg-white/[0.1]'
+                         }`}
             >
               <History size={13} />
               Runs ({executionHistory.length})

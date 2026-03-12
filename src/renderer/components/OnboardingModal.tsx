@@ -23,7 +23,15 @@ import {
   ArrowRight
 } from 'lucide-react'
 
-const ICON_MAP: Record<string, React.ComponentType<{ size?: number; strokeWidth?: number; className?: string; style?: React.CSSProperties }>> = {
+const ICON_MAP: Record<
+  string,
+  React.ComponentType<{
+    size?: number
+    strokeWidth?: number
+    className?: string
+    style?: React.CSSProperties
+  }>
+> = {
   LayoutGrid,
   Search,
   SlidersHorizontal,
@@ -73,9 +81,10 @@ export function OnboardingModal() {
   }
 
   const goTo = (direction: 'prev' | 'next') => {
-    const newIndex = direction === 'next'
-      ? Math.min(topicIndex + 1, ONBOARDING_TOPICS.length - 1)
-      : Math.max(topicIndex - 1, 0)
+    const newIndex =
+      direction === 'next'
+        ? Math.min(topicIndex + 1, ONBOARDING_TOPICS.length - 1)
+        : Math.max(topicIndex - 1, 0)
     setActiveTopic(ONBOARDING_TOPICS[newIndex].id)
   }
 
@@ -101,8 +110,10 @@ export function OnboardingModal() {
         transition={{ duration: 0.15 }}
       >
         {/* Left sidebar */}
-        <div className="w-52 border-r border-white/[0.06] flex flex-col shrink-0"
-             style={{ background: '#141416' }}>
+        <div
+          className="w-52 border-r border-white/[0.06] flex flex-col shrink-0"
+          style={{ background: '#141416' }}
+        >
           {/* Sidebar header */}
           <div className="px-4 py-3.5 border-b border-white/[0.06]">
             <span className="text-sm font-medium text-white">Welcome Guide</span>
@@ -121,9 +132,11 @@ export function OnboardingModal() {
                     className="w-full flex items-center gap-1.5 px-2 py-1 text-[11px] font-medium
                                text-gray-500 uppercase tracking-wider hover:text-gray-300 transition-colors"
                   >
-                    {isExpanded
-                      ? <ChevronDown size={11} strokeWidth={2} />
-                      : <ChevronRight size={11} strokeWidth={2} />}
+                    {isExpanded ? (
+                      <ChevronDown size={11} strokeWidth={2} />
+                    ) : (
+                      <ChevronRight size={11} strokeWidth={2} />
+                    )}
                     {section.label}
                   </button>
 
@@ -179,24 +192,30 @@ export function OnboardingModal() {
               >
                 {/* Icon */}
                 <div className="flex justify-center mb-6">
-                  <div className="w-20 h-20 rounded-2xl flex items-center justify-center"
-                       style={{ background: 'rgba(0, 255, 212, 0.04)' }}>
+                  <div
+                    className="w-20 h-20 rounded-2xl flex items-center justify-center"
+                    style={{ background: 'rgba(0, 255, 212, 0.04)' }}
+                  >
                     {IconComponent && (
-                      <IconComponent size={40} strokeWidth={1} style={{ color: 'rgba(0, 255, 212, 0.6)' }} />
+                      <IconComponent
+                        size={40}
+                        strokeWidth={1}
+                        style={{ color: 'rgba(0, 255, 212, 0.6)' }}
+                      />
                     )}
                   </div>
                 </div>
 
                 {/* Title */}
-                <h2 className="text-xl font-semibold text-white text-center mb-3">
-                  {topic.title}
-                </h2>
+                <h2 className="text-xl font-semibold text-white text-center mb-3">{topic.title}</h2>
 
                 {/* Shortcut hint */}
                 {topic.shortcutHint && (
                   <div className="flex justify-center mb-3">
-                    <kbd className="text-xs text-gray-400 bg-white/[0.06] border border-white/[0.08]
-                                    px-2.5 py-1 rounded-md font-mono">
+                    <kbd
+                      className="text-xs text-gray-400 bg-white/[0.06] border border-white/[0.08]
+                                    px-2.5 py-1 rounded-md font-mono"
+                    >
                       {topic.shortcutHint}
                     </kbd>
                   </div>

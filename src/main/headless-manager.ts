@@ -2,7 +2,13 @@ import { spawn, ChildProcess } from 'node:child_process'
 import crypto from 'node:crypto'
 import { EventEmitter } from 'node:events'
 import { BrowserWindow } from 'electron'
-import { AgentType, AgentCommandConfig, CreateTerminalPayload, HeadlessSession, IPC } from '../shared/types'
+import {
+  AgentType,
+  AgentCommandConfig,
+  CreateTerminalPayload,
+  HeadlessSession,
+  IPC
+} from '../shared/types'
 import { getGitBranch, checkoutBranch, createWorktree } from './git-utils'
 import { getSafeEnv } from './pty-manager'
 import { buildHeadlessSpawnArgs } from './agent-launch'
@@ -53,7 +59,9 @@ class HeadlessManager extends EventEmitter {
 
     const env = getSafeEnv()
     const spawnArgs = buildHeadlessSpawnArgs(payload, this.agentCommands, env)
-    log.info(`[headless] launching: ${spawnArgs.command} ${spawnArgs.args.join(' ').slice(0, 100)}...`)
+    log.info(
+      `[headless] launching: ${spawnArgs.command} ${spawnArgs.args.join(' ').slice(0, 100)}...`
+    )
 
     const child = spawn(spawnArgs.command, spawnArgs.args, {
       cwd: effectivePath,

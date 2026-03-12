@@ -127,12 +127,16 @@ export class HookServer extends EventEmitter {
       const requestId = crypto.randomUUID()
       const pending: PendingPermission = { requestId, res, event, createdAt: Date.now() }
       this.pendingPermissions.set(requestId, pending)
-      log.info(`[hooks] permission stored: requestId=${requestId} tool=${event.tool_name} pending=${this.pendingPermissions.size}`)
+      log.info(
+        `[hooks] permission stored: requestId=${requestId} tool=${event.tool_name} pending=${this.pendingPermissions.size}`
+      )
 
       // Clean up if connection closes before we respond (e.g. Claude timeout)
       res.on('close', () => {
         if (this.pendingPermissions.has(requestId)) {
-          log.info(`[hooks] permission connection closed before response: requestId=${requestId} (Claude may have timed out)`)
+          log.info(
+            `[hooks] permission connection closed before response: requestId=${requestId} (Claude may have timed out)`
+          )
           this.pendingPermissions.delete(requestId)
           this.emit('permission-cancelled', requestId)
         }
@@ -158,8 +162,14 @@ export class HookServer extends EventEmitter {
     res.end('{}')
   }
 
-  resolvePermission(requestId: string, allow: boolean, extra?: { updatedPermissions?: unknown[]; updatedInput?: unknown }): void {
-    log.info(`[hooks] resolvePermission: requestId=${requestId} allow=${allow} pending=${this.pendingPermissions.size} found=${this.pendingPermissions.has(requestId)}`)
+  resolvePermission(
+    requestId: string,
+    allow: boolean,
+    extra?: { updatedPermissions?: unknown[]; updatedInput?: unknown }
+  ): void {
+    log.info(
+      `[hooks] resolvePermission: requestId=${requestId} allow=${allow} pending=${this.pendingPermissions.size} found=${this.pendingPermissions.has(requestId)}`
+    )
     const pending = this.pendingPermissions.get(requestId)
     if (!pending) {
       log.info(`[hooks] resolvePermission: requestId not found in pending map`)
@@ -198,11 +208,14 @@ export class HookServer extends EventEmitter {
   }
 
   cancelSessionPermissions(sessionId: string): void {
-    const toCancel = Array.from(this.pendingPermissions.entries())
-      .filter(([, pending]) => pending.event.session_id === sessionId)
+    const toCancel = Array.from(this.pendingPermissions.entries()).filter(
+      ([, pending]) => pending.event.session_id === sessionId
+    )
     for (const [requestId, pending] of toCancel) {
       this.pendingPermissions.delete(requestId)
-      log.info(`[hooks] cancelling stale permission for session ${sessionId}: requestId=${requestId}`)
+      log.info(
+        `[hooks] cancelling stale permission for session ${sessionId}: requestId=${requestId}`
+      )
       if (!pending.res.destroyed) {
         pending.res.destroy()
       }
@@ -240,12 +253,16 @@ export class HookServer extends EventEmitter {
       if (fs.existsSync(PORT_FILE)) {
         fs.unlinkSync(PORT_FILE)
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     try {
       if (fs.existsSync(TOKEN_FILE)) {
         fs.unlinkSync(TOKEN_FILE)
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }
 }
 

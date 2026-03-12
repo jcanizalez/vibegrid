@@ -37,32 +37,38 @@ export function GridView() {
 
   const DRAG_THRESHOLD = 5
 
-  const handleDragStart = useCallback((terminalId: string, e: React.PointerEvent) => {
-    if (sortMode !== 'manual') return
-    if (e.button !== 0) return
-    setDragState({
-      draggingId: terminalId,
-      startX: e.clientX,
-      startY: e.clientY,
-      isDragging: false
-    })
-  }, [sortMode])
+  const handleDragStart = useCallback(
+    (terminalId: string, e: React.PointerEvent) => {
+      if (sortMode !== 'manual') return
+      if (e.button !== 0) return
+      setDragState({
+        draggingId: terminalId,
+        startX: e.clientX,
+        startY: e.clientY,
+        isDragging: false
+      })
+    },
+    [sortMode]
+  )
 
-  const handlePointerMove = useCallback((e: React.PointerEvent) => {
-    if (!dragState) return
+  const handlePointerMove = useCallback(
+    (e: React.PointerEvent) => {
+      if (!dragState) return
 
-    const dx = e.clientX - dragState.startX
-    const dy = e.clientY - dragState.startY
+      const dx = e.clientX - dragState.startX
+      const dy = e.clientY - dragState.startY
 
-    if (!dragState.isDragging && Math.abs(dx) + Math.abs(dy) < DRAG_THRESHOLD) return
+      if (!dragState.isDragging && Math.abs(dx) + Math.abs(dy) < DRAG_THRESHOLD) return
 
-    if (!dragState.isDragging) {
-      setDragState({ ...dragState, isDragging: true })
-    }
+      if (!dragState.isDragging) {
+        setDragState({ ...dragState, isDragging: true })
+      }
 
-    const targetIndex = getDropIndex(e.clientX, e.clientY, orderedIds, cardRefs.current)
-    setDropTargetIndex(targetIndex)
-  }, [dragState, orderedIds])
+      const targetIndex = getDropIndex(e.clientX, e.clientY, orderedIds, cardRefs.current)
+      setDropTargetIndex(targetIndex)
+    },
+    [dragState, orderedIds]
+  )
 
   const handlePointerUp = useCallback(() => {
     if (dragState?.isDragging && dropTargetIndex !== null) {
@@ -85,8 +91,15 @@ export function GridView() {
       {orderedIds.length === 0 ? (
         isFiltered ? (
           <div className="flex flex-col items-center justify-center h-full">
-            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                 strokeWidth="1" className="text-white/20 mb-6">
+            <svg
+              width="64"
+              height="64"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1"
+              className="text-white/20 mb-6"
+            >
               <rect x="2" y="3" width="20" height="14" rx="2" />
               <path d="M8 21h8M12 17v4" />
               <path d="M7 8l3 3-3 3M12 14h4" />
@@ -109,9 +122,7 @@ export function GridView() {
                     else cardRefs.current.delete(id)
                   }}
                   terminalId={id}
-                  isDragTarget={
-                    dragState?.isDragging === true && dropTargetIndex === index
-                  }
+                  isDragTarget={dragState?.isDragging === true && dropTargetIndex === index}
                   onDragStart={sortMode === 'manual' ? (e) => handleDragStart(id, e) : undefined}
                 />
               ))}

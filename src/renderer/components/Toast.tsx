@@ -42,7 +42,10 @@ toast.info = (msg: string) => toast(msg, 'info')
 /*  Icons & colors per type                                           */
 /* ------------------------------------------------------------------ */
 
-const TOAST_STYLES: Record<ToastType, { icon: typeof Check; bg: string; border: string; text: string }> = {
+const TOAST_STYLES: Record<
+  ToastType,
+  { icon: typeof Check; bg: string; border: string; text: string }
+> = {
   success: {
     icon: Check,
     bg: 'bg-green-500/10',

@@ -48,13 +48,16 @@ const claudeProvider: AgentHistoryProvider = {
       const raw = fs.readFileSync(historyPath, 'utf-8')
       const lines = raw.trim().split('\n').filter(Boolean)
 
-      const sessionMap = new Map<string, {
-        display: string
-        projectPath: string
-        firstTimestamp: number
-        lastTimestamp: number
-        count: number
-      }>()
+      const sessionMap = new Map<
+        string,
+        {
+          display: string
+          projectPath: string
+          firstTimestamp: number
+          lastTimestamp: number
+          count: number
+        }
+      >()
 
       for (const line of lines) {
         try {
@@ -145,7 +148,8 @@ const geminiProvider: AgentHistoryProvider = {
         const chatsDir = path.join(geminiDir, 'tmp', projName, 'chats')
         if (!fs.existsSync(chatsDir)) continue
 
-        const files = fs.readdirSync(chatsDir)
+        const files = fs
+          .readdirSync(chatsDir)
           .filter((f) => f.startsWith('session-') && f.endsWith('.json'))
           .map((f) => ({ name: f, mtime: fs.statSync(path.join(chatsDir, f)).mtimeMs }))
           .sort((a, b) => b.mtime - a.mtime)
@@ -203,7 +207,9 @@ const codexProvider: AgentHistoryProvider = {
             if (entry.session_id) {
               msgCounts.set(entry.session_id, (msgCounts.get(entry.session_id) || 0) + 1)
             }
-          } catch { /* skip */ }
+          } catch {
+            /* skip */
+          }
         }
       }
 
@@ -239,9 +245,7 @@ const copilotProvider: AgentHistoryProvider = {
     try {
       if (!fs.existsSync(dbPath)) return []
 
-      const where = projectPath
-        ? `WHERE s.cwd = '${projectPath.replace(/'/g, "''")}'`
-        : ''
+      const where = projectPath ? `WHERE s.cwd = '${projectPath.replace(/'/g, "''")}'` : ''
 
       const sql = `SELECT s.id, s.cwd, s.summary, s.updated_at, COUNT(t.id) as turn_count FROM sessions s LEFT JOIN turns t ON s.id = t.session_id ${where} GROUP BY s.id ORDER BY s.updated_at DESC LIMIT ${limit}`
       const rows = querySqlite(dbPath, sql)
@@ -278,7 +282,5 @@ export function getRecentSessions(projectPath?: string, limit = 20): RecentSessi
     allSessions.push(...provider.getRecentSessions(projectPath, limit))
   }
 
-  return allSessions
-    .sort((a, b) => b.timestamp - a.timestamp)
-    .slice(0, limit)
+  return allSessions.sort((a, b) => b.timestamp - a.timestamp).slice(0, limit)
 }

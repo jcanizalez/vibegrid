@@ -13,18 +13,22 @@ export function createMenu(onToggleWidget?: () => void): void {
   })
 
   const template: Electron.MenuItemConstructorOptions[] = [
-    ...(isMac ? [{
-      label: app.name,
-      submenu: [
-        { role: 'about' as const },
-        { type: 'separator' as const },
-        { role: 'hide' as const },
-        { role: 'hideOthers' as const },
-        { role: 'unhide' as const },
-        { type: 'separator' as const },
-        { role: 'quit' as const }
-      ]
-    }] : []),
+    ...(isMac
+      ? [
+          {
+            label: app.name,
+            submenu: [
+              { role: 'about' as const },
+              { type: 'separator' as const },
+              { role: 'hide' as const },
+              { role: 'hideOthers' as const },
+              { role: 'unhide' as const },
+              { type: 'separator' as const },
+              { role: 'quit' as const }
+            ]
+          }
+        ]
+      : []),
     {
       label: 'File',
       submenu: [
@@ -71,7 +75,9 @@ export function createMenu(onToggleWidget?: () => void): void {
         {
           label: 'Toggle Widget',
           accelerator: 'CmdOrCtrl+Shift+W',
-          click: (): void => { onToggleWidget?.() }
+          click: (): void => {
+            onToggleWidget?.()
+          }
         }
       ]
     }

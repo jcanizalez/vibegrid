@@ -4,7 +4,15 @@ import os from 'node:os'
 import { EventEmitter } from 'node:events'
 import { execFileSync } from 'node:child_process'
 import { BrowserWindow } from 'electron'
-import { AgentType, AgentStatus, AgentCommandConfig, CreateTerminalPayload, IPC, TerminalSession, RemoteHost } from '../shared/types'
+import {
+  AgentType,
+  AgentStatus,
+  AgentCommandConfig,
+  CreateTerminalPayload,
+  IPC,
+  TerminalSession,
+  RemoteHost
+} from '../shared/types'
 import { getGitBranch, checkoutBranch, createWorktree } from './git-utils'
 import { DEFAULT_AGENT_COMMANDS } from '../shared/agent-defaults'
 import { buildAgentLaunchLine as buildLaunchLine } from './agent-launch'
@@ -45,9 +53,20 @@ export function shellEscape(s: string): string {
 }
 
 const SENSITIVE_ENV_PREFIXES = [
-  'AWS_SECRET', 'AWS_SESSION', 'GITHUB_TOKEN', 'GH_TOKEN', 'OPENAI_API',
-  'ANTHROPIC_API', 'GOOGLE_API', 'STRIPE_', 'DATABASE_URL', 'DB_PASSWORD',
-  'SECRET_', 'PRIVATE_KEY', 'NPM_TOKEN', 'NODE_AUTH_TOKEN'
+  'AWS_SECRET',
+  'AWS_SESSION',
+  'GITHUB_TOKEN',
+  'GH_TOKEN',
+  'OPENAI_API',
+  'ANTHROPIC_API',
+  'GOOGLE_API',
+  'STRIPE_',
+  'DATABASE_URL',
+  'DB_PASSWORD',
+  'SECRET_',
+  'PRIVATE_KEY',
+  'NPM_TOKEN',
+  'NODE_AUTH_TOKEN'
 ]
 
 // Env vars to strip so agent CLIs don't refuse to launch (e.g. nested session detection)
@@ -110,7 +129,11 @@ class PtyManager extends EventEmitter {
     return this.createLocalPty(id, shell, payload)
   }
 
-  private createLocalPty(id: string, shell: string, payload: CreateTerminalPayload): TerminalSession {
+  private createLocalPty(
+    id: string,
+    shell: string,
+    payload: CreateTerminalPayload
+  ): TerminalSession {
     let effectivePath = payload.projectPath
     let worktreePath: string | undefined
     let effectiveBranch: string | undefined
@@ -162,7 +185,12 @@ class PtyManager extends EventEmitter {
     return session
   }
 
-  private createRemotePty(id: string, shell: string, payload: CreateTerminalPayload, host: RemoteHost): TerminalSession {
+  private createRemotePty(
+    id: string,
+    shell: string,
+    payload: CreateTerminalPayload,
+    host: RemoteHost
+  ): TerminalSession {
     const ptyProcess = pty.spawn(shell, ['-l'], {
       name: 'xterm-256color',
       cols: 80,
@@ -215,11 +243,19 @@ class PtyManager extends EventEmitter {
     this.ptys.set(id, ptyProcess)
 
     // Clean up the prompt listener after connection or timeout
-    const cleanup = (): void => { promptListener.dispose() }
+    const cleanup = (): void => {
+      promptListener.dispose()
+    }
     const checkConnected = setInterval(() => {
-      if (connected) { cleanup(); clearInterval(checkConnected) }
+      if (connected) {
+        cleanup()
+        clearInterval(checkConnected)
+      }
     }, 200)
-    setTimeout(() => { cleanup(); clearInterval(checkConnected) }, 6000)
+    setTimeout(() => {
+      cleanup()
+      clearInterval(checkConnected)
+    }, 6000)
 
     const session: TerminalSession = {
       id,

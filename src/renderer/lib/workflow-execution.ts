@@ -18,7 +18,9 @@ function resolveTaskContext(task: TaskConfig, fallbackBranch?: string, fallbackW
   const project = state.config?.projects.find((p) => p.name === task.projectName)
   let initialPrompt: string
   if (project) {
-    const siblingTasks = (state.config?.tasks || []).filter((t) => t.projectName === task.projectName)
+    const siblingTasks = (state.config?.tasks || []).filter(
+      (t) => t.projectName === task.projectName
+    )
     initialPrompt = buildTaskPrompt({ task, project, siblingTasks })
   } else {
     initialPrompt = task.description
@@ -53,7 +55,9 @@ export async function executeWorkflow(
   }
 
   const actionNodes = getOrderedActionNodes(workflow)
-  console.log(`[workflow] executeWorkflow "${workflow.name}" — ${actionNodes.length} action nodes, triggerTaskId=${context?.task?.id}`)
+  console.log(
+    `[workflow] executeWorkflow "${workflow.name}" — ${actionNodes.length} action nodes, triggerTaskId=${context?.task?.id}`
+  )
 
   // Persist immediately so the run is visible in the UI from the start
   persistExecution(workflow.id, execution)
@@ -68,7 +72,10 @@ export async function executeWorkflow(
       }
 
       // Update node status to running
-      updateNodeState(execution, node.id, { status: 'running', startedAt: new Date().toISOString() })
+      updateNodeState(execution, node.id, {
+        status: 'running',
+        startedAt: new Date().toISOString()
+      })
       persistExecution(workflow.id, execution)
 
       if (node.type === 'script') {
@@ -77,7 +84,7 @@ export async function executeWorkflow(
 
         try {
           const result = await window.api.executeScript(config)
-          
+
           updateNodeState(execution, node.id, {
             status: result.success ? 'success' : 'error',
             completedAt: new Date().toISOString(),
@@ -98,7 +105,9 @@ export async function executeWorkflow(
 
       // Default: Launch Agent
       const config = node.config as LaunchAgentConfig
-      console.log(`[workflow] launch agent: ${node.label} headless=${config.headless} prompt="${(config.prompt || '').slice(0, 50)}"`)
+      console.log(
+        `[workflow] launch agent: ${node.label} headless=${config.headless} prompt="${(config.prompt || '').slice(0, 50)}"`
+      )
 
       // Resolve prompt from task if applicable
       let initialPrompt = config.prompt
@@ -136,32 +145,40 @@ export async function executeWorkflow(
 
       if (config.headless) {
         // Headless execution — run process directly without terminal
-        console.log(`[workflow] creating headless session for "${node.label}" prompt="${(initialPrompt || '').slice(0, 80)}"`)
+        console.log(
+          `[workflow] creating headless session for "${node.label}" prompt="${(initialPrompt || '').slice(0, 80)}"`
+        )
 
         // Register listeners BEFORE creating the session to avoid race conditions
         // (fast-exiting processes can fire exit before listeners are set up)
         let sessionId: string | null = null
         let logs = ''
 
-        const removeDataListener = window.api.onHeadlessData(({ id, data }: { id: string; data: string }) => {
-          if (sessionId && id === sessionId) {
-            logs += data
-            if (logs.length > 100000) {
-              logs = logs.slice(-80000)
+        const removeDataListener = window.api.onHeadlessData(
+          ({ id, data }: { id: string; data: string }) => {
+            if (sessionId && id === sessionId) {
+              logs += data
+              if (logs.length > 100000) {
+                logs = logs.slice(-80000)
+              }
+              updateNodeState(execution, node.id, { logs })
+              useAppStore.getState().setWorkflowExecution(workflow.id, { ...execution })
             }
-            updateNodeState(execution, node.id, { logs })
-            useAppStore.getState().setWorkflowExecution(workflow.id, { ...execution })
           }
-        })
+        )
 
         let resolveExit: (code: number) => void
-        const exitPromise = new Promise<number>((resolve) => { resolveExit = resolve })
-
-        const removeExitListener = window.api.onHeadlessExit(({ id, exitCode: code }: { id: string; exitCode: number }) => {
-          if (sessionId && id === sessionId) {
-            resolveExit(code)
-          }
+        const exitPromise = new Promise<number>((resolve) => {
+          resolveExit = resolve
         })
+
+        const removeExitListener = window.api.onHeadlessExit(
+          ({ id, exitCode: code }: { id: string; exitCode: number }) => {
+            if (sessionId && id === sessionId) {
+              resolveExit(code)
+            }
+          }
+        )
 
         try {
           const headlessSession = await window.api.createHeadlessSession({
@@ -180,7 +197,10 @@ export async function executeWorkflow(
           // Set sessionId so the pre-registered listeners start matching
           sessionId = headlessSession.id
 
-          updateNodeState(execution, node.id, { sessionId: headlessSession.id, taskId: resolvedTaskId })
+          updateNodeState(execution, node.id, {
+            sessionId: headlessSession.id,
+            taskId: resolvedTaskId
+          })
           persistExecution(workflow.id, execution)
 
           if (resolvedTaskId) {

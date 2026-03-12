@@ -72,7 +72,8 @@ export function McpSettings() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    window.api.getMcpInfo()
+    window.api
+      .getMcpInfo()
       .then(setMcpInfo)
       .catch((err: unknown) => setError(err instanceof Error ? err.message : String(err)))
   }, [])
@@ -92,21 +93,25 @@ export function McpSettings() {
   return (
     <div>
       <h2 className="text-xl font-semibold text-white mb-1">MCP Integration</h2>
-      <p className="text-sm text-gray-500 mb-6">
-        Connect your coding agents to VibeGrid via MCP
-      </p>
+      <p className="text-sm text-gray-500 mb-6">Connect your coding agents to VibeGrid via MCP</p>
 
       {/* CLI Install */}
-      <div className="border border-white/[0.06] rounded-lg p-4 mb-6" style={{ background: '#141416' }}>
+      <div
+        className="border border-white/[0.06] rounded-lg p-4 mb-6"
+        style={{ background: '#141416' }}
+      >
         <h3 className="text-sm font-medium text-gray-200 mb-2">Add to PATH</h3>
         <p className="text-xs text-gray-500 mb-3">
-          Run this so agents can find <span className="font-mono text-gray-400">vibegrid</span> by name.
+          Run this so agents can find <span className="font-mono text-gray-400">vibegrid</span> by
+          name.
         </p>
 
         {cliInstallCmd && mcpInfo ? (
           <div className="flex items-center gap-2">
-            <code className="flex-1 px-3 py-1.5 bg-white/[0.04] border border-white/[0.08] rounded-md
-                           text-xs text-gray-300 font-mono overflow-x-auto whitespace-nowrap">
+            <code
+              className="flex-1 px-3 py-1.5 bg-white/[0.04] border border-white/[0.08] rounded-md
+                           text-xs text-gray-300 font-mono overflow-x-auto whitespace-nowrap"
+            >
               {cliInstallCmd}
             </code>
             <CopyButton text={cliInstallCmd} />
@@ -136,8 +141,10 @@ export function McpSettings() {
                 <span className="text-sm font-medium text-gray-200">{agent.displayName}</span>
               </div>
               <div className="flex items-center gap-2">
-                <code className="flex-1 px-3 py-1.5 bg-white/[0.04] border border-white/[0.08] rounded-md
-                               text-xs text-gray-300 font-mono overflow-x-auto whitespace-nowrap">
+                <code
+                  className="flex-1 px-3 py-1.5 bg-white/[0.04] border border-white/[0.08] rounded-md
+                               text-xs text-gray-300 font-mono overflow-x-auto whitespace-nowrap"
+                >
                   {cmd}
                 </code>
                 <CopyButton text={cmd} />

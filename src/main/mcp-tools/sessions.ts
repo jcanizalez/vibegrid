@@ -5,28 +5,30 @@ import type { AgentType, CreateTerminalPayload } from '../../shared/types'
 
 type PtyManager = typeof PtyManagerInstance
 
-const AGENT_TYPES: [AgentType, ...AgentType[]] = ['claude', 'copilot', 'codex', 'opencode', 'gemini']
+const AGENT_TYPES: [AgentType, ...AgentType[]] = [
+  'claude',
+  'copilot',
+  'codex',
+  'opencode',
+  'gemini'
+]
 
 export function registerSessionTools(server: McpServer, deps: { ptyManager: PtyManager }): void {
   const { ptyManager } = deps
 
-  server.tool(
-    'list_sessions',
-    'List all active terminal sessions',
-    async () => {
-      const sessions = ptyManager.getActiveSessions()
-      const summary = sessions.map(s => ({
-        id: s.id,
-        agentType: s.agentType,
-        projectName: s.projectName,
-        status: s.status,
-        displayName: s.displayName,
-        branch: s.branch,
-        pid: s.pid
-      }))
-      return { content: [{ type: 'text', text: JSON.stringify(summary, null, 2) }] }
-    }
-  )
+  server.tool('list_sessions', 'List all active terminal sessions', async () => {
+    const sessions = ptyManager.getActiveSessions()
+    const summary = sessions.map((s) => ({
+      id: s.id,
+      agentType: s.agentType,
+      projectName: s.projectName,
+      status: s.status,
+      displayName: s.displayName,
+      branch: s.branch,
+      pid: s.pid
+    }))
+    return { content: [{ type: 'text', text: JSON.stringify(summary, null, 2) }] }
+  })
 
   server.tool(
     'launch_agent',
@@ -54,16 +56,22 @@ export function registerSessionTools(server: McpServer, deps: { ptyManager: PtyM
       try {
         const session = ptyManager.createPty(payload)
         return {
-          content: [{
-            type: 'text',
-            text: JSON.stringify({
-              id: session.id,
-              agentType: session.agentType,
-              projectName: session.projectName,
-              pid: session.pid,
-              status: session.status
-            }, null, 2)
-          }]
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(
+                {
+                  id: session.id,
+                  agentType: session.agentType,
+                  projectName: session.projectName,
+                  pid: session.pid,
+                  status: session.status
+                },
+                null,
+                2
+              )
+            }
+          ]
         }
       } catch (err) {
         return { content: [{ type: 'text', text: `Error launching agent: ${err}` }], isError: true }
@@ -97,7 +105,10 @@ export function registerSessionTools(server: McpServer, deps: { ptyManager: PtyM
         ptyManager.writeToPty(args.id, args.data)
         return { content: [{ type: 'text', text: `Wrote to session: ${args.id}` }] }
       } catch (err) {
-        return { content: [{ type: 'text', text: `Error writing to terminal: ${err}` }], isError: true }
+        return {
+          content: [{ type: 'text', text: `Error writing to terminal: ${err}` }],
+          isError: true
+        }
       }
     }
   )

@@ -61,8 +61,7 @@ export function TabView() {
     // Auto-select adjacent tab before removing
     if (activeTabId === id) {
       const idx = orderedIds.indexOf(id)
-      const nextId =
-        orderedIds[idx + 1] ?? orderedIds[idx - 1] ?? null
+      const nextId = orderedIds[idx + 1] ?? orderedIds[idx - 1] ?? null
       setActiveTabId(nextId)
     }
 
@@ -77,8 +76,15 @@ export function TabView() {
       <div className="h-full overflow-auto p-4">
         {isFiltered ? (
           <div className="flex flex-col items-center justify-center h-full">
-            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                 strokeWidth="1" className="text-white/20 mb-6">
+            <svg
+              width="64"
+              height="64"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1"
+              className="text-white/20 mb-6"
+            >
               <rect x="2" y="3" width="20" height="14" rx="2" />
               <path d="M8 21h8M12 17v4" />
               <path d="M7 8l3 3-3 3M12 14h4" />
@@ -106,9 +112,9 @@ export function TabView() {
           const terminal = terminals.get(id)
           if (!terminal) return null
           const isActive = id === activeTabId
-          const assignedTask = useAppStore.getState().config?.tasks?.find(
-            (t) => t.assignedSessionId === id && t.status === 'in_progress'
-          )
+          const assignedTask = useAppStore
+            .getState()
+            .config?.tasks?.find((t) => t.assignedSessionId === id && t.status === 'in_progress')
           const displayName = terminal.session.displayName?.trim()
             ? getDisplayName(terminal.session)
             : assignedTask
@@ -122,12 +128,14 @@ export function TabView() {
               onDoubleClick={() => handleDoubleClick(id)}
               className={`group flex items-center gap-1.5 px-2.5 h-[28px] rounded-md text-xs
                          transition-colors shrink-0 max-w-[200px] ${
-                isActive
-                  ? 'bg-white/[0.1] text-white'
-                  : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.04]'
-              }`}
+                           isActive
+                             ? 'bg-white/[0.1] text-white'
+                             : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.04]'
+                         }`}
             >
-              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${STATUS_DOT[terminal.status]}`} />
+              <span
+                className={`w-1.5 h-1.5 rounded-full shrink-0 ${STATUS_DOT[terminal.status]}`}
+              />
               <AgentIcon agentType={terminal.session.agentType} size={12} />
               <span className="truncate">{displayName}</span>
               <ConfirmPopover
@@ -140,7 +148,14 @@ export function TabView() {
                              transition-colors opacity-0 group-hover:opacity-100 text-gray-500 hover:text-gray-200 hover:bg-white/[0.1]"
                   title="Close session"
                 >
-                  <svg width="8" height="8" viewBox="0 0 8 8" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <svg
+                    width="8"
+                    height="8"
+                    viewBox="0 0 8 8"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                  >
                     <path d="M1 1l6 6M7 1l-6 6" />
                   </svg>
                 </span>
@@ -156,7 +171,14 @@ export function TabView() {
                      text-gray-500 hover:text-gray-200 hover:bg-white/[0.06] transition-colors"
           title="New session"
         >
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <svg
+            width="12"
+            height="12"
+            viewBox="0 0 12 12"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+          >
             <path d="M6 1v10M1 6h10" />
           </svg>
         </button>
@@ -165,25 +187,36 @@ export function TabView() {
       {/* Terminal content */}
       <div className="flex-1 min-h-0" style={{ background: '#141416' }}>
         {activeTabId && activeTerminal && !focusedId && (
-          <TerminalInstance
-            key={activeTabId}
-            terminalId={activeTabId}
-            isFocused={true}
-          />
+          <TerminalInstance key={activeTabId} terminalId={activeTabId} isFocused={true} />
         )}
         {activeTabId && activeTerminal && focusedId === activeTabId && (
           <div className="flex items-center justify-center h-full text-gray-600 text-xs">
             Expanded
           </div>
         )}
-        {activeTabId && activeTerminal && activeTerminal.lastOutputTimestamp === 0 && !focusedId && (
-          <div className="absolute inset-0 p-3 space-y-2 pointer-events-none" style={{ background: '#141416' }}>
-            <div className="h-3 w-3/4 rounded bg-white/[0.04] animate-pulse" />
-            <div className="h-3 w-1/2 rounded bg-white/[0.04] animate-pulse" style={{ animationDelay: '0.15s' }} />
-            <div className="h-3 w-5/6 rounded bg-white/[0.04] animate-pulse" style={{ animationDelay: '0.3s' }} />
-            <div className="h-3 w-2/3 rounded bg-white/[0.04] animate-pulse" style={{ animationDelay: '0.45s' }} />
-          </div>
-        )}
+        {activeTabId &&
+          activeTerminal &&
+          activeTerminal.lastOutputTimestamp === 0 &&
+          !focusedId && (
+            <div
+              className="absolute inset-0 p-3 space-y-2 pointer-events-none"
+              style={{ background: '#141416' }}
+            >
+              <div className="h-3 w-3/4 rounded bg-white/[0.04] animate-pulse" />
+              <div
+                className="h-3 w-1/2 rounded bg-white/[0.04] animate-pulse"
+                style={{ animationDelay: '0.15s' }}
+              />
+              <div
+                className="h-3 w-5/6 rounded bg-white/[0.04] animate-pulse"
+                style={{ animationDelay: '0.3s' }}
+              />
+              <div
+                className="h-3 w-2/3 rounded bg-white/[0.04] animate-pulse"
+                style={{ animationDelay: '0.45s' }}
+              />
+            </div>
+          )}
       </div>
     </div>
   )

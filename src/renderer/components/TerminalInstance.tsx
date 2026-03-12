@@ -1,5 +1,12 @@
 import { useRef, useEffect } from 'react'
-import { attachTerminal, detachTerminal, fitTerminal, focusTerminal, getViewportState, scrollToBottom } from '../lib/terminal-registry'
+import {
+  attachTerminal,
+  detachTerminal,
+  fitTerminal,
+  focusTerminal,
+  getViewportState,
+  scrollToBottom
+} from '../lib/terminal-registry'
 import { useStatusDetection } from '../hooks/useStatusDetection'
 import { useAppStore } from '../stores'
 
@@ -58,10 +65,5 @@ export function TerminalInstance({ terminalId, isFocused }: Props) {
     return () => clearTimeout(timer)
   }, [rowHeight, terminalId])
 
-  return (
-    <div
-      ref={containerRef}
-      className="w-full h-full"
-    />
-  )
+  return <div ref={containerRef} className="w-full h-full" />
 }

@@ -1,6 +1,20 @@
 import { useState } from 'react'
-import { CheckCircle, XCircle, Clock, ChevronDown, ChevronRight, Maximize2, Play } from 'lucide-react'
-import { WorkflowExecution, WorkflowNode, NodeExecutionState, TaskConfig, AgentType } from '../../../shared/types'
+import {
+  CheckCircle,
+  XCircle,
+  Clock,
+  ChevronDown,
+  ChevronRight,
+  Maximize2,
+  Play
+} from 'lucide-react'
+import {
+  WorkflowExecution,
+  WorkflowNode,
+  NodeExecutionState,
+  TaskConfig,
+  AgentType
+} from '../../../shared/types'
 
 export function formatRunTime(iso: string): string {
   const d = new Date(iso)
@@ -21,7 +35,11 @@ export function formatDuration(start: string, end?: string): string {
   return `${Math.floor(ms / 60000)}m ${Math.floor((ms % 60000) / 1000)}s`
 }
 
-export function StatusIcon({ status }: { status: WorkflowExecution['status'] | NodeExecutionState['status'] }) {
+export function StatusIcon({
+  status
+}: {
+  status: WorkflowExecution['status'] | NodeExecutionState['status']
+}) {
   switch (status) {
     case 'success':
       return <CheckCircle size={14} className="text-green-400 shrink-0" />
@@ -49,10 +67,25 @@ interface RunEntryProps {
   tasks?: TaskConfig[]
   onViewFullOutput?: (logs: string) => void
   onClickTask?: (taskId: string) => void
-  onResumeSession?: (agentSessionId: string, agentType: AgentType, projectName: string, projectPath: string, branch?: string, useWorktree?: boolean) => void
+  onResumeSession?: (
+    agentSessionId: string,
+    agentType: AgentType,
+    projectName: string,
+    projectPath: string,
+    branch?: string,
+    useWorktree?: boolean
+  ) => void
 }
 
-export function RunEntry({ execution, nodes, workflowName, tasks, onViewFullOutput, onClickTask, onResumeSession }: RunEntryProps) {
+export function RunEntry({
+  execution,
+  nodes,
+  workflowName,
+  tasks,
+  onViewFullOutput,
+  onClickTask,
+  onResumeSession
+}: RunEntryProps) {
   const [expanded, setExpanded] = useState(false)
   const [expandedNodeId, setExpandedNodeId] = useState<string | null>(null)
 
@@ -62,9 +95,10 @@ export function RunEntry({ execution, nodes, workflowName, tasks, onViewFullOutp
     return node?.type !== 'trigger'
   })
 
-  const triggerTask = execution.triggerTaskId && tasks
-    ? tasks.find((t) => t.id === execution.triggerTaskId)
-    : undefined
+  const triggerTask =
+    execution.triggerTaskId && tasks
+      ? tasks.find((t) => t.id === execution.triggerTaskId)
+      : undefined
 
   return (
     <div className="border border-white/[0.08] rounded-md overflow-hidden">
@@ -73,12 +107,14 @@ export function RunEntry({ execution, nodes, workflowName, tasks, onViewFullOutp
         onClick={() => setExpanded(!expanded)}
         className="w-full flex items-center gap-2 px-3 py-2.5 text-left hover:bg-white/[0.04] transition-colors"
       >
-        {expanded ? <ChevronDown size={12} className="text-gray-500" /> : <ChevronRight size={12} className="text-gray-500" />}
+        {expanded ? (
+          <ChevronDown size={12} className="text-gray-500" />
+        ) : (
+          <ChevronRight size={12} className="text-gray-500" />
+        )}
         <StatusIcon status={execution.status} />
         <span className="text-[12px] text-gray-300 flex-1 min-w-0 truncate">
-          {workflowName && (
-            <span className="text-gray-500 mr-1.5">{workflowName}</span>
-          )}
+          {workflowName && <span className="text-gray-500 mr-1.5">{workflowName}</span>}
           {formatRunTime(execution.startedAt)}
         </span>
         {triggerTask && (
@@ -104,7 +140,15 @@ export function RunEntry({ execution, nodes, workflowName, tasks, onViewFullOutp
           {actionStates.map((ns, i) => {
             const nodeTask = ns.taskId && tasks ? tasks.find((t) => t.id === ns.taskId) : undefined
             const node = nodes.find((n) => n.id === ns.nodeId)
-            const nodeConfig = node?.config as { agentType?: AgentType; projectName?: string; projectPath?: string; branch?: string; useWorktree?: boolean } | undefined
+            const nodeConfig = node?.config as
+              | {
+                  agentType?: AgentType
+                  projectName?: string
+                  projectPath?: string
+                  branch?: string
+                  useWorktree?: boolean
+                }
+              | undefined
 
             return (
               <div key={ns.nodeId} className="border-b border-white/[0.04] last:border-b-0">
@@ -151,8 +195,10 @@ export function RunEntry({ execution, nodes, workflowName, tasks, onViewFullOutp
                 {/* Expanded logs */}
                 {expandedNodeId === ns.nodeId && ns.logs && (
                   <div className="px-4 pb-2">
-                    <pre className="text-[11px] text-gray-400 bg-black/30 rounded-md p-2 max-h-[200px] overflow-auto
-                                    font-mono whitespace-pre-wrap break-all leading-relaxed">
+                    <pre
+                      className="text-[11px] text-gray-400 bg-black/30 rounded-md p-2 max-h-[200px] overflow-auto
+                                    font-mono whitespace-pre-wrap break-all leading-relaxed"
+                    >
                       {ns.logs.length > 2000 ? ns.logs.slice(0, 2000) + '\n...' : ns.logs}
                     </pre>
                     <div className="flex items-center gap-2 mt-1.5">
@@ -167,14 +213,16 @@ export function RunEntry({ execution, nodes, workflowName, tasks, onViewFullOutp
                       )}
                       {ns.agentSessionId && onResumeSession && nodeConfig && (
                         <button
-                          onClick={() => onResumeSession(
-                            ns.agentSessionId!,
-                            nodeConfig.agentType || 'claude',
-                            nodeConfig.projectName || '',
-                            nodeConfig.projectPath || '',
-                            nodeConfig.branch,
-                            nodeConfig.useWorktree
-                          )}
+                          onClick={() =>
+                            onResumeSession(
+                              ns.agentSessionId!,
+                              nodeConfig.agentType || 'claude',
+                              nodeConfig.projectName || '',
+                              nodeConfig.projectPath || '',
+                              nodeConfig.branch,
+                              nodeConfig.useWorktree
+                            )
+                          }
                           className="flex items-center gap-1 text-[11px] text-amber-400 hover:text-amber-300 transition-colors"
                         >
                           <Play size={11} strokeWidth={2} />
@@ -182,9 +230,7 @@ export function RunEntry({ execution, nodes, workflowName, tasks, onViewFullOutp
                         </button>
                       )}
                     </div>
-                    {ns.error && (
-                      <p className="text-[11px] text-red-400 mt-1">{ns.error}</p>
-                    )}
+                    {ns.error && <p className="text-[11px] text-red-400 mt-1">{ns.error}</p>}
                   </div>
                 )}
 
@@ -194,14 +240,16 @@ export function RunEntry({ execution, nodes, workflowName, tasks, onViewFullOutp
                     <p className="text-[11px] text-red-400">{ns.error}</p>
                     {ns.agentSessionId && onResumeSession && nodeConfig && (
                       <button
-                        onClick={() => onResumeSession(
-                          ns.agentSessionId!,
-                          nodeConfig.agentType || 'claude',
-                          nodeConfig.projectName || '',
-                          nodeConfig.projectPath || '',
-                          nodeConfig.branch,
-                          nodeConfig.useWorktree
-                        )}
+                        onClick={() =>
+                          onResumeSession(
+                            ns.agentSessionId!,
+                            nodeConfig.agentType || 'claude',
+                            nodeConfig.projectName || '',
+                            nodeConfig.projectPath || '',
+                            nodeConfig.branch,
+                            nodeConfig.useWorktree
+                          )
+                        }
                         className="flex items-center gap-1 mt-1.5 text-[11px] text-amber-400 hover:text-amber-300 transition-colors"
                       >
                         <Play size={11} strokeWidth={2} />

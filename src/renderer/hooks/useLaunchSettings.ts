@@ -118,13 +118,16 @@ export function useLaunchSettings() {
     getProjectHostIds(p).includes(selectedHost)
   )
 
-  const handleHostChange = useCallback((hostId: string) => {
-    setSelectedHost(hostId)
-    if (selectedProject) {
-      const proj = config?.projects.find((p) => p.name === selectedProject)
-      if (proj && !getProjectHostIds(proj).includes(hostId)) setSelectedProject('')
-    }
-  }, [selectedProject, config?.projects])
+  const handleHostChange = useCallback(
+    (hostId: string) => {
+      setSelectedHost(hostId)
+      if (selectedProject) {
+        const proj = config?.projects.find((p) => p.name === selectedProject)
+        if (proj && !getProjectHostIds(proj).includes(hostId)) setSelectedProject('')
+      }
+    },
+    [selectedProject, config?.projects]
+  )
 
   const handleProjectChange = useCallback((projectName: string) => {
     setSelectedProject(projectName)

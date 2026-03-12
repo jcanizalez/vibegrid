@@ -186,16 +186,16 @@ export function HostSettings() {
               </div>
 
               <div className="mt-3 text-[11px] text-gray-600 font-mono">
-                ssh {h.user ? `${h.user}@` : ''}{h.hostname || '...'}{h.port !== 22 ? ` -p ${h.port}` : ''}
+                ssh {h.user ? `${h.user}@` : ''}
+                {h.hostname || '...'}
+                {h.port !== 22 ? ` -p ${h.port}` : ''}
               </div>
             </div>
           )
         })}
 
         {hosts.length === 0 && (
-          <div className="text-center py-8 text-sm text-gray-600">
-            No remote hosts configured
-          </div>
+          <div className="text-center py-8 text-sm text-gray-600">No remote hosts configured</div>
         )}
 
         <button

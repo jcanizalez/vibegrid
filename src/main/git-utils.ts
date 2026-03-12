@@ -28,7 +28,12 @@ export function listBranches(projectPath: string): string[] {
       ...EXEC_OPTS,
       timeout: 5000
     }).trim()
-    return output ? output.split('\n').map((b: string) => b.trim()).filter(Boolean) : []
+    return output
+      ? output
+          .split('\n')
+          .map((b: string) => b.trim())
+          .filter(Boolean)
+      : []
   } catch {
     return []
   }
@@ -132,7 +137,9 @@ export interface WorktreeEntry {
   isMain: boolean
 }
 
-export function getGitDiffStat(cwd: string): { filesChanged: number; insertions: number; deletions: number } | null {
+export function getGitDiffStat(
+  cwd: string
+): { filesChanged: number; insertions: number; deletions: number } | null {
   try {
     const output = execFileSync('git', ['diff', 'HEAD', '--numstat'], {
       cwd,
@@ -202,7 +209,13 @@ export function getGitDiffFull(cwd: string): {
     }
 
     // Split raw diff by file boundaries
-    const fileDiffs: { filePath: string; status: string; insertions: number; deletions: number; diff: string }[] = []
+    const fileDiffs: {
+      filePath: string
+      status: string
+      insertions: number
+      deletions: number
+      diff: string
+    }[] = []
     const diffSections = rawDiff.split(/^diff --git /m).filter(Boolean)
 
     for (const section of diffSections) {

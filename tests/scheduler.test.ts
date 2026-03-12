@@ -27,7 +27,9 @@ function makeTriggerNode(config: TriggerConfig): WorkflowNode {
   }
 }
 
-function makeWorkflow(overrides: Partial<WorkflowDefinition> & { triggerConfig?: TriggerConfig } = {}): WorkflowDefinition {
+function makeWorkflow(
+  overrides: Partial<WorkflowDefinition> & { triggerConfig?: TriggerConfig } = {}
+): WorkflowDefinition {
   const { triggerConfig, ...rest } = overrides
   const trigger = triggerConfig ?? { triggerType: 'manual' as const }
   return {
@@ -93,7 +95,10 @@ describe('getNextRun', () => {
   })
 
   it('returns null for disabled workflow', () => {
-    const wf = makeWorkflow({ enabled: false, triggerConfig: { triggerType: 'recurring', cron: '0 9 * * *' } })
+    const wf = makeWorkflow({
+      enabled: false,
+      triggerConfig: { triggerType: 'recurring', cron: '0 9 * * *' }
+    })
     expect(scheduler.getNextRun('wf-1', [wf])).toBeNull()
   })
 

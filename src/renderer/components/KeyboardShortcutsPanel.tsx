@@ -33,8 +33,10 @@ export function KeyboardShortcutsPanel() {
         {/* Header */}
         <div className="px-5 py-4 border-b border-white/[0.06] flex items-center justify-between">
           <h2 className="text-sm font-medium text-white">Keyboard Shortcuts</h2>
-          <kbd className="text-[10px] text-gray-600 bg-white/[0.04]
-                          border border-white/[0.06] px-1.5 py-0.5 rounded font-mono">
+          <kbd
+            className="text-[10px] text-gray-600 bg-white/[0.04]
+                          border border-white/[0.06] px-1.5 py-0.5 rounded font-mono"
+          >
             ESC
           </kbd>
         </div>
@@ -54,8 +56,10 @@ export function KeyboardShortcutsPanel() {
                                hover:bg-white/[0.03] transition-colors"
                   >
                     <span className="text-[13px] text-gray-300">{shortcut.description}</span>
-                    <kbd className="text-[11px] text-gray-400 bg-white/[0.04]
-                                    border border-white/[0.06] px-2 py-0.5 rounded font-mono shrink-0 ml-4">
+                    <kbd
+                      className="text-[11px] text-gray-400 bg-white/[0.04]
+                                    border border-white/[0.06] px-2 py-0.5 rounded font-mono shrink-0 ml-4"
+                    >
                       {shortcut.display}
                     </kbd>
                   </div>
@@ -70,9 +74,7 @@ export function KeyboardShortcutsPanel() {
               Tips
             </div>
             <div className="space-y-0.5">
-              {[
-                ['Double-click card title', 'Rename inline']
-              ].map(([key, desc]) => (
+              {[['Double-click card title', 'Rename inline']].map(([key, desc]) => (
                 <div
                   key={key}
                   className="flex items-center justify-between py-1.5 px-2 rounded-md
@@ -95,7 +97,9 @@ export function KeyboardShortcutsPanel() {
               className="w-full flex items-center justify-between py-1.5 px-2 rounded-md
                          hover:bg-white/[0.06] transition-colors text-left"
             >
-              <span className="text-[13px]" style={{ color: '#00FFD4' }}>Show Welcome Guide</span>
+              <span className="text-[13px]" style={{ color: '#00FFD4' }}>
+                Show Welcome Guide
+              </span>
               <span className="text-[11px] text-gray-500">Feature tour</span>
             </button>
           </div>

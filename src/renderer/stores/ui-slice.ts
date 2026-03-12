@@ -16,7 +16,9 @@ function saveGridSettings(patch: Record<string, unknown>): void {
   try {
     const current = loadGridSettings()
     localStorage.setItem(GRID_STORAGE_KEY, JSON.stringify({ ...current, ...patch }))
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 const savedGrid = loadGridSettings()
@@ -40,7 +42,8 @@ export const createUISlice: StateCreator<AppStore, [], [], UISlice> = (set, get)
   gridColumns: (savedGrid.gridColumns as number) ?? 0,
   rowHeight: 208,
   sortMode: (savedGrid.sortMode as 'manual' | 'created' | 'recent') ?? 'manual',
-  statusFilter: (savedGrid.statusFilter as 'all' | 'running' | 'waiting' | 'idle' | 'error') ?? 'all',
+  statusFilter:
+    (savedGrid.statusFilter as 'all' | 'running' | 'waiting' | 'idle' | 'error') ?? 'all',
   terminalOrder: [],
   visibleTerminalIds: [],
   minimizedTerminals: new Set(),
@@ -67,8 +70,14 @@ export const createUISlice: StateCreator<AppStore, [], [], UISlice> = (set, get)
     })),
   setSelectedTerminal: (id) => set({ selectedTerminalId: id }),
   setRenamingTerminalId: (id) => set({ renamingTerminalId: id }),
-  setSortMode: (mode) => { saveGridSettings({ sortMode: mode }); set({ sortMode: mode }) },
-  setStatusFilter: (filter) => { saveGridSettings({ statusFilter: filter }); set({ statusFilter: filter }) },
+  setSortMode: (mode) => {
+    saveGridSettings({ sortMode: mode })
+    set({ sortMode: mode })
+  },
+  setStatusFilter: (filter) => {
+    saveGridSettings({ statusFilter: filter })
+    set({ statusFilter: filter })
+  },
 
   toggleSidebar: () => set((state) => ({ isSidebarOpen: !state.isSidebarOpen })),
 
@@ -95,7 +104,10 @@ export const createUISlice: StateCreator<AppStore, [], [], UISlice> = (set, get)
       previousSessions: sessions || []
     }),
 
-  setGridColumns: (cols) => { saveGridSettings({ gridColumns: cols }); set({ gridColumns: cols }) },
+  setGridColumns: (cols) => {
+    saveGridSettings({ gridColumns: cols })
+    set({ gridColumns: cols })
+  },
 
   setRowHeight: (height) =>
     set((state) => {
@@ -157,11 +169,9 @@ export const createUISlice: StateCreator<AppStore, [], [], UISlice> = (set, get)
   setTaskDialogOpen: (open) => set({ isTaskDialogOpen: open }),
   setEditingTask: (task) => set({ editingTask: task }),
 
-  toggleTerminalPanel: () =>
-    set((state) => ({ isTerminalPanelOpen: !state.isTerminalPanelOpen })),
+  toggleTerminalPanel: () => set((state) => ({ isTerminalPanelOpen: !state.isTerminalPanelOpen })),
 
-  setTerminalPanelHeight: (height) =>
-    set({ terminalPanelHeight: height }),
+  setTerminalPanelHeight: (height) => set({ terminalPanelHeight: height }),
 
   setActiveTabId: (id) => set({ activeTabId: id }),
 
@@ -174,20 +184,20 @@ export const createUISlice: StateCreator<AppStore, [], [], UISlice> = (set, get)
   removeShellTab: (id) =>
     set((state) => {
       const tabs = state.shellTabs.filter((t) => t.id !== id)
-      const active = state.activeShellTab === id
-        ? (tabs.length > 0 ? tabs[tabs.length - 1].id : null)
-        : state.activeShellTab
+      const active =
+        state.activeShellTab === id
+          ? tabs.length > 0
+            ? tabs[tabs.length - 1].id
+            : null
+          : state.activeShellTab
       return { shellTabs: tabs, activeShellTab: active }
     }),
 
-  setActiveShellTab: (id) =>
-    set({ activeShellTab: id }),
+  setActiveShellTab: (id) => set({ activeShellTab: id }),
 
   renameShellTab: (id, title) =>
     set((state) => ({
-      shellTabs: state.shellTabs.map((t) =>
-        t.id === id ? { ...t, title } : t
-      )
+      shellTabs: state.shellTabs.map((t) => (t.id === id ? { ...t, title } : t))
     })),
 
   workflowExecutions: new Map(),

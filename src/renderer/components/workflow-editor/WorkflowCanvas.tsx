@@ -58,17 +58,12 @@ export function WorkflowCanvas({
   }, [nodes, edges])
 
   return (
-    <div
-      className="flex-1 h-full overflow-auto"
-      onClick={() => onNodeClick('')}
-    >
+    <div className="flex-1 h-full overflow-auto" onClick={() => onNodeClick('')}>
       <div className="flex flex-col items-center py-12 min-h-full">
         {orderedNodes.map((node, index) => (
           <div key={node.id} className="flex flex-col items-center">
             {/* Connector line before this node (except the first) */}
-            {index > 0 && (
-              <div className="w-px h-8 bg-white/[0.15]" />
-            )}
+            {index > 0 && <div className="w-px h-8 bg-white/[0.15]" />}
 
             {/* Node card */}
             {node.type === 'trigger' ? (

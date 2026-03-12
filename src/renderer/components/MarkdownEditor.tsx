@@ -2,31 +2,48 @@ import { useState } from 'react'
 import { Eye, Pencil } from 'lucide-react'
 
 function renderMarkdown(text: string): string {
-  return text
-    // Headers
-    .replace(/^### (.+)$/gm, '<h3 class="text-xs font-semibold text-gray-300 mt-3 mb-1">$1</h3>')
-    .replace(/^## (.+)$/gm, '<h2 class="text-sm font-semibold text-gray-200 mt-3 mb-1">$1</h2>')
-    // Bold
-    .replace(/\*\*(.+?)\*\*/g, '<strong class="text-gray-200">$1</strong>')
-    // Italic
-    .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    // Inline code
-    .replace(/`([^`]+)`/g, '<code class="px-1 py-0.5 bg-white/[0.06] rounded text-[11px] font-mono text-gray-300">$1</code>')
-    // Code blocks
-    .replace(/```[\s\S]*?```/g, (match) => {
-      const code = match.replace(/```\w*\n?/, '').replace(/\n?```$/, '')
-      return `<pre class="px-2 py-1.5 bg-white/[0.04] rounded-md text-[11px] font-mono text-gray-300 overflow-x-auto my-1">${code}</pre>`
-    })
-    // Checkboxes
-    .replace(/^- \[x\] (.+)$/gm, '<div class="flex items-center gap-1.5 py-0.5"><span class="text-green-400">&#10003;</span><span class="text-gray-300 line-through">$1</span></div>')
-    .replace(/^- \[ \] (.+)$/gm, '<div class="flex items-center gap-1.5 py-0.5"><span class="text-gray-600">&#9744;</span><span class="text-gray-300">$1</span></div>')
-    // Unordered lists
-    .replace(/^- (.+)$/gm, '<div class="flex items-start gap-1.5 py-0.5"><span class="text-gray-600 mt-0.5">&#8226;</span><span class="text-gray-400">$1</span></div>')
-    // Ordered lists
-    .replace(/^(\d+)\. (.+)$/gm, '<div class="flex items-start gap-1.5 py-0.5"><span class="text-gray-600">$1.</span><span class="text-gray-400">$2</span></div>')
-    // Line breaks
-    .replace(/\n\n/g, '<div class="h-2"></div>')
-    .replace(/\n/g, '<br />')
+  return (
+    text
+      // Headers
+      .replace(/^### (.+)$/gm, '<h3 class="text-xs font-semibold text-gray-300 mt-3 mb-1">$1</h3>')
+      .replace(/^## (.+)$/gm, '<h2 class="text-sm font-semibold text-gray-200 mt-3 mb-1">$1</h2>')
+      // Bold
+      .replace(/\*\*(.+?)\*\*/g, '<strong class="text-gray-200">$1</strong>')
+      // Italic
+      .replace(/\*(.+?)\*/g, '<em>$1</em>')
+      // Inline code
+      .replace(
+        /`([^`]+)`/g,
+        '<code class="px-1 py-0.5 bg-white/[0.06] rounded text-[11px] font-mono text-gray-300">$1</code>'
+      )
+      // Code blocks
+      .replace(/```[\s\S]*?```/g, (match) => {
+        const code = match.replace(/```\w*\n?/, '').replace(/\n?```$/, '')
+        return `<pre class="px-2 py-1.5 bg-white/[0.04] rounded-md text-[11px] font-mono text-gray-300 overflow-x-auto my-1">${code}</pre>`
+      })
+      // Checkboxes
+      .replace(
+        /^- \[x\] (.+)$/gm,
+        '<div class="flex items-center gap-1.5 py-0.5"><span class="text-green-400">&#10003;</span><span class="text-gray-300 line-through">$1</span></div>'
+      )
+      .replace(
+        /^- \[ \] (.+)$/gm,
+        '<div class="flex items-center gap-1.5 py-0.5"><span class="text-gray-600">&#9744;</span><span class="text-gray-300">$1</span></div>'
+      )
+      // Unordered lists
+      .replace(
+        /^- (.+)$/gm,
+        '<div class="flex items-start gap-1.5 py-0.5"><span class="text-gray-600 mt-0.5">&#8226;</span><span class="text-gray-400">$1</span></div>'
+      )
+      // Ordered lists
+      .replace(
+        /^(\d+)\. (.+)$/gm,
+        '<div class="flex items-start gap-1.5 py-0.5"><span class="text-gray-600">$1.</span><span class="text-gray-400">$2</span></div>'
+      )
+      // Line breaks
+      .replace(/\n\n/g, '<div class="h-2"></div>')
+      .replace(/\n/g, '<br />')
+  )
 }
 
 export const TASK_TEMPLATE = `## Description
@@ -62,9 +79,7 @@ export function MarkdownEditor({
         <button
           onClick={() => setMode('write')}
           className={`flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium transition-colors ${
-            mode === 'write'
-              ? 'bg-white/[0.08] text-white'
-              : 'text-gray-500 hover:text-gray-300'
+            mode === 'write' ? 'bg-white/[0.08] text-white' : 'text-gray-500 hover:text-gray-300'
           }`}
         >
           <Pencil size={11} strokeWidth={2} />
@@ -73,9 +88,7 @@ export function MarkdownEditor({
         <button
           onClick={() => setMode('preview')}
           className={`flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium transition-colors ${
-            mode === 'preview'
-              ? 'bg-white/[0.08] text-white'
-              : 'text-gray-500 hover:text-gray-300'
+            mode === 'preview' ? 'bg-white/[0.08] text-white' : 'text-gray-500 hover:text-gray-300'
           }`}
         >
           <Eye size={11} strokeWidth={2} />
@@ -109,7 +122,13 @@ export function MarkdownEditor({
   )
 }
 
-export function MarkdownPreview({ content, className = '' }: { content: string; className?: string }) {
+export function MarkdownPreview({
+  content,
+  className = ''
+}: {
+  content: string
+  className?: string
+}) {
   if (!content.trim()) return null
   return (
     <div

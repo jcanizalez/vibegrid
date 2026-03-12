@@ -12,7 +12,7 @@ export interface ScriptExecutionResult {
 export async function executeScript(config: ScriptConfig): Promise<ScriptExecutionResult> {
   return new Promise((resolve) => {
     let command: string
-    let args: string[] = []
+    let args: string[]
 
     switch (config.scriptType) {
       case 'bash':
@@ -47,7 +47,7 @@ export async function executeScript(config: ScriptConfig): Promise<ScriptExecuti
     }
 
     const cwd = config.cwd || config.projectPath || process.cwd()
-    
+
     log.info(`[script-runner] executing ${config.scriptType} script in ${cwd}`)
 
     const child = spawn(command, args, {
@@ -81,7 +81,7 @@ export async function executeScript(config: ScriptConfig): Promise<ScriptExecuti
       resolve({
         success: code === 0,
         output: stdout,
-        error: code !== 0 ? (stderr || `Exited with code ${code}`) : undefined,
+        error: code !== 0 ? stderr || `Exited with code ${code}` : undefined,
         exitCode: code ?? undefined
       })
     })

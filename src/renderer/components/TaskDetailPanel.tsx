@@ -10,10 +10,31 @@ import { CommitDialog } from './CommitDialog'
 import { STATUS_BADGE, STATUS_ICON } from './task-board/TaskCard'
 import { toast } from './Toast'
 import {
-  X, Play, CheckCircle2, XCircle, RotateCcw, Terminal, Pencil, Trash2,
-  GitBranch, Clock, Calendar, ImageIcon, ImagePlus, FileCode, RefreshCw, Loader2,
-  GitCommitHorizontal, Send, MessageSquare, ChevronDown, ChevronRight, FolderGit2,
-  Save, ArrowLeft, Workflow
+  X,
+  Play,
+  CheckCircle2,
+  XCircle,
+  RotateCcw,
+  Terminal,
+  Pencil,
+  Trash2,
+  GitBranch,
+  Clock,
+  Calendar,
+  ImageIcon,
+  ImagePlus,
+  FileCode,
+  RefreshCw,
+  Loader2,
+  GitCommitHorizontal,
+  Send,
+  MessageSquare,
+  ChevronDown,
+  ChevronRight,
+  FolderGit2,
+  Save,
+  ArrowLeft,
+  Workflow
 } from 'lucide-react'
 import { RunEntry } from './workflow-editor/RunEntry'
 import { LogReplayModal } from './LogReplayModal'
@@ -79,7 +100,11 @@ export function TaskDetailPanel() {
   const [selectedFile, setSelectedFile] = useState<string | null>(null)
   const [showCommitDialog, setShowCommitDialog] = useState(false)
   const [comments, setComments] = useState<DiffComment[]>([])
-  const [commentingLine, setCommentingLine] = useState<{ filePath: string; lineIndex: number; lineContent: string } | null>(null)
+  const [commentingLine, setCommentingLine] = useState<{
+    filePath: string
+    lineIndex: number
+    lineContent: string
+  } | null>(null)
   const [showDiffSection, setShowDiffSection] = useState(true)
   const [showWorkflowRuns, setShowWorkflowRuns] = useState(true)
   const [fullOutputLogs, setFullOutputLogs] = useState<string | null>(null)
@@ -98,17 +123,25 @@ export function TaskDetailPanel() {
   const inEditOrCreate = isEditing || isCreateMode
   const taskId = isCreateMode ? newTaskIdRef.current : task?.id
 
-  const project = config?.projects.find((p) => p.name === (inEditOrCreate ? formProjectName : task?.projectName))
+  const project = config?.projects.find(
+    (p) => p.name === (inEditOrCreate ? formProjectName : task?.projectName)
+  )
   const cwd = task?.worktreePath || project?.path || ''
-  const showDiff = !inEditOrCreate && (task?.status === 'in_review' || task?.status === 'in_progress')
+  const showDiff =
+    !inEditOrCreate && (task?.status === 'in_review' || task?.status === 'in_progress')
   const sessionIsLive = !!(task?.assignedSessionId && terminals.has(task.assignedSessionId))
   const canResume = !sessionIsLive && !!task?.agentSessionId && !!task?.assignedAgent
 
   // Load workflow runs related to this task from the database
-  const [relatedRuns, setRelatedRuns] = useState<(WorkflowExecution & { workflowName?: string })[]>([])
+  const [relatedRuns, setRelatedRuns] = useState<(WorkflowExecution & { workflowName?: string })[]>(
+    []
+  )
   const workflowExecutions = useAppStore((s) => s.workflowExecutions)
   useEffect(() => {
-    if (!task) { setRelatedRuns([]); return }
+    if (!task) {
+      setRelatedRuns([])
+      return
+    }
     window.api.listWorkflowRunsByTask(task.id, 20).then(setRelatedRuns)
   }, [task?.id])
 
@@ -117,7 +150,7 @@ export function TaskDetailPanel() {
     if (!task) return
     let relevant = false
     for (const [, exec] of workflowExecutions) {
-      if (exec.triggerTaskId === task.id || exec.nodeStates.some(ns => ns.taskId === task.id)) {
+      if (exec.triggerTaskId === task.id || exec.nodeStates.some((ns) => ns.taskId === task.id)) {
         relevant = true
         break
       }
@@ -204,7 +237,9 @@ export function TaskDetailPanel() {
         try {
           const path = await window.api.getTaskImagePath(selectedTaskId, filename)
           paths.set(filename, path)
-        } catch { /* ignore */ }
+        } catch {
+          /* ignore */
+        }
       }
       setTaskImagePaths(paths)
     }
@@ -235,7 +270,7 @@ export function TaskDetailPanel() {
   const handleStartTask = async () => {
     if (!project || !task) return
     const agentType = config?.defaults.defaultAgent || 'claude'
-    const siblingTasks = (config?.tasks || []).filter(t => t.projectName === task.projectName)
+    const siblingTasks = (config?.tasks || []).filter((t) => t.projectName === task.projectName)
     const session = await window.api.createTerminal({
       agentType,
       projectName: project.name,
@@ -300,12 +335,15 @@ export function TaskDetailPanel() {
 
   const handleAddComment = (text: string) => {
     if (!commentingLine) return
-    setComments((prev) => [...prev, {
-      filePath: commentingLine.filePath,
-      lineIndex: commentingLine.lineIndex,
-      lineContent: commentingLine.lineContent,
-      comment: text
-    }])
+    setComments((prev) => [
+      ...prev,
+      {
+        filePath: commentingLine.filePath,
+        lineIndex: commentingLine.lineIndex,
+        lineContent: commentingLine.lineContent,
+        comment: text
+      }
+    ])
     setCommentingLine(null)
   }
 
@@ -394,7 +432,8 @@ export function TaskDetailPanel() {
 
     const now = new Date().toISOString()
     if (isCreateMode) {
-      const existingTasks = config?.tasks?.filter((t) => t.projectName === formProjectName && t.status === 'todo') || []
+      const existingTasks =
+        config?.tasks?.filter((t) => t.projectName === formProjectName && t.status === 'todo') || []
       const newId = newTaskIdRef.current
       addTask({
         id: newId,
@@ -435,17 +474,24 @@ export function TaskDetailPanel() {
 
   const canSubmit = formTitle.trim() && formProjectName && formDescription.trim()
 
-  const stat = diffResult ? {
-    filesChanged: diffResult.files.length,
-    insertions: diffResult.files.reduce((s, f) => s + f.insertions, 0),
-    deletions: diffResult.files.reduce((s, f) => s + f.deletions, 0)
-  } : null
+  const stat = diffResult
+    ? {
+        filesChanged: diffResult.files.length,
+        insertions: diffResult.files.reduce((s, f) => s + f.insertions, 0),
+        deletions: diffResult.files.reduce((s, f) => s + f.deletions, 0)
+      }
+    : null
 
   const hasChanges = stat && (stat.insertions > 0 || stat.deletions > 0)
 
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr)
-    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+    return d.toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
   }
 
   return (
@@ -556,7 +602,9 @@ export function TaskDetailPanel() {
               >
                 <option value="">Select project</option>
                 {config?.projects.map((p) => (
-                  <option key={p.name} value={p.name}>{p.name}</option>
+                  <option key={p.name} value={p.name}>
+                    {p.name}
+                  </option>
                 ))}
               </select>
             </div>
@@ -586,7 +634,10 @@ export function TaskDetailPanel() {
                 {formImages.map((filename) => {
                   const absPath = formImagePaths.get(filename)
                   return (
-                    <div key={filename} className="relative group/img w-16 h-16 rounded-lg border border-white/[0.08] overflow-hidden bg-white/[0.03]">
+                    <div
+                      key={filename}
+                      className="relative group/img w-16 h-16 rounded-lg border border-white/[0.08] overflow-hidden bg-white/[0.03]"
+                    >
                       {absPath && (
                         <img
                           src={`file://${absPath}`}
@@ -684,7 +735,10 @@ export function TaskDetailPanel() {
               )}
               {(task.status === 'in_review' || task.status === 'in_progress') && (
                 <button
-                  onClick={() => { completeTask(task.id); toast.success('Task completed') }}
+                  onClick={() => {
+                    completeTask(task.id)
+                    toast.success('Task completed')
+                  }}
                   className="flex items-center gap-1.5 px-2.5 py-1.5 text-[12px] font-medium
                              bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06]
                              rounded-md transition-colors text-gray-300 hover:text-gray-100"
@@ -695,7 +749,10 @@ export function TaskDetailPanel() {
               )}
               {task.status !== 'cancelled' && task.status !== 'done' && (
                 <button
-                  onClick={() => { cancelTask(task.id); toast.info('Task cancelled') }}
+                  onClick={() => {
+                    cancelTask(task.id)
+                    toast.info('Task cancelled')
+                  }}
                   className="flex items-center gap-1.5 px-2.5 py-1.5 text-[12px] font-medium
                              bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06]
                              rounded-md transition-colors text-gray-400 hover:text-gray-200"
@@ -706,7 +763,10 @@ export function TaskDetailPanel() {
               )}
               {(task.status === 'cancelled' || task.status === 'done') && (
                 <button
-                  onClick={() => { reopenTask(task.id); toast.success('Task reopened') }}
+                  onClick={() => {
+                    reopenTask(task.id)
+                    toast.success('Task reopened')
+                  }}
                   className="flex items-center gap-1.5 px-2.5 py-1.5 text-[12px] font-medium
                              bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06]
                              rounded-md transition-colors text-gray-300 hover:text-gray-100"
@@ -771,7 +831,9 @@ export function TaskDetailPanel() {
             {/* Description */}
             {task.description && (
               <div className="px-4 py-3 border-b border-white/[0.06]">
-                <span className="text-[11px] font-medium text-gray-500 uppercase tracking-wider mb-2 block">Description</span>
+                <span className="text-[11px] font-medium text-gray-500 uppercase tracking-wider mb-2 block">
+                  Description
+                </span>
                 <MarkdownPreview content={task.description} />
               </div>
             )}
@@ -794,7 +856,9 @@ export function TaskDetailPanel() {
                         className="rounded-md border border-white/[0.06] max-w-full"
                       />
                     ) : (
-                      <div key={filename} className="text-xs text-gray-600 py-1">{filename}</div>
+                      <div key={filename} className="text-xs text-gray-600 py-1">
+                        {filename}
+                      </div>
                     )
                   })}
                 </div>
@@ -855,7 +919,10 @@ export function TaskDetailPanel() {
                   <div className="flex-1" />
                   {hasChanges && (
                     <span
-                      onClick={(e) => { e.stopPropagation(); setShowCommitDialog(true) }}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setShowCommitDialog(true)
+                      }}
                       className="flex items-center gap-1 px-2 py-0.5 text-[10px] font-medium normal-case
                                  bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06]
                                  rounded transition-colors text-gray-400 hover:text-gray-200"
@@ -865,10 +932,17 @@ export function TaskDetailPanel() {
                     </span>
                   )}
                   <span
-                    onClick={(e) => { e.stopPropagation(); fetchDiff() }}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      fetchDiff()
+                    }}
                     className="p-0.5 text-gray-500 hover:text-white rounded transition-colors"
                   >
-                    <RefreshCw size={12} className={diffLoading ? 'animate-spin' : ''} strokeWidth={1.5} />
+                    <RefreshCw
+                      size={12}
+                      className={diffLoading ? 'animate-spin' : ''}
+                      strokeWidth={1.5}
+                    />
                   </span>
                 </button>
 
@@ -918,7 +992,9 @@ export function TaskDetailPanel() {
                           onClickLine={handleClickLine}
                           onAddComment={handleAddComment}
                           onCancelComment={() => setCommentingLine(null)}
-                          onRemoveComment={(idx) => setComments((prev) => prev.filter((_, i) => i !== idx))}
+                          onRemoveComment={(idx) =>
+                            setComments((prev) => prev.filter((_, i) => i !== idx))
+                          }
                         />
                       </>
                     ) : (
@@ -972,10 +1048,7 @@ export function TaskDetailPanel() {
       )}
 
       {fullOutputLogs !== null && (
-        <LogReplayModal
-          logs={fullOutputLogs}
-          onClose={() => setFullOutputLogs(null)}
-        />
+        <LogReplayModal logs={fullOutputLogs} onClose={() => setFullOutputLogs(null)} />
       )}
     </div>
   )

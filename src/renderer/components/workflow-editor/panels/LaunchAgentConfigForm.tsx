@@ -17,15 +17,18 @@ const EMPTY_TASKS: import('../../../../shared/types').TaskConfig[] = []
 export function LaunchAgentConfigForm({ config, onChange, triggerType }: Props) {
   const projects = useAppStore((s) => s.config?.projects ?? EMPTY_PROJECTS)
   const tasks = useAppStore((s) => s.config?.tasks ?? EMPTY_TASKS)
-  const projectTasks = tasks.filter((t) => t.projectName === config.projectName && t.status === 'todo')
+  const projectTasks = tasks.filter(
+    (t) => t.projectName === config.projectName && t.status === 'todo'
+  )
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   const promptSource = config.taskId ? 'task' : config.taskFromQueue ? 'queue' : 'inline'
   const isTaskTrigger = triggerType === 'taskCreated' || triggerType === 'taskStatusChanged'
 
   const availableVars = isTaskTrigger
-    ? TEMPLATE_VARIABLES.filter((v) =>
-        v.category === 'task' || (v.category === 'trigger' && triggerType === 'taskStatusChanged')
+    ? TEMPLATE_VARIABLES.filter(
+        (v) =>
+          v.category === 'task' || (v.category === 'trigger' && triggerType === 'taskStatusChanged')
       )
     : []
 
@@ -59,9 +62,11 @@ export function LaunchAgentConfigForm({ config, onChange, triggerType }: Props) 
               key={type}
               onClick={() => onChange({ ...config, agentType: type })}
               className={`flex items-center gap-1.5 px-2.5 py-1.5 text-[12px] rounded-md transition-colors capitalize
-                         ${config.agentType === type
-                           ? 'bg-white/[0.12] text-white border border-white/[0.15]'
-                           : 'bg-white/[0.04] text-gray-500 border border-white/[0.08] hover:bg-white/[0.08]'}`}
+                         ${
+                           config.agentType === type
+                             ? 'bg-white/[0.12] text-white border border-white/[0.15]'
+                             : 'bg-white/[0.04] text-gray-500 border border-white/[0.08] hover:bg-white/[0.08]'
+                         }`}
             >
               <AgentIcon agentType={type} size={14} />
               {type}
@@ -86,7 +91,9 @@ export function LaunchAgentConfigForm({ config, onChange, triggerType }: Props) 
         >
           <option value="">Select project...</option>
           {projects.map((p) => (
-            <option key={p.name} value={p.name}>{p.name}</option>
+            <option key={p.name} value={p.name}>
+              {p.name}
+            </option>
           ))}
         </select>
       </div>
@@ -134,7 +141,9 @@ export function LaunchAgentConfigForm({ config, onChange, triggerType }: Props) 
 
       {/* Headless Mode */}
       <div>
-        <label className={`flex items-center gap-2 text-[12px] cursor-pointer ${config.remoteHostId ? 'text-gray-600' : 'text-gray-400'}`}>
+        <label
+          className={`flex items-center gap-2 text-[12px] cursor-pointer ${config.remoteHostId ? 'text-gray-600' : 'text-gray-400'}`}
+        >
           <input
             type="checkbox"
             checked={config.headless || false}
@@ -159,14 +168,24 @@ export function LaunchAgentConfigForm({ config, onChange, triggerType }: Props) 
             <button
               key={source}
               onClick={() => {
-                if (source === 'inline') onChange({ ...config, taskId: undefined, taskFromQueue: undefined })
-                else if (source === 'task') onChange({ ...config, prompt: undefined, taskFromQueue: undefined, taskId: projectTasks[0]?.id })
-                else onChange({ ...config, prompt: undefined, taskId: undefined, taskFromQueue: true })
+                if (source === 'inline')
+                  onChange({ ...config, taskId: undefined, taskFromQueue: undefined })
+                else if (source === 'task')
+                  onChange({
+                    ...config,
+                    prompt: undefined,
+                    taskFromQueue: undefined,
+                    taskId: projectTasks[0]?.id
+                  })
+                else
+                  onChange({ ...config, prompt: undefined, taskId: undefined, taskFromQueue: true })
               }}
               className={`px-2.5 py-1 text-[11px] rounded-md transition-colors capitalize
-                         ${promptSource === source
-                           ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
-                           : 'bg-white/[0.06] text-gray-400 border border-white/[0.08] hover:bg-white/[0.1]'}`}
+                         ${
+                           promptSource === source
+                             ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                             : 'bg-white/[0.06] text-gray-400 border border-white/[0.08] hover:bg-white/[0.1]'
+                         }`}
             >
               {source}
             </button>
@@ -220,14 +239,17 @@ export function LaunchAgentConfigForm({ config, onChange, triggerType }: Props) 
           >
             <option value="">Select task...</option>
             {projectTasks.map((t) => (
-              <option key={t.id} value={t.id}>{t.title}</option>
+              <option key={t.id} value={t.id}>
+                {t.title}
+              </option>
             ))}
           </select>
         )}
 
         {promptSource === 'queue' && (
           <p className="text-[12px] text-gray-500">
-            Will auto-pick the next todo task from {config.projectName || 'the project'} queue at runtime.
+            Will auto-pick the next todo task from {config.projectName || 'the project'} queue at
+            runtime.
           </p>
         )}
       </div>
@@ -241,7 +263,12 @@ export function LaunchAgentConfigForm({ config, onChange, triggerType }: Props) 
           <input
             type="number"
             value={config.promptDelayMs || ''}
-            onChange={(e) => onChange({ ...config, promptDelayMs: e.target.value ? parseInt(e.target.value) : undefined })}
+            onChange={(e) =>
+              onChange({
+                ...config,
+                promptDelayMs: e.target.value ? parseInt(e.target.value) : undefined
+              })
+            }
             placeholder="0"
             className="w-full px-3 py-2 text-[13px] bg-white/[0.06] border border-white/[0.1] rounded-md
                        text-white placeholder:text-gray-600 focus:outline-none focus:border-blue-500/50"

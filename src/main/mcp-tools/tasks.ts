@@ -5,14 +5,26 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import type { configManager as ConfigManagerInstance } from '../config-manager'
 import type { TaskConfig, TaskStatus, AgentType } from '../../shared/types'
 import {
-  dbListTasks, dbGetTask, dbInsertTask, dbUpdateTask, dbDeleteTask,
-  dbGetMaxTaskOrder, dbGetProject, dbListProjects
+  dbListTasks,
+  dbGetTask,
+  dbInsertTask,
+  dbUpdateTask,
+  dbDeleteTask,
+  dbGetMaxTaskOrder,
+  dbGetProject,
+  dbListProjects
 } from '../database'
 
 type ConfigManager = typeof ConfigManagerInstance
 
 const TASK_STATUSES: TaskStatus[] = ['todo', 'in_progress', 'in_review', 'done', 'cancelled']
-const AGENT_TYPES: [AgentType, ...AgentType[]] = ['claude', 'copilot', 'codex', 'opencode', 'gemini']
+const AGENT_TYPES: [AgentType, ...AgentType[]] = [
+  'claude',
+  'copilot',
+  'codex',
+  'opencode',
+  'gemini'
+]
 
 export function registerTaskTools(server: McpServer, deps: { configManager: ConfigManager }): void {
   const { configManager } = deps
@@ -22,7 +34,10 @@ export function registerTaskTools(server: McpServer, deps: { configManager: Conf
     'List tasks, optionally filtered by project and/or status',
     {
       project_name: z.string().optional().describe('Filter by project name'),
-      status: z.enum(TASK_STATUSES as [string, ...string[]]).optional().describe('Filter by status')
+      status: z
+        .enum(TASK_STATUSES as [string, ...string[]])
+        .optional()
+        .describe('Filter by status')
     },
     async (args) => {
       const tasks = dbListTasks(args.project_name, args.status)
@@ -37,7 +52,10 @@ export function registerTaskTools(server: McpServer, deps: { configManager: Conf
       project_name: z.string().describe('Project name (must match existing project)'),
       title: z.string().describe('Task title'),
       description: z.string().optional().describe('Task description (markdown)'),
-      status: z.enum(TASK_STATUSES as [string, ...string[]]).optional().describe('Task status (default: todo)'),
+      status: z
+        .enum(TASK_STATUSES as [string, ...string[]])
+        .optional()
+        .describe('Task status (default: todo)'),
       branch: z.string().optional().describe('Git branch for this task'),
       use_worktree: z.boolean().optional().describe('Create a git worktree for this task'),
       assigned_agent: z.enum(AGENT_TYPES).optional().describe('Assign to an agent type')
@@ -45,7 +63,10 @@ export function registerTaskTools(server: McpServer, deps: { configManager: Conf
     async (args) => {
       const project = dbGetProject(args.project_name)
       if (!project) {
-        return { content: [{ type: 'text', text: `Error: project "${args.project_name}" not found` }], isError: true }
+        return {
+          content: [{ type: 'text', text: `Error: project "${args.project_name}" not found` }],
+          isError: true
+        }
       }
 
       const maxOrder = dbGetMaxTaskOrder(args.project_name)
@@ -81,7 +102,10 @@ export function registerTaskTools(server: McpServer, deps: { configManager: Conf
     async (args) => {
       const task = dbGetTask(args.id)
       if (!task) {
-        return { content: [{ type: 'text', text: `Error: task "${args.id}" not found` }], isError: true }
+        return {
+          content: [{ type: 'text', text: `Error: task "${args.id}" not found` }],
+          isError: true
+        }
       }
       return { content: [{ type: 'text', text: JSON.stringify(task, null, 2) }] }
     }
@@ -89,12 +113,15 @@ export function registerTaskTools(server: McpServer, deps: { configManager: Conf
 
   server.tool(
     'update_task',
-    'Update a task\'s properties',
+    "Update a task's properties",
     {
       id: z.string().describe('Task ID'),
       title: z.string().optional().describe('New title'),
       description: z.string().optional().describe('New description'),
-      status: z.enum(TASK_STATUSES as [string, ...string[]]).optional().describe('New status'),
+      status: z
+        .enum(TASK_STATUSES as [string, ...string[]])
+        .optional()
+        .describe('New status'),
       branch: z.string().optional().describe('Git branch'),
       use_worktree: z.boolean().optional().describe('Use git worktree'),
       assigned_agent: z.enum(AGENT_TYPES).optional().describe('Assigned agent type'),
@@ -103,7 +130,10 @@ export function registerTaskTools(server: McpServer, deps: { configManager: Conf
     async (args) => {
       const task = dbGetTask(args.id)
       if (!task) {
-        return { content: [{ type: 'text', text: `Error: task "${args.id}" not found` }], isError: true }
+        return {
+          content: [{ type: 'text', text: `Error: task "${args.id}" not found` }],
+          isError: true
+        }
       }
 
       const updates: Partial<TaskConfig> = { updatedAt: new Date().toISOString() }
@@ -111,7 +141,8 @@ export function registerTaskTools(server: McpServer, deps: { configManager: Conf
       if (args.description !== undefined) updates.description = args.description
       if (args.branch !== undefined) updates.branch = args.branch
       if (args.use_worktree !== undefined) updates.useWorktree = args.use_worktree
-      if (args.assigned_agent !== undefined) updates.assignedAgent = args.assigned_agent as AgentType
+      if (args.assigned_agent !== undefined)
+        updates.assignedAgent = args.assigned_agent as AgentType
       if (args.order !== undefined) updates.order = args.order
 
       if (args.status !== undefined) {
@@ -138,7 +169,10 @@ export function registerTaskTools(server: McpServer, deps: { configManager: Conf
     async (args) => {
       const task = dbGetTask(args.id)
       if (!task) {
-        return { content: [{ type: 'text', text: `Error: task "${args.id}" not found` }], isError: true }
+        return {
+          content: [{ type: 'text', text: `Error: task "${args.id}" not found` }],
+          isError: true
+        }
       }
       dbDeleteTask(args.id)
       configManager.notifyChanged()
@@ -150,36 +184,54 @@ export function registerTaskTools(server: McpServer, deps: { configManager: Conf
   server.tool(
     'get_my_context',
     'Get your current task and project context. Auto-detects based on your working directory. ' +
-    'Call this at the start of a session to understand what you are working on.',
+      'Call this at the start of a session to understand what you are working on.',
     {
-      cwd: z.string().optional().describe(
-        'Your current working directory (auto-detected if omitted). ' +
-        'Used to match against known projects and task worktrees.'
-      ),
-      task_id: z.string().optional().describe(
-        'Specific task ID to get context for (overrides auto-detection)'
-      )
+      cwd: z
+        .string()
+        .optional()
+        .describe(
+          'Your current working directory (auto-detected if omitted). ' +
+            'Used to match against known projects and task worktrees.'
+        ),
+      task_id: z
+        .string()
+        .optional()
+        .describe('Specific task ID to get context for (overrides auto-detection)')
     },
     async (args) => {
       // If a specific task ID is provided, return its context directly
       if (args.task_id) {
         const task = dbGetTask(args.task_id)
         if (!task) {
-          return { content: [{ type: 'text', text: `Error: task "${args.task_id}" not found` }], isError: true }
+          return {
+            content: [{ type: 'text', text: `Error: task "${args.task_id}" not found` }],
+            isError: true
+          }
         }
         const project = dbGetProject(task.projectName)
         const siblingTasks = dbListTasks(task.projectName)
         return {
-          content: [{
-            type: 'text',
-            text: JSON.stringify({
-              task,
-              project: project ?? undefined,
-              siblingTasks: siblingTasks.filter(t => t.id !== task.id).map(t => ({
-                id: t.id, title: t.title, status: t.status, branch: t.branch
-              }))
-            }, null, 2)
-          }]
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(
+                {
+                  task,
+                  project: project ?? undefined,
+                  siblingTasks: siblingTasks
+                    .filter((t) => t.id !== task.id)
+                    .map((t) => ({
+                      id: t.id,
+                      title: t.title,
+                      status: t.status,
+                      branch: t.branch
+                    }))
+                },
+                null,
+                2
+              )
+            }
+          ]
         }
       }
 
@@ -201,14 +253,20 @@ export function registerTaskTools(server: McpServer, deps: { configManager: Conf
 
       if (!matchedProject) {
         return {
-          content: [{
-            type: 'text',
-            text: JSON.stringify({
-              message: 'No matching project found for current directory.',
-              cwd: normalizedCwd,
-              hint: 'Use list_projects to see available projects, or pass a task_id directly.'
-            }, null, 2)
-          }]
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(
+                {
+                  message: 'No matching project found for current directory.',
+                  cwd: normalizedCwd,
+                  hint: 'Use list_projects to see available projects, or pass a task_id directly.'
+                },
+                null,
+                2
+              )
+            }
+          ]
         }
       }
 
@@ -231,7 +289,7 @@ export function registerTaskTools(server: McpServer, deps: { configManager: Conf
 
       // 2. If no worktree match, look for an in_progress task assigned to this project
       if (!matchedTask) {
-        matchedTask = projectTasks.find(t => t.status === 'in_progress') ?? null
+        matchedTask = projectTasks.find((t) => t.status === 'in_progress') ?? null
       }
 
       const result: Record<string, unknown> = {
@@ -246,12 +304,15 @@ export function registerTaskTools(server: McpServer, deps: { configManager: Conf
       if (matchedTask) {
         result.task = matchedTask
         result.siblingTasks = projectTasks
-          .filter(t => t.id !== matchedTask!.id)
-          .map(t => ({ id: t.id, title: t.title, status: t.status, branch: t.branch }))
+          .filter((t) => t.id !== matchedTask!.id)
+          .map((t) => ({ id: t.id, title: t.title, status: t.status, branch: t.branch }))
       } else {
         result.message = 'No specific task matched. Showing all project tasks.'
-        result.tasks = projectTasks.map(t => ({
-          id: t.id, title: t.title, status: t.status, branch: t.branch
+        result.tasks = projectTasks.map((t) => ({
+          id: t.id,
+          title: t.title,
+          status: t.status,
+          branch: t.branch
         }))
       }
 

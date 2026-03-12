@@ -44,7 +44,9 @@ describe('getGitBranch', () => {
   })
 
   it('returns null on error', () => {
-    mockExecFileSync.mockImplementation(() => { throw new Error('not a git repo') })
+    mockExecFileSync.mockImplementation(() => {
+      throw new Error('not a git repo')
+    })
     expect(getGitBranch('/project')).toBeNull()
   })
 
@@ -61,7 +63,9 @@ describe('listBranches', () => {
   })
 
   it('returns empty array on error', () => {
-    mockExecFileSync.mockImplementation(() => { throw new Error() })
+    mockExecFileSync.mockImplementation(() => {
+      throw new Error()
+    })
     expect(listBranches('/project')).toEqual([])
   })
 
@@ -105,7 +109,9 @@ describe('getGitDiffStat', () => {
   })
 
   it('returns null on error', () => {
-    mockExecFileSync.mockImplementation(() => { throw new Error() })
+    mockExecFileSync.mockImplementation(() => {
+      throw new Error()
+    })
     expect(getGitDiffStat('/project')).toBeNull()
   })
 })
@@ -147,7 +153,9 @@ describe('gitCommit', () => {
   })
 
   it('returns error on failure', () => {
-    mockExecFileSync.mockImplementation(() => { throw new Error('nothing to commit') })
+    mockExecFileSync.mockImplementation(() => {
+      throw new Error('nothing to commit')
+    })
     const result = gitCommit('/project', 'msg', false)
     expect(result.success).toBe(false)
     expect(result.error).toContain('nothing to commit')
@@ -158,7 +166,7 @@ describe('listWorktrees', () => {
   it('parses porcelain output', () => {
     mockExecFileSync.mockReturnValue(
       'worktree /path/to/project\nbranch refs/heads/main\n\n' +
-      'worktree /path/to/worktree\nbranch refs/heads/feature\n'
+        'worktree /path/to/worktree\nbranch refs/heads/feature\n'
     )
     const result = listWorktrees('/path/to/project')
     expect(result).toEqual([
@@ -170,14 +178,16 @@ describe('listWorktrees', () => {
   it('handles detached HEAD', () => {
     mockExecFileSync.mockReturnValue(
       'worktree /path/to/project\nbranch refs/heads/main\n\n' +
-      'worktree /path/to/worktree\ndetached\n'
+        'worktree /path/to/worktree\ndetached\n'
     )
     const result = listWorktrees('/path/to/project')
     expect(result[1].branch).toBe('detached')
   })
 
   it('returns empty on error', () => {
-    mockExecFileSync.mockImplementation(() => { throw new Error() })
+    mockExecFileSync.mockImplementation(() => {
+      throw new Error()
+    })
     expect(listWorktrees('/project')).toEqual([])
   })
 

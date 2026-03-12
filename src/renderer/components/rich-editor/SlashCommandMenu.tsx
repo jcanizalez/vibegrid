@@ -129,9 +129,7 @@ export function SlashCommandMenuPortal() {
   useEffect(() => {
     keyDownHandler = ({ event }: SuggestionKeyDownProps) => {
       if (event.key === 'ArrowUp') {
-        setSelectedIndex((prev) =>
-          (prev - 1 + state.items.length) % state.items.length
-        )
+        setSelectedIndex((prev) => (prev - 1 + state.items.length) % state.items.length)
         return true
       }
       if (event.key === 'ArrowDown') {
@@ -192,9 +190,7 @@ export function SlashCommandMenuPortal() {
               </div>
               <div className="min-w-0">
                 <div className="text-sm font-medium truncate">{item.title}</div>
-                <div className="text-[11px] text-gray-500 truncate">
-                  {item.description}
-                </div>
+                <div className="text-[11px] text-gray-500 truncate">{item.description}</div>
               </div>
             </button>
           )

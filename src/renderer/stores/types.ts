@@ -1,4 +1,16 @@
-import { AgentStatus, AgentType, AppConfig, ProjectConfig, WorkflowDefinition, WorkflowExecution, RemoteHost, TerminalSession, GitDiffStat, TaskConfig, ArchivedSession } from '../../shared/types'
+import {
+  AgentStatus,
+  AgentType,
+  AppConfig,
+  ProjectConfig,
+  WorkflowDefinition,
+  WorkflowExecution,
+  RemoteHost,
+  TerminalSession,
+  GitDiffStat,
+  TaskConfig,
+  ArchivedSession
+} from '../../shared/types'
 
 export type SortMode = 'manual' | 'created' | 'recent'
 export type StatusFilter = AgentStatus | 'all'

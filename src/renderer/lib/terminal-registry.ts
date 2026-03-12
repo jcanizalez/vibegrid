@@ -232,10 +232,15 @@ export function onTerminalReady(terminalId: string, callback: () => void): () =>
   }
   if (!readyCallbacks.has(terminalId)) readyCallbacks.set(terminalId, new Set())
   readyCallbacks.get(terminalId)!.add(callback)
-  return () => { readyCallbacks.get(terminalId)?.delete(callback) }
+  return () => {
+    readyCallbacks.get(terminalId)?.delete(callback)
+  }
 }
 
-export function onTerminalScroll(terminalId: string, callback: () => void): (() => void) | undefined {
+export function onTerminalScroll(
+  terminalId: string,
+  callback: () => void
+): (() => void) | undefined {
   const entry = registry.get(terminalId)
   if (!entry) return undefined
   const scrollDisposable = entry.term.onScroll(callback)

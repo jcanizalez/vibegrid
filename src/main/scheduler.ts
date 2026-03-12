@@ -53,17 +53,15 @@ class Scheduler {
 
       if (trigger.triggerType === 'recurring' && !this.cronJobs.has(wf.id)) {
         if (!cron.validate(trigger.cron)) {
-          log.error(`[scheduler] invalid cron expression for workflow "${wf.name}": ${trigger.cron}`)
+          log.error(
+            `[scheduler] invalid cron expression for workflow "${wf.name}": ${trigger.cron}`
+          )
           continue
         }
         try {
-          const task = cron.schedule(
-            trigger.cron,
-            () => this.executeWorkflow(wf.id),
-            {
-              timezone: trigger.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone
-            }
-          )
+          const task = cron.schedule(trigger.cron, () => this.executeWorkflow(wf.id), {
+            timezone: trigger.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone
+          })
           this.cronJobs.set(wf.id, task)
         } catch (err) {
           log.error(`[scheduler] failed to schedule workflow "${wf.name}":`, err)

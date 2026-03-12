@@ -45,11 +45,8 @@ export function useStatusDetection(terminalId: string) {
         const state = useAppStore.getState()
         const t = state.terminals.get(terminalId)
         if (t && shouldNotifyBell(state.config)) {
-          sendAgentNotification(
-            t,
-            'bell',
-            state.config,
-            () => useAppStore.getState().setFocusedTerminal(terminalId)
+          sendAgentNotification(t, 'bell', state.config, () =>
+            useAppStore.getState().setFocusedTerminal(terminalId)
           )
         }
       }

@@ -1,7 +1,19 @@
 import { TaskConfig } from '../../../shared/types'
 import { TaskCard } from './TaskCard'
 
-export function TaskListView({ sections, onEdit, onDelete, onStart, onOpenSession, onComplete, onCancel, onReopen, onReviewDiff, onSelect, isSessionLive }: {
+export function TaskListView({
+  sections,
+  onEdit,
+  onDelete,
+  onStart,
+  onOpenSession,
+  onComplete,
+  onCancel,
+  onReopen,
+  onReviewDiff,
+  onSelect,
+  isSessionLive
+}: {
   sections: { title: string; tasks: TaskConfig[]; emptyText: string }[]
   onEdit: (task: TaskConfig) => void
   onDelete: (id: string) => void

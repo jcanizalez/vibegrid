@@ -2,15 +2,27 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAppStore } from '../stores'
 import { GitDiffResult, GitFileDiff } from '../../shared/types'
-import { X, RefreshCw, FileCode, FilePlus, FileMinus, FileSymlink, Loader2, GitCommitHorizontal, MessageSquare, Send } from 'lucide-react'
+import {
+  X,
+  RefreshCw,
+  FileCode,
+  FilePlus,
+  FileMinus,
+  FileSymlink,
+  Loader2,
+  GitCommitHorizontal,
+  MessageSquare,
+  Send
+} from 'lucide-react'
 import { CommitDialog } from './CommitDialog'
 
-export const STATUS_ICONS: Record<string, { icon: typeof FileCode; color: string; label: string }> = {
-  modified: { icon: FileCode, color: 'text-yellow-400', label: 'M' },
-  added: { icon: FilePlus, color: 'text-green-400', label: 'A' },
-  deleted: { icon: FileMinus, color: 'text-red-400', label: 'D' },
-  renamed: { icon: FileSymlink, color: 'text-blue-400', label: 'R' }
-}
+export const STATUS_ICONS: Record<string, { icon: typeof FileCode; color: string; label: string }> =
+  {
+    modified: { icon: FileCode, color: 'text-yellow-400', label: 'M' },
+    added: { icon: FilePlus, color: 'text-green-400', label: 'A' },
+    deleted: { icon: FileMinus, color: 'text-red-400', label: 'D' },
+    renamed: { icon: FileSymlink, color: 'text-blue-400', label: 'R' }
+  }
 
 interface DiffComment {
   filePath: string
@@ -160,18 +172,31 @@ export function DiffContent({
     <div className="flex-1 overflow-y-auto">
       {files.map((file) => {
         const meta = STATUS_ICONS[file.status] || STATUS_ICONS.modified
-        const lines = parseDiffLines(file.diff, file.filePath, comments, commentingLine, onClickLine, onAddComment, onCancelComment, onRemoveComment)
+        const lines = parseDiffLines(
+          file.diff,
+          file.filePath,
+          comments,
+          commentingLine,
+          onClickLine,
+          onAddComment,
+          onCancelComment,
+          onRemoveComment
+        )
         const fileCommentCount = comments.filter((c) => c.filePath === file.filePath).length
 
         return (
           <div
             key={file.filePath}
-            ref={(el) => { if (el) fileRefs.current.set(file.filePath, el) }}
+            ref={(el) => {
+              if (el) fileRefs.current.set(file.filePath, el)
+            }}
           >
             {/* File header */}
-            <div className="sticky top-0 z-10 flex items-center gap-2 px-3 py-1.5 text-[12px] font-mono
+            <div
+              className="sticky top-0 z-10 flex items-center gap-2 px-3 py-1.5 text-[12px] font-mono
                             border-b border-white/[0.06]"
-                 style={{ background: '#1e1e22' }}>
+              style={{ background: '#1e1e22' }}
+            >
               <span className={`${meta.color} font-bold`}>{meta.label}</span>
               <span className="text-gray-300">{file.filePath}</span>
               {fileCommentCount > 0 && (
@@ -182,9 +207,7 @@ export function DiffContent({
             </div>
 
             {/* Diff lines */}
-            <pre className="text-[12px] leading-[1.6] font-mono">
-              {lines}
-            </pre>
+            <pre className="text-[12px] leading-[1.6] font-mono">{lines}</pre>
           </div>
         )
       })}
@@ -251,7 +274,8 @@ function parseDiffLines(
 
     const currentLineIndex = lineIndex
     const isCommentable = line.startsWith('+') || line.startsWith('-')
-    const isCommenting = commentingLine?.filePath === filePath && commentingLine?.lineIndex === currentLineIndex
+    const isCommenting =
+      commentingLine?.filePath === filePath && commentingLine?.lineIndex === currentLineIndex
 
     // Find comments for this line (using global indices into allComments)
     const lineComments: { comment: DiffComment; globalIdx: number }[] = []
@@ -268,8 +292,12 @@ function parseDiffLines(
           className={`bg-green-500/10 flex select-text group/line ${isCommentable ? 'cursor-pointer hover:bg-green-500/15' : ''}`}
           onClick={() => isCommentable && onClickLine(filePath, currentLineIndex, line)}
         >
-          <span className="w-[35px] shrink-0 text-right pr-2 text-[11px] text-gray-600 select-none">{' '}</span>
-          <span className="w-[35px] shrink-0 text-right pr-2 text-[11px] text-green-600 select-none">{newLine}</span>
+          <span className="w-[35px] shrink-0 text-right pr-2 text-[11px] text-gray-600 select-none">
+            {' '}
+          </span>
+          <span className="w-[35px] shrink-0 text-right pr-2 text-[11px] text-green-600 select-none">
+            {newLine}
+          </span>
           <span className="text-green-300 px-1 flex-1">{line.slice(1) || ' '}</span>
           {isCommentable && (
             <span className="opacity-0 group-hover/line:opacity-100 pr-2 text-blue-400 transition-opacity shrink-0">
@@ -286,8 +314,12 @@ function parseDiffLines(
           className={`bg-red-500/10 flex select-text group/line ${isCommentable ? 'cursor-pointer hover:bg-red-500/15' : ''}`}
           onClick={() => isCommentable && onClickLine(filePath, currentLineIndex, line)}
         >
-          <span className="w-[35px] shrink-0 text-right pr-2 text-[11px] text-red-600 select-none">{oldLine}</span>
-          <span className="w-[35px] shrink-0 text-right pr-2 text-[11px] text-gray-600 select-none">{' '}</span>
+          <span className="w-[35px] shrink-0 text-right pr-2 text-[11px] text-red-600 select-none">
+            {oldLine}
+          </span>
+          <span className="w-[35px] shrink-0 text-right pr-2 text-[11px] text-gray-600 select-none">
+            {' '}
+          </span>
           <span className="text-red-300 px-1 flex-1">{line.slice(1) || ' '}</span>
           {isCommentable && (
             <span className="opacity-0 group-hover/line:opacity-100 pr-2 text-blue-400 transition-opacity shrink-0">
@@ -300,8 +332,12 @@ function parseDiffLines(
     } else if (line.startsWith(' ')) {
       nodes.push(
         <div key={lineIndex} className="flex select-text">
-          <span className="w-[35px] shrink-0 text-right pr-2 text-[11px] text-gray-600 select-none">{oldLine}</span>
-          <span className="w-[35px] shrink-0 text-right pr-2 text-[11px] text-gray-600 select-none">{newLine}</span>
+          <span className="w-[35px] shrink-0 text-right pr-2 text-[11px] text-gray-600 select-none">
+            {oldLine}
+          </span>
+          <span className="w-[35px] shrink-0 text-right pr-2 text-[11px] text-gray-600 select-none">
+            {newLine}
+          </span>
           <span className="text-gray-400 px-1 flex-1">{line.slice(1) || ' '}</span>
         </div>
       )
@@ -370,7 +406,11 @@ export function DiffSidebar() {
 
   // Review comments state
   const [comments, setComments] = useState<DiffComment[]>([])
-  const [commentingLine, setCommentingLine] = useState<{ filePath: string; lineIndex: number; lineContent: string } | null>(null)
+  const [commentingLine, setCommentingLine] = useState<{
+    filePath: string
+    lineIndex: number
+    lineContent: string
+  } | null>(null)
 
   const fetchDiff = useCallback(async () => {
     if (!terminal) return
@@ -425,12 +465,15 @@ export function DiffSidebar() {
 
   const handleAddComment = (text: string): void => {
     if (!commentingLine) return
-    setComments((prev) => [...prev, {
-      filePath: commentingLine.filePath,
-      lineIndex: commentingLine.lineIndex,
-      lineContent: commentingLine.lineContent,
-      comment: text
-    }])
+    setComments((prev) => [
+      ...prev,
+      {
+        filePath: commentingLine.filePath,
+        lineIndex: commentingLine.lineIndex,
+        lineContent: commentingLine.lineContent,
+        comment: text
+      }
+    ])
     setCommentingLine(null)
   }
 
@@ -503,7 +546,9 @@ export function DiffSidebar() {
                 <span className="flex items-center gap-1.5 text-[11px] font-mono">
                   <span className="text-green-400">+{stat.insertions}</span>
                   <span className="text-red-400">-{stat.deletions}</span>
-                  <span className="text-gray-500">{stat.filesChanged} file{stat.filesChanged !== 1 ? 's' : ''}</span>
+                  <span className="text-gray-500">
+                    {stat.filesChanged} file{stat.filesChanged !== 1 ? 's' : ''}
+                  </span>
                 </span>
               )}
               {hasChanges && (

@@ -11,7 +11,7 @@ const CRON_PRESETS = [
   { label: 'Daily 9am', value: '0 9 * * *' },
   { label: 'Every hour', value: '0 * * * *' },
   { label: 'Every 30min', value: '*/30 * * * *' },
-  { label: 'Weekly (Mon 9am)', value: '0 9 * * 1' },
+  { label: 'Weekly (Mon 9am)', value: '0 9 * * 1' }
 ]
 
 const TRIGGER_TYPES = [
@@ -19,7 +19,7 @@ const TRIGGER_TYPES = [
   { type: 'once' as const, label: 'Once' },
   { type: 'recurring' as const, label: 'Recurring' },
   { type: 'taskCreated' as const, label: 'Task Created' },
-  { type: 'taskStatusChanged' as const, label: 'Status Change' },
+  { type: 'taskStatusChanged' as const, label: 'Status Change' }
 ]
 
 const TASK_STATUSES: { value: TaskStatus; label: string }[] = [
@@ -27,16 +27,21 @@ const TASK_STATUSES: { value: TaskStatus; label: string }[] = [
   { value: 'in_progress', label: 'In Progress' },
   { value: 'in_review', label: 'In Review' },
   { value: 'done', label: 'Done' },
-  { value: 'cancelled', label: 'Cancelled' },
+  { value: 'cancelled', label: 'Cancelled' }
 ]
 
 function switchTriggerType(type: TriggerConfig['triggerType']): TriggerConfig {
   switch (type) {
-    case 'manual': return { triggerType: 'manual' }
-    case 'once': return { triggerType: 'once', runAt: new Date().toISOString() }
-    case 'recurring': return { triggerType: 'recurring', cron: '0 9 * * *' }
-    case 'taskCreated': return { triggerType: 'taskCreated' }
-    case 'taskStatusChanged': return { triggerType: 'taskStatusChanged' }
+    case 'manual':
+      return { triggerType: 'manual' }
+    case 'once':
+      return { triggerType: 'once', runAt: new Date().toISOString() }
+    case 'recurring':
+      return { triggerType: 'recurring', cron: '0 9 * * *' }
+    case 'taskCreated':
+      return { triggerType: 'taskCreated' }
+    case 'taskStatusChanged':
+      return { triggerType: 'taskStatusChanged' }
   }
 }
 
@@ -57,9 +62,11 @@ export function TriggerConfigForm({ config, onChange }: Props) {
               key={type}
               onClick={() => onChange(switchTriggerType(type))}
               className={`px-3 py-1.5 text-[12px] rounded-md transition-colors
-                         ${config.triggerType === type
-                           ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
-                           : 'bg-white/[0.06] text-gray-400 border border-white/[0.08] hover:bg-white/[0.1]'}`}
+                         ${
+                           config.triggerType === type
+                             ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                             : 'bg-white/[0.06] text-gray-400 border border-white/[0.08] hover:bg-white/[0.1]'
+                         }`}
             >
               {label}
             </button>
@@ -75,7 +82,9 @@ export function TriggerConfigForm({ config, onChange }: Props) {
           <input
             type="datetime-local"
             value={config.runAt ? new Date(config.runAt).toISOString().slice(0, 16) : ''}
-            onChange={(e) => onChange({ triggerType: 'once', runAt: new Date(e.target.value).toISOString() })}
+            onChange={(e) =>
+              onChange({ triggerType: 'once', runAt: new Date(e.target.value).toISOString() })
+            }
             className="w-full px-3 py-2 text-[13px] bg-white/[0.06] border border-white/[0.1] rounded-md
                        text-white focus:outline-none focus:border-blue-500/50
                        [color-scheme:dark]"
@@ -95,9 +104,11 @@ export function TriggerConfigForm({ config, onChange }: Props) {
                   key={preset.value}
                   onClick={() => onChange({ ...config, cron: preset.value })}
                   className={`px-2.5 py-1 text-[11px] rounded-md transition-colors
-                             ${config.cron === preset.value
-                               ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
-                               : 'bg-white/[0.06] text-gray-400 border border-white/[0.08] hover:bg-white/[0.1]'}`}
+                             ${
+                               config.cron === preset.value
+                                 ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                                 : 'bg-white/[0.06] text-gray-400 border border-white/[0.08] hover:bg-white/[0.1]'
+                             }`}
                 >
                   {preset.label}
                 </button>
@@ -195,7 +206,9 @@ function ProjectFilterSelect({
       >
         <option value="">All projects</option>
         {projects.map((p) => (
-          <option key={p.name} value={p.name}>{p.name}</option>
+          <option key={p.name} value={p.name}>
+            {p.name}
+          </option>
         ))}
       </select>
     </div>
@@ -220,7 +233,9 @@ function StatusSelect({
     >
       <option value="">{placeholder}</option>
       {TASK_STATUSES.map((s) => (
-        <option key={s.value} value={s.value}>{s.label}</option>
+        <option key={s.value} value={s.value}>
+          {s.label}
+        </option>
       ))}
     </select>
   )

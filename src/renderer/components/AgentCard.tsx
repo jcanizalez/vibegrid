@@ -51,238 +51,280 @@ function RowResizeHandle() {
   )
 }
 
-export const AgentCard = forwardRef<HTMLDivElement, Props>(
-  function AgentCard({ terminalId, isDragTarget, onDragStart }, ref) {
-    const terminal = useAppStore((s) => s.terminals.get(terminalId))
-    const focusedId = useAppStore((s) => s.focusedTerminalId)
-    const selectedId = useAppStore((s) => s.selectedTerminalId)
-    const setSelected = useAppStore((s) => s.setSelectedTerminal)
-    const setFocused = useAppStore((s) => s.setFocusedTerminal)
-    const removeTerminal = useAppStore((s) => s.removeTerminal)
-    const isMinimized = useAppStore((s) => s.minimizedTerminals.has(terminalId))
-    const toggleMinimized = useAppStore((s) => s.toggleMinimized)
-    const isRenaming = useAppStore((s) => s.renamingTerminalId === terminalId)
-    const setRenamingTerminalId = useAppStore((s) => s.setRenamingTerminalId)
-    const renameTerminal = useAppStore((s) => s.renameTerminal)
-    const assignedTask = useAppStore((s) => s.config?.tasks?.find(t => t.assignedSessionId === terminalId && t.status === 'in_progress'))
-    const setEditingTask = useAppStore((s) => s.setEditingTask)
-    const setTaskDialogOpen = useAppStore((s) => s.setTaskDialogOpen)
-    const togglePinned = useAppStore((s) => s.togglePinned)
-    const archiveSession = useAppStore((s) => s.archiveSession)
-    const [cardHovered, setCardHovered] = useState(false)
-    const { showScrollBtn, handleScrollToBottom } = useTerminalScrollButton(terminalId)
+export const AgentCard = forwardRef<HTMLDivElement, Props>(function AgentCard(
+  { terminalId, isDragTarget, onDragStart },
+  ref
+) {
+  const terminal = useAppStore((s) => s.terminals.get(terminalId))
+  const focusedId = useAppStore((s) => s.focusedTerminalId)
+  const selectedId = useAppStore((s) => s.selectedTerminalId)
+  const setSelected = useAppStore((s) => s.setSelectedTerminal)
+  const setFocused = useAppStore((s) => s.setFocusedTerminal)
+  const removeTerminal = useAppStore((s) => s.removeTerminal)
+  const isMinimized = useAppStore((s) => s.minimizedTerminals.has(terminalId))
+  const toggleMinimized = useAppStore((s) => s.toggleMinimized)
+  const isRenaming = useAppStore((s) => s.renamingTerminalId === terminalId)
+  const setRenamingTerminalId = useAppStore((s) => s.setRenamingTerminalId)
+  const renameTerminal = useAppStore((s) => s.renameTerminal)
+  const assignedTask = useAppStore((s) =>
+    s.config?.tasks?.find((t) => t.assignedSessionId === terminalId && t.status === 'in_progress')
+  )
+  const setEditingTask = useAppStore((s) => s.setEditingTask)
+  const setTaskDialogOpen = useAppStore((s) => s.setTaskDialogOpen)
+  const togglePinned = useAppStore((s) => s.togglePinned)
+  const archiveSession = useAppStore((s) => s.archiveSession)
+  const [cardHovered, setCardHovered] = useState(false)
+  const { showScrollBtn, handleScrollToBottom } = useTerminalScrollButton(terminalId)
 
-    if (!terminal) return null
+  if (!terminal) return null
 
-    const isFocused = focusedId === terminalId
-    const isSelected = selectedId === terminalId
-    const isPinned = terminal.session.pinned === true
-    const isIdlePinned = terminal.status === 'idle' && isPinned
-    const def = AGENT_DEFINITIONS[terminal.session.agentType]
+  const isFocused = focusedId === terminalId
+  const isSelected = selectedId === terminalId
+  const isPinned = terminal.session.pinned === true
+  const isIdlePinned = terminal.status === 'idle' && isPinned
+  const def = AGENT_DEFINITIONS[terminal.session.agentType]
 
-    const handleKill = async (): Promise<void> => {
-      const name = getDisplayName(terminal.session)
-      if (focusedId === terminalId) setFocused(null)
-      await window.api.killTerminal(terminalId)
-      destroyTerminal(terminalId)
-      removeTerminal(terminalId)
-      toast.success(`Session "${name}" closed`)
-    }
+  const handleKill = async (): Promise<void> => {
+    const name = getDisplayName(terminal.session)
+    if (focusedId === terminalId) setFocused(null)
+    await window.api.killTerminal(terminalId)
+    destroyTerminal(terminalId)
+    removeTerminal(terminalId)
+    toast.success(`Session "${name}" closed`)
+  }
 
-    const handleMinimize = (): void => {
-      toggleMinimized(terminalId)
-    }
+  const handleMinimize = (): void => {
+    toggleMinimized(terminalId)
+  }
 
-    const handleExpand = (): void => {
-      setFocused(terminalId)
-    }
+  const handleExpand = (): void => {
+    setFocused(terminalId)
+  }
 
-    return (
-      <motion.div
-        ref={ref}
-        layout
-        layoutId={terminalId}
-        className={`relative rounded-lg border overflow-hidden flex flex-col
+  return (
+    <motion.div
+      ref={ref}
+      layout
+      layoutId={terminalId}
+      className={`relative rounded-lg border overflow-hidden flex flex-col
                    transition-colors
-                   ${isFocused
-                     ? 'border-blue-500/60 ring-1 ring-blue-500/30'
-                     : isSelected
-                       ? 'border-white/40 ring-1 ring-white/10'
-                       : isDragTarget
-                         ? 'card-drop-target border-blue-500/30 hover:border-white/[0.12]'
-                         : 'border-white/[0.06] hover:border-white/[0.12]'
+                   ${
+                     isFocused
+                       ? 'border-blue-500/60 ring-1 ring-blue-500/30'
+                       : isSelected
+                         ? 'border-white/40 ring-1 ring-white/10'
+                         : isDragTarget
+                           ? 'card-drop-target border-blue-500/30 hover:border-white/[0.12]'
+                           : 'border-white/[0.06] hover:border-white/[0.12]'
                    }`}
-        style={{ background: '#1a1a1e', ...(isMinimized ? { alignSelf: 'start' } : {}), ...(isIdlePinned ? { opacity: 0.55 } : {}) }}
-        transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-        onMouseDown={() => { if (!isSelected && !isFocused) setSelected(terminalId) }}
-        onMouseEnter={() => setCardHovered(true)}
-        onMouseLeave={() => setCardHovered(false)}
-      >
-        {/* Header */}
-        <div className="flex items-center gap-2 px-3 py-2 border-b border-white/[0.04] shrink-0">
-          {/* Drag handle + info — double-click to expand */}
-          <div
-            className={`flex-1 min-w-0 flex items-center gap-2 cursor-text ${onDragStart ? 'drag-handle' : ''}`}
-            onDoubleClick={handleExpand}
-            onPointerDown={onDragStart}
-          >
-            <AgentIcon agentType={terminal.session.agentType} size={14} />
-            <div className="flex-1 min-w-0">
-              {isRenaming ? (
-                <InlineRename
-                  value={getDisplayName(terminal.session)}
-                  onCommit={(name) => {
-                    renameTerminal(terminalId, name)
-                    setRenamingTerminalId(null)
-                    toast.success(`Renamed to "${name}"`)
-                  }}
-                  onCancel={() => setRenamingTerminalId(null)}
-                  className="text-[13px] font-medium w-full"
-                />
-              ) : (
-                <div className="flex items-center gap-1 group/rename">
-                  <span
-                    className="text-[13px] font-medium text-gray-300 truncate"
-                    title={terminal.session.displayName?.trim() ? getDisplayName(terminal.session) : assignedTask ? assignedTask.title : getDisplayName(terminal.session)}
-                  >
-                    {terminal.session.displayName?.trim() ? getDisplayName(terminal.session) : assignedTask ? assignedTask.title : getDisplayName(terminal.session)}
-                  </span>
-                  {isMinimized && assignedTask && (
-                    <ListTodo size={10} className="text-violet-400 shrink-0" strokeWidth={2} />
-                  )}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setRenamingTerminalId(terminalId)
-                    }}
-                    className="opacity-0 group-hover/rename:opacity-100 text-gray-500 hover:text-gray-300 transition-opacity shrink-0"
-                    title="Rename"
-                  >
-                    <Pencil size={10} />
-                  </button>
-                </div>
-              )}
-              {terminal.session.branch && (
-                <div className="flex items-center gap-1 mt-0.5">
-                  {terminal.session.isWorktree ? (
-                    <FolderGit2 size={10} className="text-amber-500 shrink-0" strokeWidth={1.5} />
-                  ) : (
-                    <GitBranch size={10} className="text-gray-600 shrink-0" strokeWidth={1.5} />
-                  )}
-                  <span className={`text-[10px] font-mono truncate ${terminal.session.isWorktree ? 'text-amber-400' : 'text-gray-500'}`}>
-                    {terminal.session.branch}
-                  </span>
-                  {terminal.session.isWorktree && (
-                    <span className="text-[9px] text-amber-500/60">worktree</span>
-                  )}
-                </div>
-              )}
-              {terminal.session.remoteHostLabel && (
-                <div className="flex items-center gap-1 mt-0.5">
-                  <Server size={10} className="text-blue-400 shrink-0" strokeWidth={1.5} />
-                  <span className="text-[10px] font-mono text-blue-400 truncate">
-                    {terminal.session.remoteHostLabel}
-                  </span>
-                  <span className="text-[9px] text-blue-400/60">remote</span>
-                </div>
-              )}
-              {!isMinimized && assignedTask && (
+      style={{
+        background: '#1a1a1e',
+        ...(isMinimized ? { alignSelf: 'start' } : {}),
+        ...(isIdlePinned ? { opacity: 0.55 } : {})
+      }}
+      transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+      onMouseDown={() => {
+        if (!isSelected && !isFocused) setSelected(terminalId)
+      }}
+      onMouseEnter={() => setCardHovered(true)}
+      onMouseLeave={() => setCardHovered(false)}
+    >
+      {/* Header */}
+      <div className="flex items-center gap-2 px-3 py-2 border-b border-white/[0.04] shrink-0">
+        {/* Drag handle + info — double-click to expand */}
+        <div
+          className={`flex-1 min-w-0 flex items-center gap-2 cursor-text ${onDragStart ? 'drag-handle' : ''}`}
+          onDoubleClick={handleExpand}
+          onPointerDown={onDragStart}
+        >
+          <AgentIcon agentType={terminal.session.agentType} size={14} />
+          <div className="flex-1 min-w-0">
+            {isRenaming ? (
+              <InlineRename
+                value={getDisplayName(terminal.session)}
+                onCommit={(name) => {
+                  renameTerminal(terminalId, name)
+                  setRenamingTerminalId(null)
+                  toast.success(`Renamed to "${name}"`)
+                }}
+                onCancel={() => setRenamingTerminalId(null)}
+                className="text-[13px] font-medium w-full"
+              />
+            ) : (
+              <div className="flex items-center gap-1 group/rename">
+                <span
+                  className="text-[13px] font-medium text-gray-300 truncate"
+                  title={
+                    terminal.session.displayName?.trim()
+                      ? getDisplayName(terminal.session)
+                      : assignedTask
+                        ? assignedTask.title
+                        : getDisplayName(terminal.session)
+                  }
+                >
+                  {terminal.session.displayName?.trim()
+                    ? getDisplayName(terminal.session)
+                    : assignedTask
+                      ? assignedTask.title
+                      : getDisplayName(terminal.session)}
+                </span>
+                {isMinimized && assignedTask && (
+                  <ListTodo size={10} className="text-violet-400 shrink-0" strokeWidth={2} />
+                )}
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
-                    setEditingTask(assignedTask)
-                    setTaskDialogOpen(true)
+                    setRenamingTerminalId(terminalId)
                   }}
-                  className="flex items-center gap-1 mt-0.5 px-1.5 py-0.5 rounded-full
-                             bg-violet-500/10 hover:bg-violet-500/20 transition-colors group/task"
+                  className="opacity-0 group-hover/rename:opacity-100 text-gray-500 hover:text-gray-300 transition-opacity shrink-0"
+                  title="Rename"
                 >
-                  <ListTodo size={10} className="text-violet-400 shrink-0" strokeWidth={2} />
-                  <span className="text-[10px] text-violet-400 group-hover/task:text-violet-300 truncate max-w-[120px]">
-                    {assignedTask.title}
-                  </span>
+                  <Pencil size={10} />
                 </button>
-              )}
-            </div>
-          </div>
-
-          <StatusBadge status={terminal.status} />
-          <GitChangesIndicator terminalId={terminalId} />
-
-          {/* Pin / Archive buttons */}
-          {cardHovered && (
-            <div className="flex items-center gap-0.5">
+              </div>
+            )}
+            {terminal.session.branch && (
+              <div className="flex items-center gap-1 mt-0.5">
+                {terminal.session.isWorktree ? (
+                  <FolderGit2 size={10} className="text-amber-500 shrink-0" strokeWidth={1.5} />
+                ) : (
+                  <GitBranch size={10} className="text-gray-600 shrink-0" strokeWidth={1.5} />
+                )}
+                <span
+                  className={`text-[10px] font-mono truncate ${terminal.session.isWorktree ? 'text-amber-400' : 'text-gray-500'}`}
+                >
+                  {terminal.session.branch}
+                </span>
+                {terminal.session.isWorktree && (
+                  <span className="text-[9px] text-amber-500/60">worktree</span>
+                )}
+              </div>
+            )}
+            {terminal.session.remoteHostLabel && (
+              <div className="flex items-center gap-1 mt-0.5">
+                <Server size={10} className="text-blue-400 shrink-0" strokeWidth={1.5} />
+                <span className="text-[10px] font-mono text-blue-400 truncate">
+                  {terminal.session.remoteHostLabel}
+                </span>
+                <span className="text-[9px] text-blue-400/60">remote</span>
+              </div>
+            )}
+            {!isMinimized && assignedTask && (
               <button
-                onClick={(e) => { e.stopPropagation(); togglePinned(terminalId) }}
-                className={`p-1 rounded transition-colors ${
-                  isPinned
-                    ? 'text-amber-400 hover:text-amber-300'
-                    : 'text-gray-500 hover:text-gray-300'
-                }`}
-                title={isPinned ? 'Unpin session' : 'Pin session'}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setEditingTask(assignedTask)
+                  setTaskDialogOpen(true)
+                }}
+                className="flex items-center gap-1 mt-0.5 px-1.5 py-0.5 rounded-full
+                             bg-violet-500/10 hover:bg-violet-500/20 transition-colors group/task"
               >
-                <Pin size={12} strokeWidth={2} className={isPinned ? 'fill-current' : ''} />
+                <ListTodo size={10} className="text-violet-400 shrink-0" strokeWidth={2} />
+                <span className="text-[10px] text-violet-400 group-hover/task:text-violet-300 truncate max-w-[120px]">
+                  {assignedTask.title}
+                </span>
               </button>
-              {isIdlePinned && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); archiveSession(terminalId) }}
-                  className="p-1 rounded text-gray-500 hover:text-gray-300 transition-colors"
-                  title="Archive session"
-                >
-                  <Archive size={12} strokeWidth={2} />
-                </button>
-              )}
-            </div>
-          )}
-          {!cardHovered && isPinned && (
-            <Pin size={10} strokeWidth={2} className="text-amber-400 fill-current shrink-0" />
-          )}
-
-          {/* Traffic lights — right side */}
-          <div className={cardHovered ? '' : 'traffic-light-inactive'}>
-            <TrafficLights
-              onClose={handleKill}
-              onMinimize={handleMinimize}
-              onExpand={handleExpand}
-            />
+            )}
           </div>
         </div>
 
-        {/* Terminal — collapsible via minimize */}
-        {!isMinimized && (
-          <div className="relative flex-1 min-h-0" style={{ background: '#141416' }}>
-            {!isFocused && <TerminalInstance terminalId={terminalId} isFocused={isSelected} />}
-            {isFocused && (
-              <div className="flex items-center justify-center h-full text-gray-600 text-xs">
-                Expanded
-              </div>
-            )}
-            {!isFocused && terminal.lastOutputTimestamp === 0 && (
-              <div className="absolute inset-0 p-3 space-y-2 pointer-events-none" style={{ background: '#141416' }}>
-                <div className="h-3 w-3/4 rounded bg-white/[0.04] animate-pulse" />
-                <div className="h-3 w-1/2 rounded bg-white/[0.04] animate-pulse" style={{ animationDelay: '0.15s' }} />
-                <div className="h-3 w-5/6 rounded bg-white/[0.04] animate-pulse" style={{ animationDelay: '0.3s' }} />
-                <div className="h-3 w-2/3 rounded bg-white/[0.04] animate-pulse" style={{ animationDelay: '0.45s' }} />
-              </div>
-            )}
-            {!isFocused && showScrollBtn && (
+        <StatusBadge status={terminal.status} />
+        <GitChangesIndicator terminalId={terminalId} />
+
+        {/* Pin / Archive buttons */}
+        {cardHovered && (
+          <div className="flex items-center gap-0.5">
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                togglePinned(terminalId)
+              }}
+              className={`p-1 rounded transition-colors ${
+                isPinned
+                  ? 'text-amber-400 hover:text-amber-300'
+                  : 'text-gray-500 hover:text-gray-300'
+              }`}
+              title={isPinned ? 'Unpin session' : 'Pin session'}
+            >
+              <Pin size={12} strokeWidth={2} className={isPinned ? 'fill-current' : ''} />
+            </button>
+            {isIdlePinned && (
               <button
-                className="absolute bottom-2 right-2 w-6 h-6 flex items-center justify-center
-                           rounded bg-white/[0.08] hover:bg-white/[0.15] text-gray-400 hover:text-white
-                           transition-colors z-10"
-                onClick={handleScrollToBottom}
-                title="Scroll to bottom"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  archiveSession(terminalId)
+                }}
+                className="p-1 rounded text-gray-500 hover:text-gray-300 transition-colors"
+                title="Archive session"
               >
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                  <path d="M6 2.5V9.5M3 7L6 10L9 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
+                <Archive size={12} strokeWidth={2} />
               </button>
             )}
           </div>
         )}
+        {!cardHovered && isPinned && (
+          <Pin size={10} strokeWidth={2} className="text-amber-400 fill-current shrink-0" />
+        )}
 
-        {/* Resize handle */}
-        {!isMinimized && <RowResizeHandle />}
-      </motion.div>
-    )
-  }
-)
+        {/* Traffic lights — right side */}
+        <div className={cardHovered ? '' : 'traffic-light-inactive'}>
+          <TrafficLights onClose={handleKill} onMinimize={handleMinimize} onExpand={handleExpand} />
+        </div>
+      </div>
+
+      {/* Terminal — collapsible via minimize */}
+      {!isMinimized && (
+        <div className="relative flex-1 min-h-0" style={{ background: '#141416' }}>
+          {!isFocused && <TerminalInstance terminalId={terminalId} isFocused={isSelected} />}
+          {isFocused && (
+            <div className="flex items-center justify-center h-full text-gray-600 text-xs">
+              Expanded
+            </div>
+          )}
+          {!isFocused && terminal.lastOutputTimestamp === 0 && (
+            <div
+              className="absolute inset-0 p-3 space-y-2 pointer-events-none"
+              style={{ background: '#141416' }}
+            >
+              <div className="h-3 w-3/4 rounded bg-white/[0.04] animate-pulse" />
+              <div
+                className="h-3 w-1/2 rounded bg-white/[0.04] animate-pulse"
+                style={{ animationDelay: '0.15s' }}
+              />
+              <div
+                className="h-3 w-5/6 rounded bg-white/[0.04] animate-pulse"
+                style={{ animationDelay: '0.3s' }}
+              />
+              <div
+                className="h-3 w-2/3 rounded bg-white/[0.04] animate-pulse"
+                style={{ animationDelay: '0.45s' }}
+              />
+            </div>
+          )}
+          {!isFocused && showScrollBtn && (
+            <button
+              className="absolute bottom-2 right-2 w-6 h-6 flex items-center justify-center
+                           rounded bg-white/[0.08] hover:bg-white/[0.15] text-gray-400 hover:text-white
+                           transition-colors z-10"
+              onClick={handleScrollToBottom}
+              title="Scroll to bottom"
+            >
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <path
+                  d="M6 2.5V9.5M3 7L6 10L9 7"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Resize handle */}
+      {!isMinimized && <RowResizeHandle />}
+    </motion.div>
+  )
+})

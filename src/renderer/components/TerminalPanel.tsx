@@ -1,6 +1,12 @@
 import { useRef, useState, useCallback, useEffect } from 'react'
 import { useAppStore } from '../stores'
-import { attachTerminal, detachTerminal, fitTerminal, focusTerminal, destroyTerminal } from '../lib/terminal-registry'
+import {
+  attachTerminal,
+  detachTerminal,
+  fitTerminal,
+  focusTerminal,
+  destroyTerminal
+} from '../lib/terminal-registry'
 import { InlineRename } from './InlineRename'
 
 const MIN_HEIGHT = 120
@@ -69,31 +75,37 @@ export function TerminalPanel() {
     }
   }, [isOpen, tabs.length, createNewTab])
 
-  const closeTab = useCallback((id: string) => {
-    window.api.killTerminal(id)
-    destroyTerminal(id)
-    removeTab(id)
-  }, [removeTab])
+  const closeTab = useCallback(
+    (id: string) => {
+      window.api.killTerminal(id)
+      destroyTerminal(id)
+      removeTab(id)
+    },
+    [removeTab]
+  )
 
-  const onDragStart = useCallback((e: React.MouseEvent) => {
-    e.preventDefault()
-    dragRef.current = { startY: e.clientY, startH: height }
+  const onDragStart = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault()
+      dragRef.current = { startY: e.clientY, startH: height }
 
-    const onMove = (ev: MouseEvent): void => {
-      if (!dragRef.current) return
-      const delta = dragRef.current.startY - ev.clientY
-      const maxH = window.innerHeight * MAX_HEIGHT_RATIO
-      const newH = Math.min(maxH, Math.max(MIN_HEIGHT, dragRef.current.startH + delta))
-      setHeight(newH)
-    }
-    const onUp = (): void => {
-      dragRef.current = null
-      document.removeEventListener('mousemove', onMove)
-      document.removeEventListener('mouseup', onUp)
-    }
-    document.addEventListener('mousemove', onMove)
-    document.addEventListener('mouseup', onUp)
-  }, [height, setHeight])
+      const onMove = (ev: MouseEvent): void => {
+        if (!dragRef.current) return
+        const delta = dragRef.current.startY - ev.clientY
+        const maxH = window.innerHeight * MAX_HEIGHT_RATIO
+        const newH = Math.min(maxH, Math.max(MIN_HEIGHT, dragRef.current.startH + delta))
+        setHeight(newH)
+      }
+      const onUp = (): void => {
+        dragRef.current = null
+        document.removeEventListener('mousemove', onMove)
+        document.removeEventListener('mouseup', onUp)
+      }
+      document.addEventListener('mousemove', onMove)
+      document.addEventListener('mouseup', onUp)
+    },
+    [height, setHeight]
+  )
 
   if (!isOpen) return null
 
@@ -109,20 +121,31 @@ export function TerminalPanel() {
       />
 
       {/* Tab bar */}
-      <div className="flex items-center h-[32px] px-2 gap-1 shrink-0 border-b border-white/[0.06]"
-           style={{ background: '#1a1a1e' }}>
+      <div
+        className="flex items-center h-[32px] px-2 gap-1 shrink-0 border-b border-white/[0.06]"
+        style={{ background: '#1a1a1e' }}
+      >
         {tabs.map((tab) => (
           <div
             key={tab.id}
             className={`flex items-center gap-1.5 px-2.5 h-[26px] rounded text-[11px] cursor-pointer transition-colors select-none
-              ${activeTab === tab.id
-                ? 'bg-white/[0.1] text-gray-200'
-                : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.05]'}`}
+              ${
+                activeTab === tab.id
+                  ? 'bg-white/[0.1] text-gray-200'
+                  : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.05]'
+              }`}
             onClick={() => setActive(tab.id)}
             onDoubleClick={() => setRenamingTabId(tab.id)}
           >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                 strokeWidth="2" className="shrink-0 opacity-50">
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              className="shrink-0 opacity-50"
+            >
               <polyline points="4 17 10 11 4 5" />
               <line x1="12" y1="19" x2="20" y2="19" />
             </svg>
@@ -142,11 +165,19 @@ export function TerminalPanel() {
             <button
               className="ml-1 opacity-0 group-hover:opacity-100 hover:text-red-400 transition-opacity"
               style={{ opacity: activeTab === tab.id ? 0.5 : 0 }}
-              onClick={(e) => { e.stopPropagation(); closeTab(tab.id) }}
+              onClick={(e) => {
+                e.stopPropagation()
+                closeTab(tab.id)
+              }}
               title="Close terminal"
             >
               <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                <path d="M2.5 2.5L7.5 7.5M7.5 2.5L2.5 7.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+                <path
+                  d="M2.5 2.5L7.5 7.5M7.5 2.5L2.5 7.5"
+                  stroke="currentColor"
+                  strokeWidth="1.3"
+                  strokeLinecap="round"
+                />
               </svg>
             </button>
           </div>
@@ -160,7 +191,12 @@ export function TerminalPanel() {
           title="New terminal"
         >
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-            <path d="M6 2.5V9.5M2.5 6H9.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+            <path
+              d="M6 2.5V9.5M2.5 6H9.5"
+              stroke="currentColor"
+              strokeWidth="1.3"
+              strokeLinecap="round"
+            />
           </svg>
         </button>
 
@@ -174,7 +210,12 @@ export function TerminalPanel() {
           title="Close panel"
         >
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-            <path d="M3 3L9 9M9 3L3 9" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+            <path
+              d="M3 3L9 9M9 3L3 9"
+              stroke="currentColor"
+              strokeWidth="1.3"
+              strokeLinecap="round"
+            />
           </svg>
         </button>
       </div>

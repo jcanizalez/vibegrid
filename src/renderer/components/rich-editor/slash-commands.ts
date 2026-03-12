@@ -81,7 +81,6 @@ export function filterSlashCommands(query: string): SlashCommandItem[] {
   const lower = query.toLowerCase()
   return slashCommandItems.filter(
     (item) =>
-      item.title.toLowerCase().includes(lower) ||
-      item.description.toLowerCase().includes(lower)
+      item.title.toLowerCase().includes(lower) || item.description.toLowerCase().includes(lower)
   )
 }

@@ -99,5 +99,7 @@ export function uninstallHooks(): void {
 
     settings.hooks = hooks
     fs.writeFileSync(CLAUDE_SETTINGS_PATH, JSON.stringify(settings, null, 2), 'utf-8')
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }

@@ -45,7 +45,9 @@ export function initDatabase(): void {
 
     // Detect corruption: better-sqlite3 throws on open or pragma for corrupt files
     const message = err instanceof Error ? err.message : String(err)
-    const isCorrupt = /corrupt|notadb|malformed|not a database|file is not a database/i.test(message)
+    const isCorrupt = /corrupt|notadb|malformed|not a database|file is not a database/i.test(
+      message
+    )
 
     if (isCorrupt) {
       log.warn('[database] Database appears corrupt, attempting recovery...')
@@ -62,7 +64,11 @@ export function initDatabase(): void {
  */
 function recoverCorruptDatabase(): void {
   // Close any partially-opened handle
-  try { db?.close() } catch { /* ignore */ }
+  try {
+    db?.close()
+  } catch {
+    /* ignore */
+  }
   db = null
 
   // Back up the corrupt file
@@ -95,13 +101,17 @@ function recoverCorruptDatabase(): void {
   }
 
   // Notify the user (non-blocking)
-  dialog.showMessageBox({
-    type: 'warning',
-    title: 'Database Reset',
-    message: 'VibeGrid database was corrupted and has been reset.',
-    detail: `Your settings have been restored to defaults. A backup of the corrupt file was saved to:\n${backupPath}`,
-    buttons: ['OK']
-  }).catch(() => { /* dialog can fail in headless/test environments */ })
+  dialog
+    .showMessageBox({
+      type: 'warning',
+      title: 'Database Reset',
+      message: 'VibeGrid database was corrupted and has been reset.',
+      detail: `Your settings have been restored to defaults. A backup of the corrupt file was saved to:\n${backupPath}`,
+      buttons: ['OK']
+    })
+    .catch(() => {
+      /* dialog can fail in headless/test environments */
+    })
 }
 
 export function closeDatabase(): void {
@@ -116,7 +126,7 @@ function createSchema(): void {
 
   // Migrate: if old-format workflows table exists (had 'actions' column),
   // back it up before dropping so we don't silently destroy user data.
-  const cols = d.prepare("PRAGMA table_info(workflows)").all() as Array<{ name: string }>
+  const cols = d.prepare('PRAGMA table_info(workflows)').all() as Array<{ name: string }>
   if (cols.some((c) => c.name === 'actions')) {
     d.exec('ALTER TABLE workflows RENAME TO workflows_backup_old_format')
     log.warn('[database] migrated old-format workflows table to workflows_backup_old_format')
@@ -281,7 +291,8 @@ export function loadConfig(): AppConfig {
     version: 1,
     defaults,
     projects,
-    agentCommands: Object.keys(agentCommands).length > 0 ? agentCommands : { ...DEFAULT_AGENT_COMMANDS },
+    agentCommands:
+      Object.keys(agentCommands).length > 0 ? agentCommands : { ...DEFAULT_AGENT_COMMANDS },
     workflows,
     remoteHosts,
     tasks
@@ -289,39 +300,62 @@ export function loadConfig(): AppConfig {
 }
 
 function loadDefaults(d: Database.Database): AppConfig['defaults'] {
-  const rows = d.prepare('SELECT key, value FROM defaults').all() as { key: string; value: string }[]
+  const rows = d.prepare('SELECT key, value FROM defaults').all() as {
+    key: string
+    value: string
+  }[]
   const map: Record<string, unknown> = {}
   for (const row of rows) {
     map[row.key] = JSON.parse(row.value)
   }
 
   return {
-    shell: (map.shell as string) ?? (process.platform === 'win32' ? (process.env.COMSPEC || 'powershell.exe') : (process.env.SHELL || '/bin/zsh')),
+    shell:
+      (map.shell as string) ??
+      (process.platform === 'win32'
+        ? process.env.COMSPEC || 'powershell.exe'
+        : process.env.SHELL || '/bin/zsh'),
     fontSize: (map.fontSize as number) ?? 13,
     theme: (map.theme as 'dark' | 'light') ?? 'dark',
     ...(map.rowHeight !== undefined && { rowHeight: map.rowHeight as number }),
     ...(map.defaultAgent !== undefined && { defaultAgent: map.defaultAgent as AgentType }),
-    ...(map.notifications !== undefined && { notifications: map.notifications as AppConfig['defaults']['notifications'] }),
-    ...(map.hasSeenOnboarding !== undefined && { hasSeenOnboarding: map.hasSeenOnboarding as boolean }),
+    ...(map.notifications !== undefined && {
+      notifications: map.notifications as AppConfig['defaults']['notifications']
+    }),
+    ...(map.hasSeenOnboarding !== undefined && {
+      hasSeenOnboarding: map.hasSeenOnboarding as boolean
+    }),
     ...(map.reopenSessions !== undefined && { reopenSessions: map.reopenSessions as boolean }),
     ...(map.widgetEnabled !== undefined && { widgetEnabled: map.widgetEnabled as boolean }),
-    ...(map.taskViewMode !== undefined && { taskViewMode: map.taskViewMode as AppConfig['defaults']['taskViewMode'] })
+    ...(map.taskViewMode !== undefined && {
+      taskViewMode: map.taskViewMode as AppConfig['defaults']['taskViewMode']
+    })
   }
 }
 
 function loadProjects(d: Database.Database): ProjectConfig[] {
   const rows = d.prepare('SELECT * FROM projects').all() as Array<{
-    name: string; path: string; preferred_agents: string
-    icon: string | null; icon_color: string | null; host_ids: string | null
+    name: string
+    path: string
+    preferred_agents: string
+    icon: string | null
+    icon_color: string | null
+    host_ids: string | null
   }>
   return rows.map(rowToProject)
 }
 
 function loadWorkflows(d: Database.Database): WorkflowDefinition[] {
   const rows = d.prepare('SELECT * FROM workflows').all() as Array<{
-    id: string; name: string; icon: string; icon_color: string
-    nodes: string; edges: string; enabled: number
-    last_run_at: string | null; last_run_status: string | null
+    id: string
+    name: string
+    icon: string
+    icon_color: string
+    nodes: string
+    edges: string
+    enabled: number
+    last_run_at: string | null
+    last_run_status: string | null
     stagger_delay_ms: number | null
   }>
   return rows.map(rowToWorkflow)
@@ -329,8 +363,11 @@ function loadWorkflows(d: Database.Database): WorkflowDefinition[] {
 
 function loadAgentCommands(d: Database.Database): Partial<Record<AgentType, AgentCommandConfig>> {
   const rows = d.prepare('SELECT * FROM agent_commands').all() as Array<{
-    agent_type: string; command: string; args: string
-    fallback_command: string | null; fallback_args: string | null
+    agent_type: string
+    command: string
+    args: string
+    fallback_command: string | null
+    fallback_args: string | null
   }>
   const result: Partial<Record<AgentType, AgentCommandConfig>> = {}
   for (const r of rows) {
@@ -346,8 +383,13 @@ function loadAgentCommands(d: Database.Database): Partial<Record<AgentType, Agen
 
 function loadRemoteHosts(d: Database.Database): RemoteHost[] {
   const rows = d.prepare('SELECT * FROM remote_hosts').all() as Array<{
-    id: string; label: string; hostname: string; user: string; port: number
-    ssh_key_path: string | null; ssh_options: string | null
+    id: string
+    label: string
+    hostname: string
+    user: string
+    port: number
+    ssh_key_path: string | null
+    ssh_options: string | null
   }>
   return rows.map((r) => ({
     id: r.id,
@@ -362,11 +404,20 @@ function loadRemoteHosts(d: Database.Database): RemoteHost[] {
 
 function loadTasks(d: Database.Database): TaskConfig[] {
   const rows = d.prepare('SELECT * FROM tasks ORDER BY "order"').all() as Array<{
-    id: string; project_name: string; title: string; description: string
-    status: string; order: number; assigned_session_id: string | null
-    assigned_agent: string | null; agent_session_id: string | null
-    branch: string | null; use_worktree: number | null
-    created_at: string; updated_at: string; completed_at: string | null
+    id: string
+    project_name: string
+    title: string
+    description: string
+    status: string
+    order: number
+    assigned_session_id: string | null
+    assigned_agent: string | null
+    agent_session_id: string | null
+    branch: string | null
+    use_worktree: number | null
+    created_at: string
+    updated_at: string
+    completed_at: string | null
   }>
   return rows.map(rowToTask)
 }
@@ -395,8 +446,11 @@ export function saveConfig(config: AppConfig): void {
     )
     for (const p of config.projects) {
       insertProject.run(
-        p.name, p.path, JSON.stringify(p.preferredAgents),
-        p.icon ?? null, p.iconColor ?? null,
+        p.name,
+        p.path,
+        JSON.stringify(p.preferredAgents),
+        p.icon ?? null,
+        p.iconColor ?? null,
         p.hostIds ? JSON.stringify(p.hostIds) : null
       )
     }
@@ -409,10 +463,15 @@ export function saveConfig(config: AppConfig): void {
     )
     for (const w of config.workflows ?? []) {
       insertWorkflow.run(
-        w.id, w.name, w.icon, w.iconColor,
-        JSON.stringify(w.nodes), JSON.stringify(w.edges),
+        w.id,
+        w.name,
+        w.icon,
+        w.iconColor,
+        JSON.stringify(w.nodes),
+        JSON.stringify(w.edges),
         w.enabled ? 1 : 0,
-        w.lastRunAt ?? null, w.lastRunStatus ?? null,
+        w.lastRunAt ?? null,
+        w.lastRunStatus ?? null,
         w.staggerDelayMs ?? null
       )
     }
@@ -426,7 +485,9 @@ export function saveConfig(config: AppConfig): void {
       for (const [agentType, cmd] of Object.entries(config.agentCommands)) {
         if (cmd) {
           insertAgent.run(
-            agentType, cmd.command, JSON.stringify(cmd.args),
+            agentType,
+            cmd.command,
+            JSON.stringify(cmd.args),
             cmd.fallbackCommand ?? null,
             cmd.fallbackArgs ? JSON.stringify(cmd.fallbackArgs) : null
           )
@@ -440,7 +501,15 @@ export function saveConfig(config: AppConfig): void {
       'INSERT INTO remote_hosts (id, label, hostname, user, port, ssh_key_path, ssh_options) VALUES (?, ?, ?, ?, ?, ?, ?)'
     )
     for (const h of config.remoteHosts ?? []) {
-      insertHost.run(h.id, h.label, h.hostname, h.user, h.port, h.sshKeyPath ?? null, h.sshOptions ?? null)
+      insertHost.run(
+        h.id,
+        h.label,
+        h.hostname,
+        h.user,
+        h.port,
+        h.sshKeyPath ?? null,
+        h.sshOptions ?? null
+      )
     }
 
     // Tasks
@@ -451,12 +520,20 @@ export function saveConfig(config: AppConfig): void {
     )
     for (const t of config.tasks ?? []) {
       insertTask.run(
-        t.id, t.projectName, t.title, t.description,
-        t.status, t.order,
-        t.assignedSessionId ?? null, t.assignedAgent ?? null,
-        t.agentSessionId ?? null, t.branch ?? null,
+        t.id,
+        t.projectName,
+        t.title,
+        t.description,
+        t.status,
+        t.order,
+        t.assignedSessionId ?? null,
+        t.assignedAgent ?? null,
+        t.agentSessionId ?? null,
+        t.branch ?? null,
         t.useWorktree ? 1 : 0,
-        t.createdAt, t.updatedAt, t.completedAt ?? null
+        t.createdAt,
+        t.updatedAt,
+        t.completedAt ?? null
       )
     }
   })
@@ -473,62 +550,133 @@ export function dbListTasks(projectName?: string, status?: string): TaskConfig[]
   let sql = 'SELECT * FROM tasks'
   const params: string[] = []
   const clauses: string[] = []
-  if (projectName) { clauses.push('project_name = ?'); params.push(projectName) }
-  if (status) { clauses.push('status = ?'); params.push(status) }
+  if (projectName) {
+    clauses.push('project_name = ?')
+    params.push(projectName)
+  }
+  if (status) {
+    clauses.push('status = ?')
+    params.push(status)
+  }
   if (clauses.length) sql += ' WHERE ' + clauses.join(' AND ')
   sql += ' ORDER BY "order"'
   const rows = d.prepare(sql).all(...params) as Array<{
-    id: string; project_name: string; title: string; description: string
-    status: string; order: number; assigned_session_id: string | null
-    assigned_agent: string | null; agent_session_id: string | null
-    branch: string | null; use_worktree: number | null
-    created_at: string; updated_at: string; completed_at: string | null
+    id: string
+    project_name: string
+    title: string
+    description: string
+    status: string
+    order: number
+    assigned_session_id: string | null
+    assigned_agent: string | null
+    agent_session_id: string | null
+    branch: string | null
+    use_worktree: number | null
+    created_at: string
+    updated_at: string
+    completed_at: string | null
   }>
   return rows.map(rowToTask)
 }
 
 export function dbGetTask(id: string): TaskConfig | null {
-  const row = getDb().prepare('SELECT * FROM tasks WHERE id = ?').get(id) as {
-    id: string; project_name: string; title: string; description: string
-    status: string; order: number; assigned_session_id: string | null
-    assigned_agent: string | null; agent_session_id: string | null
-    branch: string | null; use_worktree: number | null
-    created_at: string; updated_at: string; completed_at: string | null
-  } | undefined
+  const row = getDb().prepare('SELECT * FROM tasks WHERE id = ?').get(id) as
+    | {
+        id: string
+        project_name: string
+        title: string
+        description: string
+        status: string
+        order: number
+        assigned_session_id: string | null
+        assigned_agent: string | null
+        agent_session_id: string | null
+        branch: string | null
+        use_worktree: number | null
+        created_at: string
+        updated_at: string
+        completed_at: string | null
+      }
+    | undefined
   return row ? rowToTask(row) : null
 }
 
 export function dbInsertTask(task: TaskConfig): void {
-  getDb().prepare(
-    `INSERT INTO tasks (id, project_name, title, description, status, "order", assigned_session_id, assigned_agent, agent_session_id, branch, use_worktree, created_at, updated_at, completed_at)
+  getDb()
+    .prepare(
+      `INSERT INTO tasks (id, project_name, title, description, status, "order", assigned_session_id, assigned_agent, agent_session_id, branch, use_worktree, created_at, updated_at, completed_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-  ).run(
-    task.id, task.projectName, task.title, task.description,
-    task.status, task.order,
-    task.assignedSessionId ?? null, task.assignedAgent ?? null,
-    task.agentSessionId ?? null, task.branch ?? null,
-    task.useWorktree ? 1 : 0,
-    task.createdAt, task.updatedAt, task.completedAt ?? null
-  )
+    )
+    .run(
+      task.id,
+      task.projectName,
+      task.title,
+      task.description,
+      task.status,
+      task.order,
+      task.assignedSessionId ?? null,
+      task.assignedAgent ?? null,
+      task.agentSessionId ?? null,
+      task.branch ?? null,
+      task.useWorktree ? 1 : 0,
+      task.createdAt,
+      task.updatedAt,
+      task.completedAt ?? null
+    )
 }
 
 export function dbUpdateTask(id: string, updates: Partial<TaskConfig>): void {
   const sets: string[] = []
   const params: unknown[] = []
-  if (updates.title !== undefined) { sets.push('title = ?'); params.push(updates.title) }
-  if (updates.description !== undefined) { sets.push('description = ?'); params.push(updates.description) }
-  if (updates.status !== undefined) { sets.push('status = ?'); params.push(updates.status) }
-  if (updates.order !== undefined) { sets.push('"order" = ?'); params.push(updates.order) }
-  if (updates.branch !== undefined) { sets.push('branch = ?'); params.push(updates.branch) }
-  if (updates.useWorktree !== undefined) { sets.push('use_worktree = ?'); params.push(updates.useWorktree ? 1 : 0) }
-  if (updates.assignedAgent !== undefined) { sets.push('assigned_agent = ?'); params.push(updates.assignedAgent) }
-  if (updates.assignedSessionId !== undefined) { sets.push('assigned_session_id = ?'); params.push(updates.assignedSessionId) }
-  if (updates.agentSessionId !== undefined) { sets.push('agent_session_id = ?'); params.push(updates.agentSessionId) }
-  if (updates.updatedAt !== undefined) { sets.push('updated_at = ?'); params.push(updates.updatedAt) }
-  if ('completedAt' in updates) { sets.push('completed_at = ?'); params.push(updates.completedAt ?? null) }
+  if (updates.title !== undefined) {
+    sets.push('title = ?')
+    params.push(updates.title)
+  }
+  if (updates.description !== undefined) {
+    sets.push('description = ?')
+    params.push(updates.description)
+  }
+  if (updates.status !== undefined) {
+    sets.push('status = ?')
+    params.push(updates.status)
+  }
+  if (updates.order !== undefined) {
+    sets.push('"order" = ?')
+    params.push(updates.order)
+  }
+  if (updates.branch !== undefined) {
+    sets.push('branch = ?')
+    params.push(updates.branch)
+  }
+  if (updates.useWorktree !== undefined) {
+    sets.push('use_worktree = ?')
+    params.push(updates.useWorktree ? 1 : 0)
+  }
+  if (updates.assignedAgent !== undefined) {
+    sets.push('assigned_agent = ?')
+    params.push(updates.assignedAgent)
+  }
+  if (updates.assignedSessionId !== undefined) {
+    sets.push('assigned_session_id = ?')
+    params.push(updates.assignedSessionId)
+  }
+  if (updates.agentSessionId !== undefined) {
+    sets.push('agent_session_id = ?')
+    params.push(updates.agentSessionId)
+  }
+  if (updates.updatedAt !== undefined) {
+    sets.push('updated_at = ?')
+    params.push(updates.updatedAt)
+  }
+  if ('completedAt' in updates) {
+    sets.push('completed_at = ?')
+    params.push(updates.completedAt ?? null)
+  }
   if (sets.length === 0) return
   params.push(id)
-  getDb().prepare(`UPDATE tasks SET ${sets.join(', ')} WHERE id = ?`).run(...params)
+  getDb()
+    .prepare(`UPDATE tasks SET ${sets.join(', ')} WHERE id = ?`)
+    .run(...params)
 }
 
 export function dbDeleteTask(id: string): void {
@@ -536,7 +684,9 @@ export function dbDeleteTask(id: string): void {
 }
 
 export function dbGetMaxTaskOrder(projectName: string): number {
-  const row = getDb().prepare('SELECT MAX("order") as m FROM tasks WHERE project_name = ?').get(projectName) as { m: number | null }
+  const row = getDb()
+    .prepare('SELECT MAX("order") as m FROM tasks WHERE project_name = ?')
+    .get(projectName) as { m: number | null }
   return row.m ?? -1
 }
 
@@ -546,41 +696,73 @@ export function dbGetMaxTaskOrder(projectName: string): number {
 
 export function dbListProjects(): ProjectConfig[] {
   const rows = getDb().prepare('SELECT * FROM projects').all() as Array<{
-    name: string; path: string; preferred_agents: string
-    icon: string | null; icon_color: string | null; host_ids: string | null
+    name: string
+    path: string
+    preferred_agents: string
+    icon: string | null
+    icon_color: string | null
+    host_ids: string | null
   }>
   return rows.map(rowToProject)
 }
 
 export function dbGetProject(name: string): ProjectConfig | null {
-  const row = getDb().prepare('SELECT * FROM projects WHERE name = ?').get(name) as {
-    name: string; path: string; preferred_agents: string
-    icon: string | null; icon_color: string | null; host_ids: string | null
-  } | undefined
+  const row = getDb().prepare('SELECT * FROM projects WHERE name = ?').get(name) as
+    | {
+        name: string
+        path: string
+        preferred_agents: string
+        icon: string | null
+        icon_color: string | null
+        host_ids: string | null
+      }
+    | undefined
   return row ? rowToProject(row) : null
 }
 
 export function dbInsertProject(project: ProjectConfig): void {
-  getDb().prepare(
-    'INSERT INTO projects (name, path, preferred_agents, icon, icon_color, host_ids) VALUES (?, ?, ?, ?, ?, ?)'
-  ).run(
-    project.name, project.path, JSON.stringify(project.preferredAgents),
-    project.icon ?? null, project.iconColor ?? null,
-    project.hostIds ? JSON.stringify(project.hostIds) : null
-  )
+  getDb()
+    .prepare(
+      'INSERT INTO projects (name, path, preferred_agents, icon, icon_color, host_ids) VALUES (?, ?, ?, ?, ?, ?)'
+    )
+    .run(
+      project.name,
+      project.path,
+      JSON.stringify(project.preferredAgents),
+      project.icon ?? null,
+      project.iconColor ?? null,
+      project.hostIds ? JSON.stringify(project.hostIds) : null
+    )
 }
 
 export function dbUpdateProject(name: string, updates: Partial<ProjectConfig>): void {
   const sets: string[] = []
   const params: unknown[] = []
-  if (updates.path !== undefined) { sets.push('path = ?'); params.push(updates.path) }
-  if (updates.preferredAgents !== undefined) { sets.push('preferred_agents = ?'); params.push(JSON.stringify(updates.preferredAgents)) }
-  if (updates.icon !== undefined) { sets.push('icon = ?'); params.push(updates.icon) }
-  if (updates.iconColor !== undefined) { sets.push('icon_color = ?'); params.push(updates.iconColor) }
-  if (updates.hostIds !== undefined) { sets.push('host_ids = ?'); params.push(JSON.stringify(updates.hostIds)) }
+  if (updates.path !== undefined) {
+    sets.push('path = ?')
+    params.push(updates.path)
+  }
+  if (updates.preferredAgents !== undefined) {
+    sets.push('preferred_agents = ?')
+    params.push(JSON.stringify(updates.preferredAgents))
+  }
+  if (updates.icon !== undefined) {
+    sets.push('icon = ?')
+    params.push(updates.icon)
+  }
+  if (updates.iconColor !== undefined) {
+    sets.push('icon_color = ?')
+    params.push(updates.iconColor)
+  }
+  if (updates.hostIds !== undefined) {
+    sets.push('host_ids = ?')
+    params.push(JSON.stringify(updates.hostIds))
+  }
   if (sets.length === 0) return
   params.push(name)
-  getDb().prepare(`UPDATE projects SET ${sets.join(', ')} WHERE name = ?`).run(...params)
+  getDb()
+    .prepare(`UPDATE projects SET ${sets.join(', ')} WHERE name = ?`)
+    .run(...params)
 }
 
 export function dbDeleteProject(name: string): void {
@@ -597,40 +779,76 @@ export function dbDeleteProject(name: string): void {
 
 export function dbListWorkflows(): WorkflowDefinition[] {
   const rows = getDb().prepare('SELECT * FROM workflows').all() as Array<{
-    id: string; name: string; icon: string; icon_color: string
-    nodes: string; edges: string; enabled: number
-    last_run_at: string | null; last_run_status: string | null
+    id: string
+    name: string
+    icon: string
+    icon_color: string
+    nodes: string
+    edges: string
+    enabled: number
+    last_run_at: string | null
+    last_run_status: string | null
     stagger_delay_ms: number | null
   }>
   return rows.map(rowToWorkflow)
 }
 
 export function dbInsertWorkflow(workflow: WorkflowDefinition): void {
-  getDb().prepare(
-    `INSERT INTO workflows (id, name, icon, icon_color, nodes, edges, enabled, last_run_at, last_run_status, stagger_delay_ms)
+  getDb()
+    .prepare(
+      `INSERT INTO workflows (id, name, icon, icon_color, nodes, edges, enabled, last_run_at, last_run_status, stagger_delay_ms)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-  ).run(
-    workflow.id, workflow.name, workflow.icon, workflow.iconColor,
-    JSON.stringify(workflow.nodes), JSON.stringify(workflow.edges),
-    workflow.enabled ? 1 : 0,
-    workflow.lastRunAt ?? null, workflow.lastRunStatus ?? null,
-    workflow.staggerDelayMs ?? null
-  )
+    )
+    .run(
+      workflow.id,
+      workflow.name,
+      workflow.icon,
+      workflow.iconColor,
+      JSON.stringify(workflow.nodes),
+      JSON.stringify(workflow.edges),
+      workflow.enabled ? 1 : 0,
+      workflow.lastRunAt ?? null,
+      workflow.lastRunStatus ?? null,
+      workflow.staggerDelayMs ?? null
+    )
 }
 
 export function dbUpdateWorkflow(id: string, updates: Partial<WorkflowDefinition>): void {
   const sets: string[] = []
   const params: unknown[] = []
-  if (updates.name !== undefined) { sets.push('name = ?'); params.push(updates.name) }
-  if (updates.nodes !== undefined) { sets.push('nodes = ?'); params.push(JSON.stringify(updates.nodes)) }
-  if (updates.edges !== undefined) { sets.push('edges = ?'); params.push(JSON.stringify(updates.edges)) }
-  if (updates.icon !== undefined) { sets.push('icon = ?'); params.push(updates.icon) }
-  if (updates.iconColor !== undefined) { sets.push('icon_color = ?'); params.push(updates.iconColor) }
-  if (updates.enabled !== undefined) { sets.push('enabled = ?'); params.push(updates.enabled ? 1 : 0) }
-  if (updates.staggerDelayMs !== undefined) { sets.push('stagger_delay_ms = ?'); params.push(updates.staggerDelayMs) }
+  if (updates.name !== undefined) {
+    sets.push('name = ?')
+    params.push(updates.name)
+  }
+  if (updates.nodes !== undefined) {
+    sets.push('nodes = ?')
+    params.push(JSON.stringify(updates.nodes))
+  }
+  if (updates.edges !== undefined) {
+    sets.push('edges = ?')
+    params.push(JSON.stringify(updates.edges))
+  }
+  if (updates.icon !== undefined) {
+    sets.push('icon = ?')
+    params.push(updates.icon)
+  }
+  if (updates.iconColor !== undefined) {
+    sets.push('icon_color = ?')
+    params.push(updates.iconColor)
+  }
+  if (updates.enabled !== undefined) {
+    sets.push('enabled = ?')
+    params.push(updates.enabled ? 1 : 0)
+  }
+  if (updates.staggerDelayMs !== undefined) {
+    sets.push('stagger_delay_ms = ?')
+    params.push(updates.staggerDelayMs)
+  }
   if (sets.length === 0) return
   params.push(id)
-  getDb().prepare(`UPDATE workflows SET ${sets.join(', ')} WHERE id = ?`).run(...params)
+  getDb()
+    .prepare(`UPDATE workflows SET ${sets.join(', ')} WHERE id = ?`)
+    .run(...params)
 }
 
 export function dbDeleteWorkflow(id: string): void {
@@ -642,11 +860,20 @@ export function dbDeleteWorkflow(id: string): void {
 // ---------------------------------------------------------------------------
 
 function rowToTask(r: {
-  id: string; project_name: string; title: string; description: string
-  status: string; order: number; assigned_session_id: string | null
-  assigned_agent: string | null; agent_session_id: string | null
-  branch: string | null; use_worktree: number | null
-  created_at: string; updated_at: string; completed_at: string | null
+  id: string
+  project_name: string
+  title: string
+  description: string
+  status: string
+  order: number
+  assigned_session_id: string | null
+  assigned_agent: string | null
+  agent_session_id: string | null
+  branch: string | null
+  use_worktree: number | null
+  created_at: string
+  updated_at: string
+  completed_at: string | null
 }): TaskConfig {
   return {
     id: r.id,
@@ -667,8 +894,12 @@ function rowToTask(r: {
 }
 
 function rowToProject(r: {
-  name: string; path: string; preferred_agents: string
-  icon: string | null; icon_color: string | null; host_ids: string | null
+  name: string
+  path: string
+  preferred_agents: string
+  icon: string | null
+  icon_color: string | null
+  host_ids: string | null
 }): ProjectConfig {
   return {
     name: r.name,
@@ -681,9 +912,15 @@ function rowToProject(r: {
 }
 
 function rowToWorkflow(r: {
-  id: string; name: string; icon: string; icon_color: string
-  nodes: string; edges: string; enabled: number
-  last_run_at: string | null; last_run_status: string | null
+  id: string
+  name: string
+  icon: string
+  icon_color: string
+  nodes: string
+  edges: string
+  enabled: number
+  last_run_at: string | null
+  last_run_status: string | null
   stagger_delay_ms: number | null
 }): WorkflowDefinition {
   return {
@@ -704,10 +941,14 @@ function rowToWorkflow(r: {
 // Granular updates (avoids full load/save cycle for hot paths)
 // ---------------------------------------------------------------------------
 
-export function updateWorkflowRunStatus(id: string, lastRunAt: string, lastRunStatus: string): void {
-  getDb().prepare(
-    'UPDATE workflows SET last_run_at = ?, last_run_status = ? WHERE id = ?'
-  ).run(lastRunAt, lastRunStatus, id)
+export function updateWorkflowRunStatus(
+  id: string,
+  lastRunAt: string,
+  lastRunStatus: string
+): void {
+  getDb()
+    .prepare('UPDATE workflows SET last_run_at = ?, last_run_status = ? WHERE id = ?')
+    .run(lastRunAt, lastRunStatus, id)
 }
 
 // ---------------------------------------------------------------------------
@@ -726,12 +967,21 @@ export function saveSessions(sessions: TerminalSession[]): void {
     )
     for (const s of sessions) {
       insert.run(
-        s.id, s.agentType, s.projectName, s.projectPath,
-        s.status, s.createdAt, s.pid,
-        s.displayName ?? null, s.branch ?? null,
-        s.worktreePath ?? null, s.isWorktree ? 1 : 0,
-        s.remoteHostId ?? null, s.remoteHostLabel ?? null,
-        s.hookSessionId ?? null, s.statusSource ?? null,
+        s.id,
+        s.agentType,
+        s.projectName,
+        s.projectPath,
+        s.status,
+        s.createdAt,
+        s.pid,
+        s.displayName ?? null,
+        s.branch ?? null,
+        s.worktreePath ?? null,
+        s.isWorktree ? 1 : 0,
+        s.remoteHostId ?? null,
+        s.remoteHostLabel ?? null,
+        s.hookSessionId ?? null,
+        s.statusSource ?? null,
         savedAt
       )
     }
@@ -742,12 +992,21 @@ export function saveSessions(sessions: TerminalSession[]): void {
 
 export function getPreviousSessions(): TerminalSession[] {
   const rows = getDb().prepare('SELECT * FROM sessions').all() as Array<{
-    id: string; agent_type: string; project_name: string; project_path: string
-    status: string; created_at: number; pid: number
-    display_name: string | null; branch: string | null
-    worktree_path: string | null; is_worktree: number | null
-    remote_host_id: string | null; remote_host_label: string | null
-    hook_session_id: string | null; status_source: string | null
+    id: string
+    agent_type: string
+    project_name: string
+    project_path: string
+    status: string
+    created_at: number
+    pid: number
+    display_name: string | null
+    branch: string | null
+    worktree_path: string | null
+    is_worktree: number | null
+    remote_host_id: string | null
+    remote_host_label: string | null
+    hook_session_id: string | null
+    status_source: string | null
     saved_at: number | null
   }>
   return rows.map((r) => ({
@@ -765,7 +1024,9 @@ export function getPreviousSessions(): TerminalSession[] {
     ...(r.remote_host_id != null && { remoteHostId: r.remote_host_id }),
     ...(r.remote_host_label != null && { remoteHostLabel: r.remote_host_label }),
     ...(r.hook_session_id != null && { hookSessionId: r.hook_session_id }),
-    ...(r.status_source != null && { statusSource: r.status_source as TerminalSession['statusSource'] })
+    ...(r.status_source != null && {
+      statusSource: r.status_source as TerminalSession['statusSource']
+    })
   }))
 }
 
@@ -782,7 +1043,14 @@ export function addScheduleLogEntry(entry: ScheduleLogEntry): void {
   d.prepare(
     `INSERT INTO schedule_log (workflow_id, workflow_name, executed_at, status, sessions_launched, error)
      VALUES (?, ?, ?, ?, ?, ?)`
-  ).run(entry.workflowId, entry.workflowName, entry.executedAt, entry.status, entry.sessionsLaunched, entry.error ?? null)
+  ).run(
+    entry.workflowId,
+    entry.workflowName,
+    entry.executedAt,
+    entry.status,
+    entry.sessionsLaunched,
+    entry.error ?? null
+  )
 
   // Trim to max entries
   const count = (d.prepare('SELECT COUNT(*) as c FROM schedule_log').get() as { c: number }).c
@@ -798,12 +1066,18 @@ export function addScheduleLogEntry(entry: ScheduleLogEntry): void {
 export function getScheduleLogEntries(workflowId?: string): ScheduleLogEntry[] {
   const d = getDb()
   let rows: Array<{
-    workflow_id: string; workflow_name: string; executed_at: string
-    status: string; sessions_launched: number; error: string | null
+    workflow_id: string
+    workflow_name: string
+    executed_at: string
+    status: string
+    sessions_launched: number
+    error: string | null
   }>
 
   if (workflowId) {
-    rows = d.prepare('SELECT * FROM schedule_log WHERE workflow_id = ? ORDER BY id').all(workflowId) as typeof rows
+    rows = d
+      .prepare('SELECT * FROM schedule_log WHERE workflow_id = ? ORDER BY id')
+      .all(workflowId) as typeof rows
   } else {
     rows = d.prepare('SELECT * FROM schedule_log ORDER BY id').all() as typeof rows
   }
@@ -827,17 +1101,30 @@ export function clearScheduleLog(): void {
 // ---------------------------------------------------------------------------
 
 export function archiveSession(session: {
-  id: string; agentType: string; projectName: string; projectPath: string
-  displayName?: string; branch?: string; agentSessionId?: string; archivedAt: number
+  id: string
+  agentType: string
+  projectName: string
+  projectPath: string
+  displayName?: string
+  branch?: string
+  agentSessionId?: string
+  archivedAt: number
 }): void {
-  getDb().prepare(
-    `INSERT OR REPLACE INTO archived_sessions (id, agent_type, project_name, project_path, display_name, branch, agent_session_id, archived_at)
+  getDb()
+    .prepare(
+      `INSERT OR REPLACE INTO archived_sessions (id, agent_type, project_name, project_path, display_name, branch, agent_session_id, archived_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-  ).run(
-    session.id, session.agentType, session.projectName, session.projectPath,
-    session.displayName ?? null, session.branch ?? null,
-    session.agentSessionId ?? null, session.archivedAt
-  )
+    )
+    .run(
+      session.id,
+      session.agentType,
+      session.projectName,
+      session.projectPath,
+      session.displayName ?? null,
+      session.branch ?? null,
+      session.agentSessionId ?? null,
+      session.archivedAt
+    )
 }
 
 export function unarchiveSession(id: string): void {
@@ -845,12 +1132,26 @@ export function unarchiveSession(id: string): void {
 }
 
 export function listArchivedSessions(): Array<{
-  id: string; agentType: string; projectName: string; projectPath: string
-  displayName: string | null; branch: string | null; agentSessionId: string | null; archivedAt: number
+  id: string
+  agentType: string
+  projectName: string
+  projectPath: string
+  displayName: string | null
+  branch: string | null
+  agentSessionId: string | null
+  archivedAt: number
 }> {
-  const rows = getDb().prepare('SELECT * FROM archived_sessions ORDER BY archived_at DESC').all() as Array<{
-    id: string; agent_type: string; project_name: string; project_path: string
-    display_name: string | null; branch: string | null; agent_session_id: string | null; archived_at: number
+  const rows = getDb()
+    .prepare('SELECT * FROM archived_sessions ORDER BY archived_at DESC')
+    .all() as Array<{
+    id: string
+    agent_type: string
+    project_name: string
+    project_path: string
+    display_name: string | null
+    branch: string | null
+    agent_session_id: string | null
+    archived_at: number
   }>
   return rows.map((r) => ({
     id: r.id,
@@ -911,7 +1212,11 @@ export function saveWorkflowRun(execution: WorkflowExecution): void {
     }
 
     // Trim old runs for this workflow
-    const count = (d.prepare('SELECT COUNT(*) as c FROM workflow_runs WHERE workflow_id = ?').get(execution.workflowId) as { c: number }).c
+    const count = (
+      d
+        .prepare('SELECT COUNT(*) as c FROM workflow_runs WHERE workflow_id = ?')
+        .get(execution.workflowId) as { c: number }
+    ).c
     if (count > MAX_WORKFLOW_RUNS) {
       d.prepare(
         `DELETE FROM workflow_runs WHERE id IN (
@@ -927,21 +1232,30 @@ export function saveWorkflowRun(execution: WorkflowExecution): void {
 export function listWorkflowRuns(workflowId: string, limit = 20): WorkflowExecution[] {
   const d = getDb()
 
-  const rows = d.prepare(
-    'SELECT * FROM workflow_runs WHERE workflow_id = ? ORDER BY started_at DESC LIMIT ?'
-  ).all(workflowId, limit) as Array<{
-    id: string; workflow_id: string; started_at: string
-    completed_at: string | null; status: string; trigger_task_id: string | null
+  const rows = d
+    .prepare('SELECT * FROM workflow_runs WHERE workflow_id = ? ORDER BY started_at DESC LIMIT ?')
+    .all(workflowId, limit) as Array<{
+    id: string
+    workflow_id: string
+    started_at: string
+    completed_at: string | null
+    status: string
+    trigger_task_id: string | null
   }>
 
   return rows.map((r) => {
-    const nodeRows = d.prepare(
-      'SELECT * FROM workflow_run_nodes WHERE run_id = ?'
-    ).all(r.id) as Array<{
-      node_id: string; status: string; started_at: string | null
-      completed_at: string | null; session_id: string | null
-      error: string | null; logs: string | null
-      task_id: string | null; agent_session_id: string | null
+    const nodeRows = d
+      .prepare('SELECT * FROM workflow_run_nodes WHERE run_id = ?')
+      .all(r.id) as Array<{
+      node_id: string
+      status: string
+      started_at: string | null
+      completed_at: string | null
+      session_id: string | null
+      error: string | null
+      logs: string | null
+      task_id: string | null
+      agent_session_id: string | null
     }>
 
     return {
@@ -965,11 +1279,16 @@ export function listWorkflowRuns(workflowId: string, limit = 20): WorkflowExecut
   })
 }
 
-export function listWorkflowRunsByTask(taskId: string, limit = 20): (WorkflowExecution & { workflowName?: string })[] {
+export function listWorkflowRunsByTask(
+  taskId: string,
+  limit = 20
+): (WorkflowExecution & { workflowName?: string })[] {
   const d = getDb()
 
   // Find runs where the task triggered the workflow OR a node executed the task
-  const rows = d.prepare(`
+  const rows = d
+    .prepare(
+      `
     SELECT DISTINCT wr.*, w.name as workflow_name
     FROM workflow_runs wr
     LEFT JOIN workflows w ON w.id = wr.workflow_id
@@ -977,20 +1296,31 @@ export function listWorkflowRunsByTask(taskId: string, limit = 20): (WorkflowExe
        OR wr.id IN (SELECT run_id FROM workflow_run_nodes WHERE task_id = ?)
     ORDER BY wr.started_at DESC
     LIMIT ?
-  `).all(taskId, taskId, limit) as Array<{
-    id: string; workflow_id: string; started_at: string
-    completed_at: string | null; status: string; trigger_task_id: string | null
+  `
+    )
+    .all(taskId, taskId, limit) as Array<{
+    id: string
+    workflow_id: string
+    started_at: string
+    completed_at: string | null
+    status: string
+    trigger_task_id: string | null
     workflow_name: string | null
   }>
 
   return rows.map((r) => {
-    const nodeRows = d.prepare(
-      'SELECT * FROM workflow_run_nodes WHERE run_id = ?'
-    ).all(r.id) as Array<{
-      node_id: string; status: string; started_at: string | null
-      completed_at: string | null; session_id: string | null
-      error: string | null; logs: string | null
-      task_id: string | null; agent_session_id: string | null
+    const nodeRows = d
+      .prepare('SELECT * FROM workflow_run_nodes WHERE run_id = ?')
+      .all(r.id) as Array<{
+      node_id: string
+      status: string
+      started_at: string | null
+      completed_at: string | null
+      session_id: string | null
+      error: string | null
+      logs: string | null
+      task_id: string | null
+      agent_session_id: string | null
     }>
 
     return {

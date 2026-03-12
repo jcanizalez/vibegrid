@@ -4,13 +4,18 @@ import { StatusFilter } from '../stores/types'
 
 const STATUS_FILTERS: StatusFilter[] = ['all', 'running', 'waiting', 'idle', 'error']
 const isMac = navigator.platform.toUpperCase().includes('MAC')
-const modKey = (e: KeyboardEvent): boolean => isMac ? e.metaKey : e.ctrlKey
+const modKey = (e: KeyboardEvent): boolean => (isMac ? e.metaKey : e.ctrlKey)
 
 function isInputFocused(): boolean {
   const el = document.activeElement
   if (!el) return false
   const tag = el.tagName.toLowerCase()
-  return tag === 'input' || tag === 'textarea' || tag === 'select' || (el as HTMLElement).isContentEditable
+  return (
+    tag === 'input' ||
+    tag === 'textarea' ||
+    tag === 'select' ||
+    (el as HTMLElement).isContentEditable
+  )
 }
 
 export function useKeyboardShortcuts() {

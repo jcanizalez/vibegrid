@@ -13,7 +13,16 @@ import { AGENT_DEFINITIONS } from '../lib/agent-definitions'
 import { destroyTerminal } from '../lib/terminal-registry'
 import { getDisplayName } from '../lib/terminal-display'
 import { useTerminalScrollButton } from '../hooks/useTerminalScrollButton'
-import { GitBranch, FolderGit2, GitCommitHorizontal, FileCode2, RefreshCw, Loader2, Server, ArrowDown } from 'lucide-react'
+import {
+  GitBranch,
+  FolderGit2,
+  GitCommitHorizontal,
+  FileCode2,
+  RefreshCw,
+  Loader2,
+  Server,
+  ArrowDown
+} from 'lucide-react'
 import { GitDiffResult } from '../../shared/types'
 import { toast } from './Toast'
 
@@ -22,13 +31,13 @@ const MOD = isMac ? '⌘' : 'Ctrl+'
 
 export function FocusedTerminal() {
   const focusedId = useAppStore((s) => s.focusedTerminalId)
-  const terminal = useAppStore((s) => focusedId ? s.terminals.get(focusedId) : undefined)
+  const terminal = useAppStore((s) => (focusedId ? s.terminals.get(focusedId) : undefined))
   const setFocused = useAppStore((s) => s.setFocusedTerminal)
   const removeTerminal = useAppStore((s) => s.removeTerminal)
   const isRenaming = useAppStore((s) => s.renamingTerminalId === focusedId)
   const setRenamingTerminalId = useAppStore((s) => s.setRenamingTerminalId)
   const renameTerminal = useAppStore((s) => s.renameTerminal)
-  const stat = useAppStore((s) => focusedId ? s.gitDiffStats.get(focusedId) : undefined)
+  const stat = useAppStore((s) => (focusedId ? s.gitDiffStats.get(focusedId) : undefined))
 
   const [showDiffPanel, setShowDiffPanel] = useState(false)
   const [showCommitDialog, setShowCommitDialog] = useState(false)
@@ -181,7 +190,9 @@ export function FocusedTerminal() {
                 ) : (
                   <GitBranch size={12} className="text-gray-600" strokeWidth={1.5} />
                 )}
-                <span className={`text-[12px] font-mono ${terminal.session.isWorktree ? 'text-amber-400' : 'text-gray-500'}`}>
+                <span
+                  className={`text-[12px] font-mono ${terminal.session.isWorktree ? 'text-amber-400' : 'text-gray-500'}`}
+                >
                   {terminal.session.branch}
                 </span>
                 {terminal.session.isWorktree && (
@@ -205,9 +216,11 @@ export function FocusedTerminal() {
             <button
               onClick={handleToggleDiff}
               className={`flex items-center gap-1.5 px-2 py-1 text-[11px] font-mono rounded-md border transition-colors
-                         ${showDiffPanel
-                           ? 'bg-white/[0.08] border-white/[0.12] text-gray-200'
-                           : 'bg-white/[0.04] border-white/[0.06] hover:bg-white/[0.08] text-gray-300'}`}
+                         ${
+                           showDiffPanel
+                             ? 'bg-white/[0.08] border-white/[0.12] text-gray-200'
+                             : 'bg-white/[0.04] border-white/[0.06] hover:bg-white/[0.08] text-gray-300'
+                         }`}
               title="Toggle changes panel"
             >
               <FileCode2 size={13} strokeWidth={1.5} />
@@ -221,12 +234,18 @@ export function FocusedTerminal() {
           {/* Keyboard shortcut hints */}
           <div className="flex items-center gap-2 text-[10px] text-gray-600 mx-1">
             <span className="flex items-center gap-0.5">
-              <kbd className="px-1 py-0.5 rounded bg-white/[0.06] text-gray-500 font-mono">{MOD}W</kbd>
+              <kbd className="px-1 py-0.5 rounded bg-white/[0.06] text-gray-500 font-mono">
+                {MOD}W
+              </kbd>
               close
             </span>
             <span className="flex items-center gap-0.5">
-              <kbd className="px-1 py-0.5 rounded bg-white/[0.06] text-gray-500 font-mono">{MOD}[</kbd>
-              <kbd className="px-1 py-0.5 rounded bg-white/[0.06] text-gray-500 font-mono">{MOD}]</kbd>
+              <kbd className="px-1 py-0.5 rounded bg-white/[0.06] text-gray-500 font-mono">
+                {MOD}[
+              </kbd>
+              <kbd className="px-1 py-0.5 rounded bg-white/[0.06] text-gray-500 font-mono">
+                {MOD}]
+              </kbd>
               cycle
             </span>
           </div>
@@ -291,7 +310,11 @@ export function FocusedTerminal() {
                   className="p-1 text-gray-400 hover:text-white rounded transition-colors"
                   title="Refresh"
                 >
-                  <RefreshCw size={13} className={diffLoading ? 'animate-spin' : ''} strokeWidth={1.5} />
+                  <RefreshCw
+                    size={13}
+                    className={diffLoading ? 'animate-spin' : ''}
+                    strokeWidth={1.5}
+                  />
                 </button>
               </div>
 

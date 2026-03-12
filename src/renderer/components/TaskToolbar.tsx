@@ -20,7 +20,14 @@ interface DropdownProps<T extends string> {
   label: string
 }
 
-function Dropdown<T extends string>({ icon, options, value, onChange, title, label }: DropdownProps<T>) {
+function Dropdown<T extends string>({
+  icon,
+  options,
+  value,
+  onChange,
+  title,
+  label
+}: DropdownProps<T>) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -52,23 +59,35 @@ function Dropdown<T extends string>({ icon, options, value, onChange, title, lab
         {icon}
         {activeDot && <span className={`w-1.5 h-1.5 rounded-full ${activeDot} shrink-0`} />}
         <span>{activeLabel}</span>
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
-             stroke="currentColor" strokeWidth="2.5" className="opacity-50">
+        <svg
+          width="10"
+          height="10"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          className="opacity-50"
+        >
           <polyline points="6 9 12 15 18 9" />
         </svg>
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-1 z-50 min-w-[140px]
+        <div
+          className="absolute right-0 top-full mt-1 z-50 min-w-[140px]
                         border border-white/[0.08] rounded-lg shadow-xl overflow-hidden"
-             style={{ background: '#1a1a1e' }}>
+          style={{ background: '#1a1a1e' }}
+        >
           <div className="px-3 py-2 text-[11px] text-gray-500 uppercase tracking-wider">
             {label}
           </div>
           {options.map((opt) => (
             <button
               key={opt.value}
-              onClick={() => { onChange(opt.value); setOpen(false) }}
+              onClick={() => {
+                onChange(opt.value)
+                setOpen(false)
+              }}
               className={`w-full text-left px-3 py-2 text-sm transition-colors flex items-center gap-2 ${
                 value === opt.value
                   ? 'text-white bg-white/[0.06]'
@@ -76,8 +95,14 @@ function Dropdown<T extends string>({ icon, options, value, onChange, title, lab
               }`}
             >
               {value === opt.value && (
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
-                     stroke="currentColor" strokeWidth="3">
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                >
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
               )}
@@ -106,15 +131,13 @@ const TASK_STATUS_OPTIONS: MenuOption<TaskStatusFilter>[] = [
 /* ── Icons ───────────────────────────────────────────────────── */
 
 const FilterIcon = (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-       stroke="currentColor" strokeWidth="2">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
   </svg>
 )
 
 const ListIcon = (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-       stroke="currentColor" strokeWidth="2">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <line x1="8" y1="6" x2="21" y2="6" />
     <line x1="8" y1="12" x2="21" y2="12" />
     <line x1="8" y1="18" x2="21" y2="18" />
@@ -125,8 +148,7 @@ const ListIcon = (
 )
 
 const KanbanIcon = (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-       stroke="currentColor" strokeWidth="2">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <rect x="3" y="3" width="18" height="18" rx="2" />
     <path d="M9 3v18" />
     <path d="M15 3v18" />

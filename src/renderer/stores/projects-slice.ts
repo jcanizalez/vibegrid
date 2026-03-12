@@ -36,9 +36,7 @@ export const createProjectsSlice: StateCreator<AppStore, [], [], ProjectsSlice> 
       if (!state.config) return {}
       const updated = {
         ...state.config,
-        projects: state.config.projects.map((p) =>
-          p.name === originalName ? project : p
-        )
+        projects: state.config.projects.map((p) => (p.name === originalName ? project : p))
       }
       window.api.saveConfig(updated)
       return { config: updated }
@@ -71,9 +69,7 @@ export const createProjectsSlice: StateCreator<AppStore, [], [], ProjectsSlice> 
       if (!state.config) return {}
       const updated = {
         ...state.config,
-        workflows: (state.config.workflows || []).map((w) =>
-          w.id === id ? workflow : w
-        )
+        workflows: (state.config.workflows || []).map((w) => (w.id === id ? workflow : w))
       }
       window.api.saveConfig(updated)
       return { config: updated }
@@ -106,9 +102,7 @@ export const createProjectsSlice: StateCreator<AppStore, [], [], ProjectsSlice> 
       if (!state.config) return {}
       const updated = {
         ...state.config,
-        remoteHosts: (state.config.remoteHosts || []).map((h) =>
-          h.id === id ? host : h
-        )
+        remoteHosts: (state.config.remoteHosts || []).map((h) => (h.id === id ? host : h))
       }
       window.api.saveConfig(updated)
       return { config: updated }

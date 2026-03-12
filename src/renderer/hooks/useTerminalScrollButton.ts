@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
-import { scrollToBottom, isAtBottom, onTerminalReady, onTerminalScroll } from '../lib/terminal-registry'
+import {
+  scrollToBottom,
+  isAtBottom,
+  onTerminalReady,
+  onTerminalScroll
+} from '../lib/terminal-registry'
 
 export function useTerminalScrollButton(terminalId: string | null | undefined) {
   const [showScrollBtn, setShowScrollBtn] = useState(false)

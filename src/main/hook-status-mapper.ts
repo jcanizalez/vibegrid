@@ -33,7 +33,14 @@ class HookStatusMapper {
       return session.id
     }
 
-    log.info(`[hooks] no unlinked terminal for session ${sessionId} cwd=${cwd} (active terminals: ${ptyManager.getActiveSessions().map(s => s.projectPath).join(', ') || 'none'})`)
+    log.info(
+      `[hooks] no unlinked terminal for session ${sessionId} cwd=${cwd} (active terminals: ${
+        ptyManager
+          .getActiveSessions()
+          .map((s) => s.projectPath)
+          .join(', ') || 'none'
+      })`
+    )
     return undefined
   }
 
@@ -41,9 +48,10 @@ class HookStatusMapper {
     // On SessionStart, always try to link. On other events, check the cache
     // first but fall back to cwd linking in case SessionStart was missed
     // (e.g. Claude was already running when VibeGrid started).
-    const terminalId = event.hook_event_name === 'SessionStart'
-      ? this.tryLink(event.session_id, event.cwd)
-      : (this.sessionMap.get(event.session_id) ?? this.tryLink(event.session_id, event.cwd))
+    const terminalId =
+      event.hook_event_name === 'SessionStart'
+        ? this.tryLink(event.session_id, event.cwd)
+        : (this.sessionMap.get(event.session_id) ?? this.tryLink(event.session_id, event.cwd))
 
     if (!terminalId) return null
 

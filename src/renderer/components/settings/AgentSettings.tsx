@@ -74,8 +74,10 @@ export function AgentSettings() {
   const isModified = (agentType: AgentType): boolean => {
     const current = getCommand(agentType)
     const defaults = DEFAULT_AGENT_COMMANDS[agentType]
-    return current.command !== defaults.command ||
-           JSON.stringify(current.args) !== JSON.stringify(defaults.args)
+    return (
+      current.command !== defaults.command ||
+      JSON.stringify(current.args) !== JSON.stringify(defaults.args)
+    )
   }
 
   return (

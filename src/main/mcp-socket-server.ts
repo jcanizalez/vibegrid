@@ -110,7 +110,11 @@ export function startMcpSocketServer(deps: McpSocketDeps): void {
 
   // Clean up stale socket from a previous crash (safe — GUI holds singleton lock)
   if (process.platform !== 'win32') {
-    try { fs.unlinkSync(socketPath) } catch { /* doesn't exist, fine */ }
+    try {
+      fs.unlinkSync(socketPath)
+    } catch {
+      /* doesn't exist, fine */
+    }
   }
 
   server = net.createServer((socket) => {
@@ -125,7 +129,10 @@ export function startMcpSocketServer(deps: McpSocketDeps): void {
     registerProjectTools(mcpServer, { configManager: deps.configManager })
     registerTaskTools(mcpServer, { configManager: deps.configManager })
     registerSessionTools(mcpServer, { ptyManager: deps.ptyManager })
-    registerWorkflowTools(mcpServer, { configManager: deps.configManager, scheduler: deps.scheduler })
+    registerWorkflowTools(mcpServer, {
+      configManager: deps.configManager,
+      scheduler: deps.scheduler
+    })
     registerGitTools(mcpServer)
     registerConfigTools(mcpServer, { configManager: deps.configManager })
 
@@ -140,7 +147,11 @@ export function startMcpSocketServer(deps: McpSocketDeps): void {
 
   server.listen(socketPath, () => {
     if (process.platform !== 'win32') {
-      try { fs.chmodSync(socketPath, 0o600) } catch { /* ignore */ }
+      try {
+        fs.chmodSync(socketPath, 0o600)
+      } catch {
+        /* ignore */
+      }
     }
     log.info(`[mcp-socket] listening on ${socketPath}`)
   })
@@ -153,6 +164,10 @@ export function stopMcpSocketServer(): void {
   }
   if (process.platform !== 'win32') {
     const socketPath = getSocketPath()
-    try { fs.unlinkSync(socketPath) } catch { /* ignore */ }
+    try {
+      fs.unlinkSync(socketPath)
+    } catch {
+      /* ignore */
+    }
   }
 }

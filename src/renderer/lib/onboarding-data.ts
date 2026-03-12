@@ -39,8 +39,7 @@ export const ONBOARDING_TOPICS: OnboardingTopic[] = [
     id: 'context-bar',
     title: 'Context Bar',
     section: 'core-features',
-    description:
-      `The top toolbar shows your active agent count, filter controls, and grid settings. Use it to filter agents by status (running, waiting, idle, error), change the sort order, or adjust the grid layout. Status filters also have keyboard shortcuts: ${MOD}1 through ${MOD}5.`,
+    description: `The top toolbar shows your active agent count, filter controls, and grid settings. Use it to filter agents by status (running, waiting, idle, error), change the sort order, or adjust the grid layout. Status filters also have keyboard shortcuts: ${MOD}1 through ${MOD}5.`,
     icon: 'SlidersHorizontal'
   },
   {
@@ -64,8 +63,7 @@ export const ONBOARDING_TOPICS: OnboardingTopic[] = [
     id: 'multiple-sessions',
     title: 'Multiple Sessions',
     section: 'core-features',
-    description:
-      `Run as many AI agent sessions as you need. Each session gets its own terminal card in the grid. Double-click a card to expand it full-screen, or use ${MOD}] and ${MOD}[ to cycle between them. Cards can be reordered by dragging in manual sort mode.`,
+    description: `Run as many AI agent sessions as you need. Each session gets its own terminal card in the grid. Double-click a card to expand it full-screen, or use ${MOD}] and ${MOD}[ to cycle between them. Cards can be reordered by dragging in manual sort mode.`,
     icon: 'Columns3'
   },
   {

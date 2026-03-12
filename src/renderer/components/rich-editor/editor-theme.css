@@ -122,7 +122,12 @@
   background: #22c55e;
   border-color: #22c55e;
 }
-.rich-editor .ProseMirror ul[data-type='taskList'] li > label input[type='checkbox']:checked::after {
+.rich-editor
+  .ProseMirror
+  ul[data-type='taskList']
+  li
+  > label
+  input[type='checkbox']:checked::after {
   content: '';
   position: absolute;
   left: 4px;

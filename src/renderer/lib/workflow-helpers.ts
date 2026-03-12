@@ -255,7 +255,7 @@ export function removeNode(
   const incomingEdges = edges.filter((e) => e.target === nodeId)
   const outgoingEdges = edges.filter((e) => e.source === nodeId)
 
-  let newEdges = edges.filter((e) => e.source !== nodeId && e.target !== nodeId)
+  const newEdges = [...edges.filter((e) => e.source !== nodeId && e.target !== nodeId)]
 
   // Reconnect: each parent -> each child
   for (const incoming of incomingEdges) {

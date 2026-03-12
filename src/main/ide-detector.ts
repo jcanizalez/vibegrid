@@ -15,14 +15,34 @@ interface IDEDefinition {
 }
 
 const MAC_IDES: IDEDefinition[] = [
-  { id: 'vscode', name: 'VS Code', appPath: '/Applications/Visual Studio Code.app', command: 'code' },
-  { id: 'vscode-insiders', name: 'VS Code Insiders', appPath: '/Applications/Visual Studio Code - Insiders.app', command: 'code-insiders' },
+  {
+    id: 'vscode',
+    name: 'VS Code',
+    appPath: '/Applications/Visual Studio Code.app',
+    command: 'code'
+  },
+  {
+    id: 'vscode-insiders',
+    name: 'VS Code Insiders',
+    appPath: '/Applications/Visual Studio Code - Insiders.app',
+    command: 'code-insiders'
+  },
   { id: 'cursor', name: 'Cursor', appPath: '/Applications/Cursor.app', command: 'cursor' },
   { id: 'windsurf', name: 'Windsurf', appPath: '/Applications/Windsurf.app', command: 'windsurf' },
   { id: 'zed', name: 'Zed', appPath: '/Applications/Zed.app', command: 'zed' },
-  { id: 'sublime', name: 'Sublime Text', appPath: '/Applications/Sublime Text.app', command: 'subl' },
+  {
+    id: 'sublime',
+    name: 'Sublime Text',
+    appPath: '/Applications/Sublime Text.app',
+    command: 'subl'
+  },
   { id: 'webstorm', name: 'WebStorm', appPath: '/Applications/WebStorm.app', command: 'webstorm' },
-  { id: 'intellij', name: 'IntelliJ IDEA', appPath: '/Applications/IntelliJ IDEA.app', command: 'idea' },
+  {
+    id: 'intellij',
+    name: 'IntelliJ IDEA',
+    appPath: '/Applications/IntelliJ IDEA.app',
+    command: 'idea'
+  },
   { id: 'xcode', name: 'Xcode', appPath: '/Applications/Xcode.app', command: 'xed' },
   { id: 'terminal', name: 'Terminal', appPath: null, command: 'open -a Terminal' },
   { id: 'finder', name: 'Finder', appPath: null, command: 'open' }
@@ -53,9 +73,12 @@ const LINUX_IDES: IDEDefinition[] = [
 
 function getIDEDefinitions(): IDEDefinition[] {
   switch (process.platform) {
-    case 'win32': return WIN_IDES
-    case 'linux': return LINUX_IDES
-    default: return MAC_IDES
+    case 'win32':
+      return WIN_IDES
+    case 'linux':
+      return LINUX_IDES
+    default:
+      return MAC_IDES
   }
 }
 

@@ -97,7 +97,9 @@ export function buildTaskPrompt(ctx: TaskPromptContext): string {
   lines.push('- `get_diff` — See current git changes')
   lines.push('- `list_branches` — List git branches')
   lines.push('')
-  lines.push('When you complete this task, update its status to "in_review" or "done" using `update_task`.')
+  lines.push(
+    'When you complete this task, update its status to "in_review" or "done" using `update_task`.'
+  )
   lines.push('')
 
   return lines.join('\n')
@@ -108,7 +110,11 @@ export function buildTaskPrompt(ctx: TaskPromptContext): string {
  * code review comments back to an agent). This is a lighter-weight prompt
  * that just provides the review context.
  */
-export function buildFeedbackPrompt(feedback: string, task: TaskConfig, project: ProjectConfig): string {
+export function buildFeedbackPrompt(
+  feedback: string,
+  task: TaskConfig,
+  project: ProjectConfig
+): string {
   const lines: string[] = []
   lines.push(`# Review Feedback for: ${task.title}`)
   lines.push('')
@@ -123,11 +129,17 @@ export function buildFeedbackPrompt(feedback: string, task: TaskConfig, project:
 
 function formatStatus(status: TaskStatus): string {
   switch (status) {
-    case 'todo': return 'To Do'
-    case 'in_progress': return 'In Progress'
-    case 'in_review': return 'In Review'
-    case 'done': return 'Done'
-    case 'cancelled': return 'Cancelled'
-    default: return status
+    case 'todo':
+      return 'To Do'
+    case 'in_progress':
+      return 'In Progress'
+    case 'in_review':
+      return 'In Review'
+    case 'done':
+      return 'Done'
+    case 'cancelled':
+      return 'Cancelled'
+    default:
+      return status
   }
 }

@@ -22,10 +22,7 @@ export const TEMPLATE_VARIABLES: TemplateVariable[] = [
  * Variables follow the pattern {{namespace.property}}.
  * Missing values resolve to empty string; unrecognized variables are left as-is.
  */
-export function resolveTemplateVars(
-  template: string,
-  context?: WorkflowExecutionContext
-): string {
+export function resolveTemplateVars(template: string, context?: WorkflowExecutionContext): string {
   if (!context || !template) return template
 
   return template.replace(/\{\{(\w+)\.(\w+)\}\}/g, (match, ns, prop) => {

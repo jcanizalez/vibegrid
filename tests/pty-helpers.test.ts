@@ -77,7 +77,7 @@ describe('shellEscape', () => {
   })
 
   it('safely wraps double quotes', () => {
-    expect(shellEscape('say "hi"')).toBe("'say \"hi\"'")
+    expect(shellEscape('say "hi"')).toBe('\'say "hi"\'')
   })
 
   it('handles multiple single quotes', () => {

@@ -1,14 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import type { Editor } from '@tiptap/react'
-import {
-  Bold,
-  Italic,
-  Strikethrough,
-  Code,
-  Link as LinkIcon,
-  Unlink
-} from 'lucide-react'
+import { Bold, Italic, Strikethrough, Code, Link as LinkIcon, Unlink } from 'lucide-react'
 
 interface FloatingToolbarProps {
   editor: Editor
@@ -119,12 +112,7 @@ export function FloatingToolbar({ editor }: FloatingToolbarProps) {
               className="w-[180px] px-2 py-1 bg-white/[0.04] border border-white/[0.08] rounded text-xs
                          text-gray-200 placeholder-gray-600 focus:outline-none focus:border-white/[0.15]"
             />
-            <ToolbarButton
-              onClick={applyLink}
-              active={false}
-              icon={LinkIcon}
-              title="Apply"
-            />
+            <ToolbarButton onClick={applyLink} active={false} icon={LinkIcon} title="Apply" />
           </div>
         ) : (
           <div className="flex items-center px-0.5 py-0.5 gap-0.5">

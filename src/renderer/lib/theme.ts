@@ -16,5 +16,5 @@ export const theme = {
   /** Terminal/content inset areas */
   bgInset: 'rgba(0, 0, 0, 0.2)',
   /** Overlay/backdrop */
-  bgOverlay: 'rgba(0, 0, 0, 0.5)',
+  bgOverlay: 'rgba(0, 0, 0, 0.5)'
 } as const

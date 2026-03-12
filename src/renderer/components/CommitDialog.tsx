@@ -95,7 +95,9 @@ export function CommitDialog({ cwd, branch, stat, onClose, onCommitted }: Props)
           <div className="p-2 rounded-lg bg-white/[0.06]">
             <GitCommitHorizontal size={18} className="text-gray-300" strokeWidth={1.5} />
           </div>
-          <span className="flex-1 text-[18px] font-semibold text-gray-100">Commit your changes</span>
+          <span className="flex-1 text-[18px] font-semibold text-gray-100">
+            Commit your changes
+          </span>
           <button
             onClick={onClose}
             className="p-1 text-gray-400 hover:text-white rounded transition-colors"
@@ -119,7 +121,9 @@ export function CommitDialog({ cwd, branch, stat, onClose, onCommitted }: Props)
             <span className="text-[14px] text-gray-300 font-medium">Changes</span>
             {stat ? (
               <span className="flex items-center gap-2 text-[14px]">
-                <span className="text-gray-300">{stat.filesChanged} file{stat.filesChanged !== 1 ? 's' : ''}</span>
+                <span className="text-gray-300">
+                  {stat.filesChanged} file{stat.filesChanged !== 1 ? 's' : ''}
+                </span>
                 <span className="font-mono text-green-400">+{stat.insertions}</span>
                 <span className="font-mono text-red-400">-{stat.deletions}</span>
               </span>
@@ -194,15 +198,13 @@ export function CommitDialog({ cwd, branch, stat, onClose, onCommitted }: Props)
             onClick={handleContinue}
             disabled={!canCommit}
             className={`w-full py-2.5 rounded-lg text-[14px] font-medium transition-colors flex items-center justify-center gap-2
-                       ${canCommit
-                         ? 'bg-white text-gray-900 hover:bg-gray-200'
-                         : 'bg-white/[0.06] text-gray-500 cursor-not-allowed'}`}
+                       ${
+                         canCommit
+                           ? 'bg-white text-gray-900 hover:bg-gray-200'
+                           : 'bg-white/[0.06] text-gray-500 cursor-not-allowed'
+                       }`}
           >
-            {loading ? (
-              <Loader2 size={16} className="animate-spin" />
-            ) : (
-              'Continue'
-            )}
+            {loading ? <Loader2 size={16} className="animate-spin" /> : 'Continue'}
           </button>
         </div>
       </motion.div>

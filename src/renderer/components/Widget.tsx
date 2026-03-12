@@ -1,5 +1,11 @@
 import { useState, useEffect, useCallback } from 'react'
-import { AgentType, WidgetAgentInfo, PermissionRequestInfo, PermissionSuggestion, AskUserQuestion } from '../../shared/types'
+import {
+  AgentType,
+  WidgetAgentInfo,
+  PermissionRequestInfo,
+  PermissionSuggestion,
+  AskUserQuestion
+} from '../../shared/types'
 import { AgentIcon } from './AgentIcon'
 
 type ViewMode = 'full' | 'compact'
@@ -10,7 +16,11 @@ declare global {
       onStatusUpdate: (callback: (agents: WidgetAgentInfo[]) => void) => () => void
       onPermissionRequest: (callback: (request: PermissionRequestInfo) => void) => () => void
       onPermissionCancelled: (callback: (requestId: string) => void) => () => void
-      respondPermission: (requestId: string, allow: boolean, extra?: { updatedPermissions?: unknown[]; updatedInput?: unknown }) => void
+      respondPermission: (
+        requestId: string,
+        allow: boolean,
+        extra?: { updatedPermissions?: unknown[]; updatedInput?: unknown }
+      ) => void
       focusTerminal: (id: string) => void
       hideWidget: () => void
       showApp: () => void
@@ -27,7 +37,11 @@ const GLOW_COLORS: Record<AgentType, string> = {
   gemini: 'rgba(49, 134, 255, 0.45)'
 }
 
-type RespondFn = (requestId: string, allow: boolean, extra?: { updatedPermissions?: unknown[]; updatedInput?: unknown }) => void
+type RespondFn = (
+  requestId: string,
+  allow: boolean,
+  extra?: { updatedPermissions?: unknown[]; updatedInput?: unknown }
+) => void
 
 function labelSuggestion(s: PermissionSuggestion, toolName: string): string {
   switch (s.type) {
@@ -46,23 +60,34 @@ function labelSuggestion(s: PermissionSuggestion, toolName: string): string {
     }
     case 'setMode':
       switch (s.mode) {
-        case 'acceptEdits': return 'Auto-accept edits'
-        case 'plan': return 'Switch to plan mode'
-        default: return s.mode ?? 'Set mode'
+        case 'acceptEdits':
+          return 'Auto-accept edits'
+        case 'plan':
+          return 'Switch to plan mode'
+        default:
+          return s.mode ?? 'Set mode'
       }
     default:
       return (s.label as string) ?? s.type
   }
 }
 
-function AskQuestionCard({ request, onRespond }: { request: PermissionRequestInfo; onRespond: RespondFn }) {
+function AskQuestionCard({
+  request,
+  onRespond
+}: {
+  request: PermissionRequestInfo
+  onRespond: RespondFn
+}) {
   const questions = request.questions ?? []
   const [selected, setSelected] = useState<Record<number, string>>({})
   const allAnswered = questions.every((_, i) => selected[i] !== undefined)
 
   function submit() {
     const answers: Record<string, string> = {}
-    questions.forEach((_, i) => { if (selected[i]) answers[String(i)] = selected[i] })
+    questions.forEach((_, i) => {
+      if (selected[i]) answers[String(i)] = selected[i]
+    })
     onRespond(request.requestId, true, { updatedInput: { ...request.toolInput, answers } })
   }
 
@@ -80,7 +105,7 @@ function AskQuestionCard({ request, onRespond }: { request: PermissionRequestInf
               <button
                 key={oi}
                 className={`ask-option-btn ${selected[qi] === opt.label ? 'ask-option-selected' : ''}`}
-                onClick={() => setSelected(prev => ({ ...prev, [qi]: opt.label }))}
+                onClick={() => setSelected((prev) => ({ ...prev, [qi]: opt.label }))}
               >
                 {opt.label}
               </button>
@@ -108,7 +133,13 @@ function AskQuestionCard({ request, onRespond }: { request: PermissionRequestInf
   )
 }
 
-function PermissionCard({ request, onRespond }: { request: PermissionRequestInfo; onRespond: RespondFn }) {
+function PermissionCard({
+  request,
+  onRespond
+}: {
+  request: PermissionRequestInfo
+  onRespond: RespondFn
+}) {
   const filePath = request.toolInput?.file_path as string | undefined
   const command = request.toolInput?.command as string | undefined
   let context: string | undefined
@@ -124,7 +155,8 @@ function PermissionCard({ request, onRespond }: { request: PermissionRequestInfo
   }
 
   const suggestions = request.permissionSuggestions ?? []
-  const isAskQuestion = request.toolName === 'AskUserQuestion' && (request.questions?.length ?? 0) > 0
+  const isAskQuestion =
+    request.toolName === 'AskUserQuestion' && (request.questions?.length ?? 0) > 0
 
   if (isAskQuestion) {
     return <AskQuestionCard request={request} onRespond={onRespond} />
@@ -193,20 +225,26 @@ function AgentSection({
       >
         <div
           className={`flex items-center justify-center w-6 h-6 ${isRunning ? 'agent-icon-pulse agent-icon-glow' : ''}`}
-          style={isRunning ? { '--glow-color': GLOW_COLORS[agent.agentType] } as React.CSSProperties : undefined}
+          style={
+            isRunning
+              ? ({ '--glow-color': GLOW_COLORS[agent.agentType] } as React.CSSProperties)
+              : undefined
+          }
         >
           <AgentIcon agentType={agent.agentType} size={18} />
         </div>
 
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{
-            fontSize: 12,
-            fontWeight: 500,
-            color: 'rgba(255,255,255,0.9)',
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis'
-          }}>
+          <div
+            style={{
+              fontSize: 12,
+              fontWeight: 500,
+              color: 'rgba(255,255,255,0.9)',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis'
+            }}
+          >
             {label}
           </div>
         </div>
@@ -216,7 +254,7 @@ function AgentSection({
 
       {permissions.length > 0 && (
         <div className="permission-list">
-          {permissions.map(req => (
+          {permissions.map((req) => (
             <PermissionCard key={req.requestId} request={req} onRespond={onRespond} />
           ))}
         </div>
@@ -225,10 +263,16 @@ function AgentSection({
   )
 }
 
-function CompactWidget({ agents, setMode }: { agents: WidgetAgentInfo[]; setMode: (m: ViewMode) => void }) {
-  const running = agents.filter(a => a.status === 'running').length
-  const waiting = agents.filter(a => a.status === 'waiting').length
-  const errored = agents.filter(a => a.status === 'error').length
+function CompactWidget({
+  agents,
+  setMode
+}: {
+  agents: WidgetAgentInfo[]
+  setMode: (m: ViewMode) => void
+}) {
+  const running = agents.filter((a) => a.status === 'running').length
+  const waiting = agents.filter((a) => a.status === 'waiting').length
+  const errored = agents.filter((a) => a.status === 'error').length
 
   return (
     <div className="widget-container widget-compact">
@@ -237,7 +281,9 @@ function CompactWidget({ agents, setMode }: { agents: WidgetAgentInfo[]; setMode
           className="widget-app-btn"
           onClick={() => window.widgetApi.showApp()}
           title="Open VibeGrid"
-        >VG</button>
+        >
+          VG
+        </button>
         <div className="widget-compact-dots">
           {running > 0 && (
             <div className="widget-compact-badge">
@@ -264,13 +310,30 @@ function CompactWidget({ agents, setMode }: { agents: WidgetAgentInfo[]; setMode
         <div className="widget-mode-btns">
           <button className="widget-mode-btn" onClick={() => setMode('full')} title="Expand panel">
             <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-              <rect x="1.5" y="1.5" width="7" height="7" rx="1.2" stroke="currentColor" strokeWidth="1.2" />
+              <rect
+                x="1.5"
+                y="1.5"
+                width="7"
+                height="7"
+                rx="1.2"
+                stroke="currentColor"
+                strokeWidth="1.2"
+              />
               <path d="M1.5 3.5H8.5" stroke="currentColor" strokeWidth="1.2" />
             </svg>
           </button>
-          <button className="widget-mode-btn" onClick={() => window.widgetApi.hideWidget()} title="Hide widget">
+          <button
+            className="widget-mode-btn"
+            onClick={() => window.widgetApi.hideWidget()}
+            title="Hide widget"
+          >
             <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-              <path d="M2.5 2.5L7.5 7.5M7.5 2.5L2.5 7.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+              <path
+                d="M2.5 2.5L7.5 7.5M7.5 2.5L2.5 7.5"
+                stroke="currentColor"
+                strokeWidth="1.3"
+                strokeLinecap="round"
+              />
             </svg>
           </button>
         </div>
@@ -284,10 +347,17 @@ export function Widget() {
   const [permissions, setPermissions] = useState<PermissionRequestInfo[]>([])
   const [viewMode, setViewMode] = useState<ViewMode>('full')
 
-  const respondPermission = useCallback((requestId: string, allow: boolean, extra?: { updatedPermissions?: unknown[]; updatedInput?: unknown }) => {
-    window.widgetApi.respondPermission(requestId, allow, extra)
-    setPermissions(prev => prev.filter(p => p.requestId !== requestId))
-  }, [])
+  const respondPermission = useCallback(
+    (
+      requestId: string,
+      allow: boolean,
+      extra?: { updatedPermissions?: unknown[]; updatedInput?: unknown }
+    ) => {
+      window.widgetApi.respondPermission(requestId, allow, extra)
+      setPermissions((prev) => prev.filter((p) => p.requestId !== requestId))
+    },
+    []
+  )
 
   useEffect(() => {
     return window.widgetApi.onStatusUpdate(setAgents)
@@ -295,8 +365,8 @@ export function Widget() {
 
   useEffect(() => {
     return window.widgetApi.onPermissionRequest((request) => {
-      setPermissions(prev => {
-        if (prev.some(p => p.requestId === request.requestId)) return prev
+      setPermissions((prev) => {
+        if (prev.some((p) => p.requestId === request.requestId)) return prev
         return [...prev, request]
       })
     })
@@ -304,7 +374,7 @@ export function Widget() {
 
   useEffect(() => {
     return window.widgetApi.onPermissionCancelled((requestId) => {
-      setPermissions(prev => prev.filter(p => p.requestId !== requestId))
+      setPermissions((prev) => prev.filter((p) => p.requestId !== requestId))
     })
   }, [])
 
@@ -316,7 +386,7 @@ export function Widget() {
     return <CompactWidget agents={agents} setMode={setViewMode} />
   }
 
-  const running = agents.filter(a => a.status === 'running').length
+  const running = agents.filter((a) => a.status === 'running').length
   const total = agents.length
 
   // Group permissions by terminalId for per-session display
@@ -363,7 +433,12 @@ export function Widget() {
             title="Hide widget"
           >
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-              <path d="M3 3L9 9M9 3L3 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              <path
+                d="M3 3L9 9M9 3L3 9"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
             </svg>
           </button>
         </div>
@@ -373,7 +448,7 @@ export function Widget() {
         {agents.length === 0 ? (
           <div className="widget-empty">No active agents</div>
         ) : (
-          agents.map(agent => (
+          agents.map((agent) => (
             <AgentSection
               key={agent.id}
               agent={agent}

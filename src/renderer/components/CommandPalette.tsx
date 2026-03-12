@@ -8,12 +8,33 @@ import { AgentIcon } from './AgentIcon'
 import { getDisplayName } from '../lib/terminal-display'
 import { executeWorkflow } from '../lib/workflow-execution'
 import {
-  Search, Plus, Settings, PanelLeft, FolderPlus, Zap, Monitor,
-  Filter, ArrowUpDown, Server, Keyboard, ListTodo, BookOpen,
-  Terminal, Archive, Plug, LayoutDashboard
+  Search,
+  Plus,
+  Settings,
+  PanelLeft,
+  FolderPlus,
+  Zap,
+  Monitor,
+  Filter,
+  ArrowUpDown,
+  Server,
+  Keyboard,
+  ListTodo,
+  BookOpen,
+  Terminal,
+  Archive,
+  Plug,
+  LayoutDashboard
 } from 'lucide-react'
 
-type CommandCategory = 'actions' | 'terminals' | 'recent' | 'projects' | 'workflows' | 'quicklaunch' | 'filter'
+type CommandCategory =
+  | 'actions'
+  | 'terminals'
+  | 'recent'
+  | 'projects'
+  | 'workflows'
+  | 'quicklaunch'
+  | 'filter'
 
 interface Command {
   id: string
@@ -26,7 +47,15 @@ interface Command {
   onExecute: () => void | Promise<void>
 }
 
-const CATEGORY_ORDER: CommandCategory[] = ['actions', 'terminals', 'recent', 'projects', 'workflows', 'quicklaunch', 'filter']
+const CATEGORY_ORDER: CommandCategory[] = [
+  'actions',
+  'terminals',
+  'recent',
+  'projects',
+  'workflows',
+  'quicklaunch',
+  'filter'
+]
 
 const CATEGORY_LABELS: Record<CommandCategory, string> = {
   actions: 'Actions',
@@ -174,7 +203,10 @@ function useCommands(recentSessions: RecentSession[]): Command[] {
         const cfg = useAppStore.getState().config
         if (!cfg) return
         const next = (cfg.defaults.layoutMode ?? 'grid') === 'grid' ? 'tabs' : 'grid'
-        const updated = { ...cfg, defaults: { ...cfg.defaults, layoutMode: next as 'grid' | 'tabs' } }
+        const updated = {
+          ...cfg,
+          defaults: { ...cfg.defaults, layoutMode: next as 'grid' | 'tabs' }
+        }
         useAppStore.getState().setConfig(updated)
         window.api.saveConfig(updated)
       }
@@ -298,7 +330,9 @@ function useCommands(recentSessions: RecentSession[]): Command[] {
     }
 
     // --- Quick Launch (agent x project) + Worktree variants — local projects only ---
-    const localProjects = (config?.projects ?? []).filter((p) => getProjectHostIds(p).includes('local'))
+    const localProjects = (config?.projects ?? []).filter((p) =>
+      getProjectHostIds(p).includes('local')
+    )
     for (const agent of AGENT_LIST) {
       for (const project of localProjects) {
         commands.push({
@@ -343,7 +377,9 @@ function useCommands(recentSessions: RecentSession[]): Command[] {
     // Remote host quick-launch variants — only host-matched projects
     const remoteHosts = config?.remoteHosts ?? []
     for (const host of remoteHosts) {
-      const hostProjects = (config?.projects ?? []).filter((p) => getProjectHostIds(p).includes(host.id))
+      const hostProjects = (config?.projects ?? []).filter((p) =>
+        getProjectHostIds(p).includes(host.id)
+      )
       for (const project of hostProjects) {
         const agentType = config?.defaults.defaultAgent || 'claude'
         const agentDef = AGENT_DEFINITIONS[agentType]
@@ -403,11 +439,27 @@ function useCommands(recentSessions: RecentSession[]): Command[] {
     }
 
     return commands
-  }, [terminals, config, recentSessions, addTerminal, setFocusedTerminal, setActiveProject,
-      setNewAgentDialogOpen, setAddProjectDialogOpen, setWorkflowEditorOpen,
-      setSettingsOpen, toggleSidebar, setSortMode, setStatusFilter,
-      setMainViewMode, setTaskDialogOpen, setOnboardingOpen, toggleTerminalPanel,
-      loadArchivedSessions, setShowArchivedSessions])
+  }, [
+    terminals,
+    config,
+    recentSessions,
+    addTerminal,
+    setFocusedTerminal,
+    setActiveProject,
+    setNewAgentDialogOpen,
+    setAddProjectDialogOpen,
+    setWorkflowEditorOpen,
+    setSettingsOpen,
+    toggleSidebar,
+    setSortMode,
+    setStatusFilter,
+    setMainViewMode,
+    setTaskDialogOpen,
+    setOnboardingOpen,
+    toggleTerminalPanel,
+    loadArchivedSessions,
+    setShowArchivedSessions
+  ])
 }
 
 export function CommandPalette() {
@@ -423,7 +475,10 @@ export function CommandPalette() {
   // Fetch recent sessions when palette opens
   useEffect(() => {
     if (isOpen) {
-      window.api.getRecentSessions().then(setRecentSessions).catch(() => setRecentSessions([]))
+      window.api
+        .getRecentSessions()
+        .then(setRecentSessions)
+        .catch(() => setRecentSessions([]))
     }
   }, [isOpen])
 
@@ -509,12 +564,17 @@ export function CommandPalette() {
 
   // Build render list with category headers
   const renderItems = useMemo(() => {
-    const items: { type: 'header'; label: string }[] | { type: 'command'; cmd: Command; flatIndex: number }[] = []
+    const items:
+      | { type: 'header'; label: string }[]
+      | { type: 'command'; cmd: Command; flatIndex: number }[] = []
     if (hasQuery) {
       return filtered.map((cmd, i) => ({ type: 'command' as const, cmd, flatIndex: i }))
     }
     let flatIndex = 0
-    const result: ({ type: 'header'; label: string } | { type: 'command'; cmd: Command; flatIndex: number })[] = []
+    const result: (
+      | { type: 'header'; label: string }
+      | { type: 'command'; cmd: Command; flatIndex: number }
+    )[] = []
     for (const group of groupedItems ?? []) {
       result.push({ type: 'header', label: CATEGORY_LABELS[group.category] })
       for (const cmd of group.commands) {
@@ -559,8 +619,10 @@ export function CommandPalette() {
                 className="flex-1 bg-transparent text-sm text-gray-200
                            placeholder-gray-600 outline-none"
               />
-              <kbd className="text-[10px] text-gray-600 bg-white/[0.04]
-                              border border-white/[0.06] px-1.5 py-0.5 rounded font-mono">
+              <kbd
+                className="text-[10px] text-gray-600 bg-white/[0.04]
+                              border border-white/[0.06] px-1.5 py-0.5 rounded font-mono"
+              >
                 ESC
               </kbd>
             </div>
@@ -611,12 +673,16 @@ export function CommandPalette() {
                         {hasQuery ? highlightMatch(cmd.label, query) : cmd.label}
                       </span>
                       {cmd.sublabel && (
-                        <span className="text-[10px] text-gray-600 truncate block">{cmd.sublabel}</span>
+                        <span className="text-[10px] text-gray-600 truncate block">
+                          {cmd.sublabel}
+                        </span>
                       )}
                     </span>
                     {cmd.shortcutDisplay && (
-                      <kbd className="text-[10px] text-gray-500 bg-white/[0.04]
-                                      border border-white/[0.06] px-1.5 py-0.5 rounded font-mono shrink-0">
+                      <kbd
+                        className="text-[10px] text-gray-500 bg-white/[0.04]
+                                      border border-white/[0.06] px-1.5 py-0.5 rounded font-mono shrink-0"
+                      >
                         {cmd.shortcutDisplay}
                       </kbd>
                     )}
@@ -626,18 +692,26 @@ export function CommandPalette() {
             </div>
 
             {/* Footer hints */}
-            <div className="px-4 py-2 border-t border-white/[0.06] flex items-center gap-4
-                            text-[11px] text-gray-600">
+            <div
+              className="px-4 py-2 border-t border-white/[0.06] flex items-center gap-4
+                            text-[11px] text-gray-600"
+            >
               <span className="flex items-center gap-1">
-                <kbd className="px-1 bg-white/[0.04] border border-white/[0.06] rounded text-[10px] font-mono">&uarr;&darr;</kbd>
+                <kbd className="px-1 bg-white/[0.04] border border-white/[0.06] rounded text-[10px] font-mono">
+                  &uarr;&darr;
+                </kbd>
                 navigate
               </span>
               <span className="flex items-center gap-1">
-                <kbd className="px-1 bg-white/[0.04] border border-white/[0.06] rounded text-[10px] font-mono">&crarr;</kbd>
+                <kbd className="px-1 bg-white/[0.04] border border-white/[0.06] rounded text-[10px] font-mono">
+                  &crarr;
+                </kbd>
                 select
               </span>
               <span className="flex items-center gap-1">
-                <kbd className="px-1 bg-white/[0.04] border border-white/[0.06] rounded text-[10px] font-mono">esc</kbd>
+                <kbd className="px-1 bg-white/[0.04] border border-white/[0.06] rounded text-[10px] font-mono">
+                  esc
+                </kbd>
                 close
               </span>
             </div>

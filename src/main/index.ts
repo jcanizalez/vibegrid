@@ -9,7 +9,12 @@ import { scheduler } from './scheduler'
 import { createMenu } from './menu'
 import { hookServer } from './hook-server'
 import { installHooks, uninstallHooks } from './hook-installer'
-import { installCopilotHooks, uninstallCopilotHooks, uninstallAllCopilotHooks, CopilotHookInstallation } from './copilot-hook-installer'
+import {
+  installCopilotHooks,
+  uninstallCopilotHooks,
+  uninstallAllCopilotHooks,
+  CopilotHookInstallation
+} from './copilot-hook-installer'
 import { hookStatusMapper } from './hook-status-mapper'
 import { updateManager } from './update-manager'
 import { IPC, WidgetAgentInfo, PermissionRequestInfo } from '../shared/types'
@@ -68,11 +73,13 @@ function createWindow(): void {
     icon: path.join(__dirname, '../../resources/icon.png'),
     titleBarStyle: isMac ? 'hiddenInset' : 'hidden',
     frame: false,
-    ...(isMac ? {
-      trafficLightPosition: { x: 16, y: 16 },
-      vibrancy: 'under-window',
-      visualEffectState: 'active'
-    } : {}),
+    ...(isMac
+      ? {
+          trafficLightPosition: { x: 16, y: 16 },
+          vibrancy: 'under-window',
+          visualEffectState: 'active'
+        }
+      : {}),
     backgroundColor: '#1a1a1e',
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
@@ -214,7 +221,7 @@ function createWidgetWindow(): void {
 function sendWidgetUpdate(): void {
   if (!widgetWindow || widgetWindow.isDestroyed()) return
   const sessions = ptyManager.getActiveSessions()
-  const agents: WidgetAgentInfo[] = sessions.map(s => ({
+  const agents: WidgetAgentInfo[] = sessions.map((s) => ({
     id: s.id,
     agentType: s.agentType,
     displayName: s.displayName,
@@ -395,111 +402,142 @@ app.whenReady().then(async () => {
   })
 
   // Start hook server for agent status events
-  hookServer.start().then((port) => {
-    try {
-      installHooks(port, hookServer.getAuthToken())
-    } catch (err) {
-      log.error('[hooks] failed to install hooks:', err)
-    }
+  hookServer
+    .start()
+    .then((port) => {
+      try {
+        installHooks(port, hookServer.getAuthToken())
+      } catch (err) {
+        log.error('[hooks] failed to install hooks:', err)
+      }
 
-    hookServer.on('permission-cancelled', (requestId: string) => {
-      sendToWidget(IPC.WIDGET_PERMISSION_CANCELLED, requestId)
-    })
+      hookServer.on('permission-cancelled', (requestId: string) => {
+        sendToWidget(IPC.WIDGET_PERMISSION_CANCELLED, requestId)
+      })
 
-    hookServer.on('hook-event', (event) => {
-      log.info(`[hooks] ${event.hook_event_name}: session=${event.session_id} cwd=${event.cwd}`)
-      const result = hookStatusMapper.mapEventToStatus(event)
-      if (result) {
-        ptyManager.updateSessionStatus(result.terminalId, result.status)
-        sendWidgetUpdate()
+      hookServer.on('hook-event', (event) => {
+        log.info(`[hooks] ${event.hook_event_name}: session=${event.session_id} cwd=${event.cwd}`)
+        const result = hookStatusMapper.mapEventToStatus(event)
+        if (result) {
+          ptyManager.updateSessionStatus(result.terminalId, result.status)
+          sendWidgetUpdate()
 
-        // Persist agent session ID on the linked task for resume support
+          // Persist agent session ID on the linked task for resume support
           if (event.hook_event_name === 'SessionStart') {
             try {
               const config = configManager.loadConfig()
-              const task = config.tasks?.find(t => t.assignedSessionId === result.terminalId && t.status === 'in_progress' && !t.agentSessionId)
+              const task = config.tasks?.find(
+                (t) =>
+                  t.assignedSessionId === result.terminalId &&
+                  t.status === 'in_progress' &&
+                  !t.agentSessionId
+              )
               if (task) {
                 task.agentSessionId = event.session_id
                 task.updatedAt = new Date().toISOString()
                 configManager.saveConfig(config)
-                log.info(`[hooks] stored agentSessionId ${event.session_id} on task "${task.title}"`)
+                log.info(
+                  `[hooks] stored agentSessionId ${event.session_id} on task "${task.title}"`
+                )
               }
             } catch (err) {
               log.error('[hooks] failed to persist agentSessionId:', err)
             }
           }
-      }
+        }
 
-      const dismissEvents = ['PostToolUse', 'PostToolUseFailure', 'Stop', 'UserPromptSubmit']
-      if (dismissEvents.includes(event.hook_event_name)) {
-        hookServer.cancelSessionPermissions(event.session_id)
-      }
+        const dismissEvents = ['PostToolUse', 'PostToolUseFailure', 'Stop', 'UserPromptSubmit']
+        if (dismissEvents.includes(event.hook_event_name)) {
+          hookServer.cancelSessionPermissions(event.session_id)
+        }
+      })
+
+      hookServer.on('permission-request', ({ requestId, event }) => {
+        // Try confirmed link first; fall back to cwd matching in case SessionStart was missed
+        const terminalId =
+          hookStatusMapper.getLinkedTerminal(event.session_id) ??
+          hookStatusMapper.tryLink(event.session_id, event.cwd)
+
+        log.info(
+          `[hooks] permission-request: session=${event.session_id} tool=${event.tool_name} cwd=${event.cwd} → terminal=${terminalId ?? 'none (passthrough)'}`
+        )
+
+        // Not a VibeGrid-managed session — release immediately so Claude handles it natively
+        if (!terminalId) {
+          hookServer.passthroughPermission(requestId)
+          return
+        }
+
+        const session = ptyManager.getActiveSessions().find((s) => s.id === terminalId)
+
+        const permReq: PermissionRequestInfo = {
+          requestId,
+          sessionId: event.session_id,
+          terminalId,
+          toolName: event.tool_name || 'unknown',
+          toolInput: event.tool_input || {},
+          description:
+            typeof event.tool_input?.file_path === 'string'
+              ? (event.tool_input.file_path as string)
+              : typeof event.tool_input?.command === 'string'
+                ? (event.tool_input.command as string)
+                : typeof event.tool_input?.description === 'string'
+                  ? (event.tool_input.description as string)
+                  : undefined,
+          agentType: session?.agentType,
+          projectName: session?.projectName,
+          permissionSuggestions: event.permission_suggestions,
+          questions:
+            event.tool_name === 'AskUserQuestion'
+              ? (event.tool_input?.questions as PermissionRequestInfo['questions'] | undefined)
+              : undefined
+        }
+
+        // Send to widget
+        sendToWidget(IPC.WIDGET_PERMISSION_REQUEST, permReq)
+
+        // Also send to main window
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send(IPC.WIDGET_PERMISSION_REQUEST, permReq)
+        }
+
+        ptyManager.updateSessionStatus(terminalId, 'waiting')
+        sendWidgetUpdate()
+
+        // Show widget only when main window is not focused (permission already sent to main renderer)
+        if (!mainWindow || mainWindow.isDestroyed() || !mainWindow.isFocused()) {
+          showWidget()
+        }
+
+        // Register global shortcuts for quick approval
+        updatePermissionShortcuts()
+      })
     })
-
-    hookServer.on('permission-request', ({ requestId, event }) => {
-      // Try confirmed link first; fall back to cwd matching in case SessionStart was missed
-      const terminalId = hookStatusMapper.getLinkedTerminal(event.session_id)
-        ?? hookStatusMapper.tryLink(event.session_id, event.cwd)
-
-      log.info(`[hooks] permission-request: session=${event.session_id} tool=${event.tool_name} cwd=${event.cwd} → terminal=${terminalId ?? 'none (passthrough)'}`)
-
-      // Not a VibeGrid-managed session — release immediately so Claude handles it natively
-      if (!terminalId) {
-        hookServer.passthroughPermission(requestId)
-        return
-      }
-
-      const session = ptyManager.getActiveSessions().find(s => s.id === terminalId)
-
-      const permReq: PermissionRequestInfo = {
-        requestId,
-        sessionId: event.session_id,
-        terminalId,
-        toolName: event.tool_name || 'unknown',
-        toolInput: event.tool_input || {},
-        description: typeof event.tool_input?.file_path === 'string'
-          ? event.tool_input.file_path as string
-          : typeof event.tool_input?.command === 'string'
-            ? event.tool_input.command as string
-            : typeof event.tool_input?.description === 'string'
-              ? event.tool_input.description as string
-              : undefined,
-        agentType: session?.agentType,
-        projectName: session?.projectName,
-        permissionSuggestions: event.permission_suggestions,
-        questions: event.tool_name === 'AskUserQuestion'
-          ? (event.tool_input?.questions as PermissionRequestInfo['questions'] | undefined)
-          : undefined
-      }
-
-      // Send to widget
-      sendToWidget(IPC.WIDGET_PERMISSION_REQUEST, permReq)
-
-      // Also send to main window
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send(IPC.WIDGET_PERMISSION_REQUEST, permReq)
-      }
-
-      ptyManager.updateSessionStatus(terminalId, 'waiting')
-      sendWidgetUpdate()
-
-      // Show widget only when main window is not focused (permission already sent to main renderer)
-      if (!mainWindow || mainWindow.isDestroyed() || !mainWindow.isFocused()) {
-        showWidget()
-      }
-
-      // Register global shortcuts for quick approval
-      updatePermissionShortcuts()
+    .catch((err) => {
+      log.error('Failed to start hook server:', err)
     })
-  }).catch((err) => {
-    log.error('Failed to start hook server:', err)
-  })
 
   // Permission response from widget or main window
-  ipcMain.on(IPC.WIDGET_PERMISSION_RESPONSE, (_, { requestId, allow, updatedPermissions, updatedInput }: { requestId: string; allow: boolean; updatedPermissions?: unknown[]; updatedInput?: unknown }) => {
-    hookServer.resolvePermission(requestId, allow, { updatedPermissions, updatedInput })
-    updatePermissionShortcuts()
-  })
+  ipcMain.on(
+    IPC.WIDGET_PERMISSION_RESPONSE,
+    (
+      _,
+      {
+        requestId,
+        allow,
+        updatedPermissions,
+        updatedInput
+      }: {
+        requestId: string
+        allow: boolean
+        updatedPermissions?: unknown[]
+        updatedInput?: unknown
+      }
+    ) => {
+      hookServer.resolvePermission(requestId, allow, { updatedPermissions, updatedInput })
+      updatePermissionShortcuts()
+    }
+  )
 
   app.on('activate', () => {
     if (mainWindow && !mainWindow.isDestroyed()) {

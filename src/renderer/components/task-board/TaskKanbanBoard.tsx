@@ -10,7 +10,20 @@ const KANBAN_COLUMNS: { status: TaskStatus; title: string; color: string }[] = [
   { status: 'cancelled', title: 'Cancelled', color: 'border-gray-500/20' }
 ]
 
-export function TaskKanbanBoard({ allTasks, onEdit, onDelete, onStart, onDrop, onOpenSession, onComplete, onCancel, onReopen, onReviewDiff, onSelect, isSessionLive }: {
+export function TaskKanbanBoard({
+  allTasks,
+  onEdit,
+  onDelete,
+  onStart,
+  onDrop,
+  onOpenSession,
+  onComplete,
+  onCancel,
+  onReopen,
+  onReviewDiff,
+  onSelect,
+  isSessionLive
+}: {
   allTasks: TaskConfig[]
   onEdit: (task: TaskConfig) => void
   onDelete: (id: string) => void

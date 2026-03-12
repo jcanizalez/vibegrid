@@ -10,7 +10,12 @@ describe('getProjectHostIds', () => {
   })
 
   it('returns ["local"] when hostIds is empty array', () => {
-    const project = { name: 'test', path: '/test', preferredAgents: [], hostIds: [] } as ProjectConfig
+    const project = {
+      name: 'test',
+      path: '/test',
+      preferredAgents: [],
+      hostIds: []
+    } as ProjectConfig
     expect(getProjectHostIds(project)).toEqual(['local'])
   })
 

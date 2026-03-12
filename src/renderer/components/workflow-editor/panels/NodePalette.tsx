@@ -72,7 +72,15 @@ export function NodePalette({ onAddTrigger, onAddLaunchAgent, onAddScript, hasTr
   )
 }
 
-function PaletteItem({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick: () => void }) {
+function PaletteItem({
+  icon,
+  label,
+  onClick
+}: {
+  icon: React.ReactNode
+  label: string
+  onClick: () => void
+}) {
   return (
     <button
       onClick={onClick}

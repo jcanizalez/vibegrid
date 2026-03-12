@@ -102,13 +102,28 @@ export interface WorkflowExecutionContext {
 
 export type WorkflowNodeType = 'trigger' | 'launchAgent' | 'script'
 
-export interface WorkflowNodePosition { x: number; y: number }
+export interface WorkflowNodePosition {
+  x: number
+  y: number
+}
 
 // Trigger configs (discriminated union)
-export interface ManualTriggerConfig { triggerType: 'manual' }
-export interface OnceTriggerConfig { triggerType: 'once'; runAt: string }
-export interface RecurringTriggerConfig { triggerType: 'recurring'; cron: string; timezone?: string }
-export interface TaskCreatedTriggerConfig { triggerType: 'taskCreated'; projectFilter?: string }
+export interface ManualTriggerConfig {
+  triggerType: 'manual'
+}
+export interface OnceTriggerConfig {
+  triggerType: 'once'
+  runAt: string
+}
+export interface RecurringTriggerConfig {
+  triggerType: 'recurring'
+  cron: string
+  timezone?: string
+}
+export interface TaskCreatedTriggerConfig {
+  triggerType: 'taskCreated'
+  projectFilter?: string
+}
 export interface TaskStatusChangedTriggerConfig {
   triggerType: 'taskStatusChanged'
   projectFilter?: string
@@ -374,10 +389,10 @@ export const IPC = {
 
 export interface PermissionSuggestion {
   type: 'addRules' | 'setMode' | string
-  destination?: string        // "session" | "localSettings"
-  behavior?: string           // "allow"
+  destination?: string // "session" | "localSettings"
+  behavior?: string // "allow"
   rules?: Array<{ toolName?: string; ruleContent?: string }>
-  mode?: string               // "acceptEdits" | "plan"
+  mode?: string // "acceptEdits" | "plan"
   [key: string]: unknown
 }
 

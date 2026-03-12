@@ -5,15 +5,54 @@ import { AgentType } from '../../shared/types'
 import { PROJECT_ICON_OPTIONS, ICON_COLOR_PALETTE } from '../lib/project-icons'
 import { toast } from './Toast'
 import {
-  Folder, FolderGit2, Code, Globe, Database, Server, Smartphone, Package,
-  FileCode, Terminal, Cpu, Cloud, Shield, Zap, Gamepad2, Music, Image,
-  BookOpen, FlaskConical, Rocket, FolderOpen, Monitor
+  Folder,
+  FolderGit2,
+  Code,
+  Globe,
+  Database,
+  Server,
+  Smartphone,
+  Package,
+  FileCode,
+  Terminal,
+  Cpu,
+  Cloud,
+  Shield,
+  Zap,
+  Gamepad2,
+  Music,
+  Image,
+  BookOpen,
+  FlaskConical,
+  Rocket,
+  FolderOpen,
+  Monitor
 } from 'lucide-react'
 
-const ICON_MAP: Record<string, React.FC<{ size?: number; color?: string; strokeWidth?: number }>> = {
-  Folder, FolderGit2, Code, Globe, Database, Server, Smartphone, Package,
-  FileCode, Terminal, Cpu, Cloud, Shield, Zap, Gamepad2, Music, Image,
-  BookOpen, FlaskConical, Rocket
+const ICON_MAP: Record<
+  string,
+  React.FC<{ size?: number; color?: string; strokeWidth?: number }>
+> = {
+  Folder,
+  FolderGit2,
+  Code,
+  Globe,
+  Database,
+  Server,
+  Smartphone,
+  Package,
+  FileCode,
+  Terminal,
+  Cpu,
+  Cloud,
+  Shield,
+  Zap,
+  Gamepad2,
+  Music,
+  Image,
+  BookOpen,
+  FlaskConical,
+  Rocket
 }
 
 export function AddProjectDialog() {
@@ -116,7 +155,9 @@ export function AddProjectDialog() {
                 {isEditMode ? 'Edit Project' : 'Add Project'}
               </h2>
               <p className="text-sm text-gray-500 mt-0.5">
-                {isEditMode ? 'Update your project settings' : 'Select a folder and customize your project'}
+                {isEditMode
+                  ? 'Update your project settings'
+                  : 'Select a folder and customize your project'}
               </p>
             </div>
 
@@ -136,8 +177,10 @@ export function AddProjectDialog() {
                     <FolderOpen size={16} strokeWidth={1.5} />
                     Browse
                   </button>
-                  <div className="flex-1 px-4 py-2.5 bg-white/[0.03] border border-white/[0.06]
-                                  rounded-lg text-sm text-gray-400 truncate min-w-0">
+                  <div
+                    className="flex-1 px-4 py-2.5 bg-white/[0.03] border border-white/[0.06]
+                                  rounded-lg text-sm text-gray-400 truncate min-w-0"
+                  >
                     {selectedPath || 'No folder selected'}
                   </div>
                 </div>
@@ -177,7 +220,11 @@ export function AddProjectDialog() {
                         }`}
                         title={opt.label}
                       >
-                        <IconComp size={16} color={selectedIcon === opt.name ? selectedColor : '#9ca3af'} strokeWidth={1.5} />
+                        <IconComp
+                          size={16}
+                          color={selectedIcon === opt.name ? selectedColor : '#9ca3af'}
+                          strokeWidth={1.5}
+                        />
                       </button>
                     )
                   })}
@@ -249,7 +296,11 @@ export function AddProjectDialog() {
                             : 'border-white/[0.04] bg-white/[0.02] text-gray-500 hover:border-white/[0.1]'
                         }`}
                       >
-                        <Server size={13} className={hostIds.includes(host.id) ? 'text-blue-400' : 'text-gray-500'} strokeWidth={1.5} />
+                        <Server
+                          size={13}
+                          className={hostIds.includes(host.id) ? 'text-blue-400' : 'text-gray-500'}
+                          strokeWidth={1.5}
+                        />
                         {host.label}
                       </button>
                     ))}

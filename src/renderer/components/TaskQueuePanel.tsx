@@ -5,7 +5,23 @@ import { TaskConfig, TaskStatus, TaskViewMode } from '../../shared/types'
 import { buildTaskPrompt } from '../../shared/prompt-builder'
 import { AgentIcon } from './AgentIcon'
 import { MarkdownPreview } from './MarkdownEditor'
-import { Pencil, Trash2, Play, CheckCircle2, Clock, Circle, X, LayoutList, Columns3, Terminal, Eye, XCircle, RotateCcw, FileCode, ImageIcon } from 'lucide-react'
+import {
+  Pencil,
+  Trash2,
+  Play,
+  CheckCircle2,
+  Clock,
+  Circle,
+  X,
+  LayoutList,
+  Columns3,
+  Terminal,
+  Eye,
+  XCircle,
+  RotateCcw,
+  FileCode,
+  ImageIcon
+} from 'lucide-react'
 import { ConfirmPopover } from './ConfirmPopover'
 import { toast } from './Toast'
 
@@ -25,7 +41,19 @@ const STATUS_ICON: Record<string, React.FC<{ size?: number; className?: string }
   cancelled: XCircle
 }
 
-function TaskCard({ task, onEdit, onDelete, onStart, onOpenSession, onComplete, onCancel, onReopen, onReviewDiff, sessionIsLive, compact }: {
+function TaskCard({
+  task,
+  onEdit,
+  onDelete,
+  onStart,
+  onOpenSession,
+  onComplete,
+  onCancel,
+  onReopen,
+  onReviewDiff,
+  sessionIsLive,
+  compact
+}: {
   task: TaskConfig
   onEdit: () => void
   onDelete: () => void
@@ -42,18 +70,25 @@ function TaskCard({ task, onEdit, onDelete, onStart, onOpenSession, onComplete, 
   const StatusIcon = STATUS_ICON[task.status]
 
   return (
-    <div className={`group bg-white/[0.03] border border-white/[0.06] rounded-lg p-3 hover:border-white/[0.1] transition-colors
-                     ${task.status === 'cancelled' ? 'opacity-60' : ''}`}>
+    <div
+      className={`group bg-white/[0.03] border border-white/[0.06] rounded-lg p-3 hover:border-white/[0.1] transition-colors
+                     ${task.status === 'cancelled' ? 'opacity-60' : ''}`}
+    >
       <div className="flex items-start gap-2">
         <StatusIcon size={14} className={`${badge.color} mt-0.5 shrink-0`} />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <span className={`text-sm font-medium truncate ${task.status === 'cancelled' ? 'text-gray-500 line-through' : 'text-gray-200'}`}>{task.title}</span>
-            {task.assignedAgent && (
-              <AgentIcon agentType={task.assignedAgent} size={14} />
-            )}
+            <span
+              className={`text-sm font-medium truncate ${task.status === 'cancelled' ? 'text-gray-500 line-through' : 'text-gray-200'}`}
+            >
+              {task.title}
+            </span>
+            {task.assignedAgent && <AgentIcon agentType={task.assignedAgent} size={14} />}
             {task.images && task.images.length > 0 && (
-              <span className="flex items-center gap-0.5 text-gray-600" title={`${task.images.length} image${task.images.length !== 1 ? 's' : ''}`}>
+              <span
+                className="flex items-center gap-0.5 text-gray-600"
+                title={`${task.images.length} image${task.images.length !== 1 ? 's' : ''}`}
+              >
                 <ImageIcon size={11} strokeWidth={2} />
                 <span className="text-[10px]">{task.images.length}</span>
               </span>
@@ -64,9 +99,7 @@ function TaskCard({ task, onEdit, onDelete, onStart, onOpenSession, onComplete, 
               <MarkdownPreview content={task.description} className="line-clamp-3" />
             </div>
           )}
-          {compact && (
-            <p className="text-xs text-gray-500 mt-1 line-clamp-2">{task.description}</p>
-          )}
+          {compact && <p className="text-xs text-gray-500 mt-1 line-clamp-2">{task.description}</p>}
         </div>
         <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
           {task.status === 'todo' && (
@@ -111,7 +144,11 @@ function TaskCard({ task, onEdit, onDelete, onStart, onOpenSession, onComplete, 
               className={`p-1 text-gray-600 rounded transition-colors ${sessionIsLive ? 'hover:text-violet-400' : 'hover:text-amber-400'}`}
               title={sessionIsLive ? 'Focus session' : 'Resume session'}
             >
-              {sessionIsLive ? <Terminal size={12} strokeWidth={2} /> : <Play size={12} strokeWidth={2} />}
+              {sessionIsLive ? (
+                <Terminal size={12} strokeWidth={2} />
+              ) : (
+                <Play size={12} strokeWidth={2} />
+              )}
             </button>
           )}
           <button
@@ -156,7 +193,19 @@ const KANBAN_COLUMNS: { status: TaskStatus; title: string; color: string }[] = [
   { status: 'cancelled', title: 'Cancelled', color: 'border-gray-500/20' }
 ]
 
-function KanbanBoard({ allTasks, onEdit, onDelete, onStart, onDrop, onOpenSession, onComplete, onCancel, onReopen, onReviewDiff, isSessionLive }: {
+function KanbanBoard({
+  allTasks,
+  onEdit,
+  onDelete,
+  onStart,
+  onDrop,
+  onOpenSession,
+  onComplete,
+  onCancel,
+  onReopen,
+  onReviewDiff,
+  isSessionLive
+}: {
   allTasks: TaskConfig[]
   onEdit: (task: TaskConfig) => void
   onDelete: (id: string) => void
@@ -260,7 +309,18 @@ function KanbanBoard({ allTasks, onEdit, onDelete, onStart, onDrop, onOpenSessio
   )
 }
 
-function ListView({ sections, onEdit, onDelete, onStart, onOpenSession, onComplete, onCancel, onReopen, onReviewDiff, isSessionLive }: {
+function ListView({
+  sections,
+  onEdit,
+  onDelete,
+  onStart,
+  onOpenSession,
+  onComplete,
+  onCancel,
+  onReopen,
+  onReviewDiff,
+  isSessionLive
+}: {
   sections: { title: string; tasks: TaskConfig[]; emptyText: string }[]
   onEdit: (task: TaskConfig) => void
   onDelete: (id: string) => void
@@ -347,7 +407,7 @@ export function TaskQueuePanel() {
   const handleStartTask = async (task: TaskConfig) => {
     if (!project) return
     const agentType = config?.defaults.defaultAgent || 'claude'
-    const siblingTasks = (config?.tasks || []).filter(t => t.projectName === task.projectName)
+    const siblingTasks = (config?.tasks || []).filter((t) => t.projectName === task.projectName)
     const session = await window.api.createTerminal({
       agentType,
       projectName: project.name,
@@ -375,7 +435,11 @@ export function TaskQueuePanel() {
       }
     }
     // Session closed but agent session ID available — resume
-    if (task.agentSessionId && task.assignedAgent && (task.status === 'in_progress' || task.status === 'in_review' || task.status === 'done')) {
+    if (
+      task.agentSessionId &&
+      task.assignedAgent &&
+      (task.status === 'in_progress' || task.status === 'in_review' || task.status === 'done')
+    ) {
       return async () => {
         const agentType = task.assignedAgent!
         const session = await window.api.createTerminal({
@@ -459,7 +523,9 @@ export function TaskQueuePanel() {
               <button
                 onClick={() => setViewMode('list')}
                 className={`p-1.5 rounded transition-colors ${
-                  viewMode === 'list' ? 'bg-white/[0.1] text-white' : 'text-gray-500 hover:text-gray-300'
+                  viewMode === 'list'
+                    ? 'bg-white/[0.1] text-white'
+                    : 'text-gray-500 hover:text-gray-300'
                 }`}
                 title="List view"
               >
@@ -468,7 +534,9 @@ export function TaskQueuePanel() {
               <button
                 onClick={() => setViewMode('kanban')}
                 className={`p-1.5 rounded transition-colors ${
-                  viewMode === 'kanban' ? 'bg-white/[0.1] text-white' : 'text-gray-500 hover:text-gray-300'
+                  viewMode === 'kanban'
+                    ? 'bg-white/[0.1] text-white'
+                    : 'text-gray-500 hover:text-gray-300'
                 }`}
                 title="Kanban view"
               >
@@ -500,13 +568,25 @@ export function TaskQueuePanel() {
             <KanbanBoard
               allTasks={allTasks}
               onEdit={handleEdit}
-              onDelete={(id) => { removeTask(id); toast.success('Task deleted') }}
+              onDelete={(id) => {
+                removeTask(id)
+                toast.success('Task deleted')
+              }}
               onStart={handleStartTask}
               onDrop={handleKanbanDrop}
               onOpenSession={getOpenSessionHandler}
-              onComplete={(id) => { completeTask(id); toast.success('Task completed') }}
-              onCancel={(id) => { cancelTask(id); toast.info('Task cancelled') }}
-              onReopen={(id) => { reopenTask(id); toast.success('Task reopened') }}
+              onComplete={(id) => {
+                completeTask(id)
+                toast.success('Task completed')
+              }}
+              onCancel={(id) => {
+                cancelTask(id)
+                toast.info('Task cancelled')
+              }}
+              onReopen={(id) => {
+                reopenTask(id)
+                toast.success('Task reopened')
+              }}
               onReviewDiff={(id) => setDiffReviewTaskId(id)}
               isSessionLive={isSessionLive}
             />
@@ -514,12 +594,24 @@ export function TaskQueuePanel() {
             <ListView
               sections={sections}
               onEdit={handleEdit}
-              onDelete={(id) => { removeTask(id); toast.success('Task deleted') }}
+              onDelete={(id) => {
+                removeTask(id)
+                toast.success('Task deleted')
+              }}
               onStart={handleStartTask}
               onOpenSession={getOpenSessionHandler}
-              onComplete={(id) => { completeTask(id); toast.success('Task completed') }}
-              onCancel={(id) => { cancelTask(id); toast.info('Task cancelled') }}
-              onReopen={(id) => { reopenTask(id); toast.success('Task reopened') }}
+              onComplete={(id) => {
+                completeTask(id)
+                toast.success('Task completed')
+              }}
+              onCancel={(id) => {
+                cancelTask(id)
+                toast.info('Task cancelled')
+              }}
+              onReopen={(id) => {
+                reopenTask(id)
+                toast.success('Task reopened')
+              }}
               onReviewDiff={(id) => setDiffReviewTaskId(id)}
               isSessionLive={isSessionLive}
             />

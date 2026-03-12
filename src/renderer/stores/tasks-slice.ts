@@ -102,7 +102,14 @@ export const createTasksSlice: StateCreator<AppStore, [], [], TasksSlice> = (set
         ...state.config,
         tasks: (state.config.tasks || []).map((t) =>
           t.id === id
-            ? { ...t, status: 'in_progress' as const, assignedSessionId: sessionId, assignedAgent: agentType, worktreePath: worktreePath || t.worktreePath, updatedAt: now }
+            ? {
+                ...t,
+                status: 'in_progress' as const,
+                assignedSessionId: sessionId,
+                assignedAgent: agentType,
+                worktreePath: worktreePath || t.worktreePath,
+                updatedAt: now
+              }
             : t
         )
       }
@@ -123,7 +130,13 @@ export const createTasksSlice: StateCreator<AppStore, [], [], TasksSlice> = (set
         ...state.config,
         tasks: (state.config.tasks || []).map((t) =>
           t.id === id
-            ? { ...t, status: 'done' as const, completedAt: now, updatedAt: now, assignedSessionId: undefined }
+            ? {
+                ...t,
+                status: 'done' as const,
+                completedAt: now,
+                updatedAt: now,
+                assignedSessionId: undefined
+              }
             : t
         )
       }
@@ -165,7 +178,13 @@ export const createTasksSlice: StateCreator<AppStore, [], [], TasksSlice> = (set
         ...state.config,
         tasks: (state.config.tasks || []).map((t) =>
           t.id === id
-            ? { ...t, status: 'cancelled' as const, completedAt: now, updatedAt: now, assignedSessionId: undefined }
+            ? {
+                ...t,
+                status: 'cancelled' as const,
+                completedAt: now,
+                updatedAt: now,
+                assignedSessionId: undefined
+              }
             : t
         )
       }
@@ -186,7 +205,14 @@ export const createTasksSlice: StateCreator<AppStore, [], [], TasksSlice> = (set
         ...state.config,
         tasks: (state.config.tasks || []).map((t) =>
           t.id === id
-            ? { ...t, status: 'todo' as const, updatedAt: now, completedAt: undefined, assignedSessionId: undefined, assignedAgent: undefined }
+            ? {
+                ...t,
+                status: 'todo' as const,
+                updatedAt: now,
+                completedAt: undefined,
+                assignedSessionId: undefined,
+                assignedAgent: undefined
+              }
             : t
         )
       }

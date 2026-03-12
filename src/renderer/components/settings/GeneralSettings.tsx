@@ -19,7 +19,9 @@ function NotificationToggle({
   disabled?: boolean
 }) {
   return (
-    <div className={`flex items-center justify-between py-4 border-b border-white/[0.06] ${disabled ? 'opacity-40' : ''}`}>
+    <div
+      className={`flex items-center justify-between py-4 border-b border-white/[0.06] ${disabled ? 'opacity-40' : ''}`}
+    >
       <div>
         <div className="text-sm font-medium text-gray-200">{label}</div>
         <div className="text-xs text-gray-500 mt-0.5">{description}</div>
@@ -90,15 +92,21 @@ export function GeneralSettings() {
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => updateDefaults({ fontSize: Math.max(8, config.defaults.fontSize - 1) })}
+              onClick={() =>
+                updateDefaults({ fontSize: Math.max(8, config.defaults.fontSize - 1) })
+              }
               className="w-7 h-7 flex items-center justify-center bg-white/[0.06] hover:bg-white/[0.1]
                          rounded-md text-gray-300 transition-colors text-sm"
             >
               -
             </button>
-            <span className="text-sm text-gray-200 w-8 text-center">{config.defaults.fontSize}</span>
+            <span className="text-sm text-gray-200 w-8 text-center">
+              {config.defaults.fontSize}
+            </span>
             <button
-              onClick={() => updateDefaults({ fontSize: Math.min(24, config.defaults.fontSize + 1) })}
+              onClick={() =>
+                updateDefaults({ fontSize: Math.min(24, config.defaults.fontSize + 1) })
+              }
               className="w-7 h-7 flex items-center justify-center bg-white/[0.06] hover:bg-white/[0.1]
                          rounded-md text-gray-300 transition-colors text-sm"
             >
@@ -111,7 +119,9 @@ export function GeneralSettings() {
         <div className="flex items-center justify-between py-4 border-b border-white/[0.06]">
           <div>
             <div className="text-sm font-medium text-gray-200">Default Coding Agent</div>
-            <div className="text-xs text-gray-500 mt-0.5">Pre-selected agent when creating new sessions</div>
+            <div className="text-xs text-gray-500 mt-0.5">
+              Pre-selected agent when creating new sessions
+            </div>
           </div>
           <div className="flex bg-white/[0.04] rounded-lg p-0.5 gap-0.5">
             {AGENT_LIST.map((agent) => (
@@ -151,7 +161,9 @@ export function GeneralSettings() {
         <div className="flex items-center justify-between py-4 border-b border-white/[0.06]">
           <div>
             <div className="text-sm font-medium text-gray-200">Card Row Height</div>
-            <div className="text-xs text-gray-500 mt-0.5">Terminal card height in pixels ({rowHeight}px)</div>
+            <div className="text-xs text-gray-500 mt-0.5">
+              Terminal card height in pixels ({rowHeight}px)
+            </div>
           </div>
           <div className="flex items-center gap-3">
             <input
@@ -170,7 +182,9 @@ export function GeneralSettings() {
         <div className="flex items-center justify-between py-4 border-b border-white/[0.06]">
           <div>
             <div className="text-sm font-medium text-gray-200">Reopen Sessions on Startup</div>
-            <div className="text-xs text-gray-500 mt-0.5">Automatically restore previous sessions when the app starts</div>
+            <div className="text-xs text-gray-500 mt-0.5">
+              Automatically restore previous sessions when the app starts
+            </div>
           </div>
           <button
             onClick={() => updateDefaults({ reopenSessions: !config.defaults.reopenSessions })}
@@ -190,13 +204,15 @@ export function GeneralSettings() {
         <div className="flex items-center justify-between py-4 border-b border-white/[0.06]">
           <div>
             <div className="text-sm font-medium text-gray-200">Default Task View</div>
-            <div className="text-xs text-gray-500 mt-0.5">Choose between list or kanban board for tasks</div>
+            <div className="text-xs text-gray-500 mt-0.5">
+              Choose between list or kanban board for tasks
+            </div>
           </div>
           <div className="flex bg-white/[0.04] rounded-lg p-0.5 gap-0.5">
-            {([
+            {[
               { value: 'list' as TaskViewMode, label: 'List' },
               { value: 'kanban' as TaskViewMode, label: 'Kanban' }
-            ]).map((opt) => (
+            ].map((opt) => (
               <button
                 key={opt.value}
                 onClick={() => updateDefaults({ taskViewMode: opt.value })}
@@ -216,13 +232,15 @@ export function GeneralSettings() {
         <div className="flex items-center justify-between py-4 border-b border-white/[0.06]">
           <div>
             <div className="text-sm font-medium text-gray-200">Layout Mode</div>
-            <div className="text-xs text-gray-500 mt-0.5">Choose between grid or tab layout for sessions</div>
+            <div className="text-xs text-gray-500 mt-0.5">
+              Choose between grid or tab layout for sessions
+            </div>
           </div>
           <div className="flex bg-white/[0.04] rounded-lg p-0.5 gap-0.5">
-            {([
+            {[
               { value: 'grid' as const, label: 'Grid' },
               { value: 'tabs' as const, label: 'Tabs' }
-            ]).map((opt) => (
+            ].map((opt) => (
               <button
                 key={opt.value}
                 onClick={() => updateDefaults({ layoutMode: opt.value })}
@@ -242,7 +260,9 @@ export function GeneralSettings() {
         <div className="flex items-center justify-between py-4 border-b border-white/[0.06]">
           <div>
             <div className="text-sm font-medium text-gray-200">Floating Widget</div>
-            <div className="text-xs text-gray-500 mt-0.5">Show agent status widget when app is not focused</div>
+            <div className="text-xs text-gray-500 mt-0.5">
+              Show agent status widget when app is not focused
+            </div>
           </div>
           <button
             onClick={() => {
@@ -329,7 +349,9 @@ export function GeneralSettings() {
                          [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full
                          [&::-webkit-slider-thumb]:bg-white"
             />
-            <span className="text-xs text-gray-500 w-8 text-right">{Math.round((notifications.soundVolume ?? 0.5) * 100)}%</span>
+            <span className="text-xs text-gray-500 w-8 text-right">
+              {Math.round((notifications.soundVolume ?? 0.5) * 100)}%
+            </span>
             <button
               onClick={() => playNotificationSound('bell', notifications.soundVolume ?? 0.5)}
               className="px-2 py-1 text-[11px] text-gray-400 hover:text-white bg-white/[0.06]

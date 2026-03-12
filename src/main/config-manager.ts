@@ -37,7 +37,10 @@ class ConfigManager {
       return {
         version: 1,
         defaults: {
-          shell: process.platform === 'win32' ? (process.env.COMSPEC || 'powershell.exe') : (process.env.SHELL || '/bin/zsh'),
+          shell:
+            process.platform === 'win32'
+              ? process.env.COMSPEC || 'powershell.exe'
+              : process.env.SHELL || '/bin/zsh',
           fontSize: 13,
           theme: 'dark'
         },
@@ -105,8 +108,12 @@ class ConfigManager {
   }
 
   // No-ops — retained for API compatibility during transition
-  watchConfig(_callback: ConfigChangeCallback): void { /* no-op with SQLite */ }
-  stopWatching(): void { /* no-op with SQLite */ }
+  watchConfig(_callback: ConfigChangeCallback): void {
+    /* no-op with SQLite */
+  }
+  stopWatching(): void {
+    /* no-op with SQLite */
+  }
 }
 
 export const configManager = new ConfigManager()

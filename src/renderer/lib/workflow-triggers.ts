@@ -20,7 +20,9 @@ function getTriggerConfig(wf: WorkflowDefinition): TriggerConfig | null {
  */
 export function fireTaskCreatedTrigger(task: TaskConfig): void {
   const workflows = (useAppStore.getState().config?.workflows || []).filter((wf) => wf.enabled)
-  console.log(`[triggers] fireTaskCreatedTrigger: task="${task.title}" project="${task.projectName}" workflows=${workflows.length}`)
+  console.log(
+    `[triggers] fireTaskCreatedTrigger: task="${task.title}" project="${task.projectName}" workflows=${workflows.length}`
+  )
 
   for (const wf of workflows) {
     const trigger = getTriggerConfig(wf)
@@ -29,7 +31,9 @@ export function fireTaskCreatedTrigger(task: TaskConfig): void {
       continue
     }
     if (trigger.projectFilter && trigger.projectFilter !== task.projectName) {
-      console.log(`[triggers] skip "${wf.name}": projectFilter=${trigger.projectFilter} != ${task.projectName}`)
+      console.log(
+        `[triggers] skip "${wf.name}": projectFilter=${trigger.projectFilter} != ${task.projectName}`
+      )
       continue
     }
 
@@ -65,6 +69,8 @@ export function fireTaskStatusChangedTrigger(
       task,
       trigger: { type: 'taskStatusChanged', fromStatus, toStatus }
     }
-    executeWorkflow(wf, context).catch((err) => console.error(`[triggers] executeWorkflow error:`, err))
+    executeWorkflow(wf, context).catch((err) =>
+      console.error(`[triggers] executeWorkflow error:`, err)
+    )
   }
 }

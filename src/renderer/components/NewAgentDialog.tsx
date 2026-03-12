@@ -52,7 +52,8 @@ export function NewAgentDialog() {
   }, [isOpen, defaultAgent])
 
   // Load branches when project changes
-  const activeProjectPath = config?.projects.find((p) => p.name === selectedProject)?.path || customPath
+  const activeProjectPath =
+    config?.projects.find((p) => p.name === selectedProject)?.path || customPath
   useEffect(() => {
     if (!activeProjectPath) {
       setLocalBranches([])
@@ -109,7 +110,13 @@ export function NewAgentDialog() {
     // Skip branch/worktree for remote sessions
     const isRemote = selectedHost !== 'local'
     const branchChanged = selectedBranch && selectedBranch !== currentBranch
-    const branchToUse = isRemote ? undefined : (useWorktree ? selectedBranch || undefined : (branchChanged ? selectedBranch : undefined))
+    const branchToUse = isRemote
+      ? undefined
+      : useWorktree
+        ? selectedBranch || undefined
+        : branchChanged
+          ? selectedBranch
+          : undefined
 
     const session = await window.api.createTerminal({
       agentType: selectedAgent,
@@ -172,7 +179,9 @@ export function NewAgentDialog() {
                       }`}
                     >
                       <AgentIcon agentType={agent.type} size={24} />
-                      <span className="text-xs text-gray-300 text-center leading-tight">{agent.displayName}</span>
+                      <span className="text-xs text-gray-300 text-center leading-tight">
+                        {agent.displayName}
+                      </span>
                     </button>
                   ))}
                 </div>
@@ -191,7 +200,8 @@ export function NewAgentDialog() {
                       // Clear project if not available on local
                       if (selectedProject) {
                         const proj = config?.projects.find((p) => p.name === selectedProject)
-                        if (proj && !getProjectHostIds(proj).includes('local')) setSelectedProject('')
+                        if (proj && !getProjectHostIds(proj).includes('local'))
+                          setSelectedProject('')
                       }
                     }}
                     className={`px-3 py-2 rounded-lg border text-sm transition-all ${
@@ -210,7 +220,8 @@ export function NewAgentDialog() {
                         // Clear project if not available on this host
                         if (selectedProject) {
                           const proj = config?.projects.find((p) => p.name === selectedProject)
-                          if (proj && !getProjectHostIds(proj).includes(host.id)) setSelectedProject('')
+                          if (proj && !getProjectHostIds(proj).includes(host.id))
+                            setSelectedProject('')
                         }
                       }}
                       className={`px-3 py-2 rounded-lg border text-sm transition-all flex items-center gap-2 ${
@@ -219,7 +230,10 @@ export function NewAgentDialog() {
                           : 'border-white/[0.04] bg-white/[0.02] text-gray-400 hover:border-white/[0.1]'
                       }`}
                     >
-                      <Server size={12} className={selectedHost === host.id ? 'text-blue-400' : 'text-gray-500'} />
+                      <Server
+                        size={12}
+                        className={selectedHost === host.id ? 'text-blue-400' : 'text-gray-500'}
+                      />
                       {host.label}
                     </button>
                   ))}
@@ -251,12 +265,16 @@ export function NewAgentDialog() {
                           }`}
                         >
                           <div className="text-sm text-gray-200">{project.name}</div>
-                          <div className="text-xs text-gray-500 truncate mt-0.5">{project.path}</div>
+                          <div className="text-xs text-gray-500 truncate mt-0.5">
+                            {project.path}
+                          </div>
                         </button>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-xs text-gray-600 py-1">No projects configured for this host</p>
+                    <p className="text-xs text-gray-600 py-1">
+                      No projects configured for this host
+                    </p>
                   )
                 })()}
 
@@ -311,7 +329,9 @@ export function NewAgentDialog() {
                         />
                         <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
                           {currentBranch && selectedBranch === currentBranch && (
-                            <span className="text-[10px] text-gray-600 px-1.5 py-0.5 bg-white/[0.04] rounded">current</span>
+                            <span className="text-[10px] text-gray-600 px-1.5 py-0.5 bg-white/[0.04] rounded">
+                              current
+                            </span>
                           )}
                           <button
                             onClick={handleFetchRemotes}
@@ -329,8 +349,10 @@ export function NewAgentDialog() {
 
                         {/* Dropdown */}
                         {showBranchDropdown && filteredBranches.length > 0 && (
-                          <div className="absolute top-full left-0 right-0 mt-1 max-h-48 overflow-y-auto
-                                          bg-\[#141416\] border border-white/[0.08] rounded-lg shadow-xl z-10">
+                          <div
+                            className="absolute top-full left-0 right-0 mt-1 max-h-48 overflow-y-auto
+                                          bg-\[#141416\] border border-white/[0.08] rounded-lg shadow-xl z-10"
+                          >
                             {filteredBranches.map((b) => (
                               <button
                                 key={`${b.name}-${b.isRemote}`}
@@ -340,16 +362,25 @@ export function NewAgentDialog() {
                                   setBranchFilter('')
                                 }}
                                 className={`w-full text-left px-3 py-2 text-sm hover:bg-white/[0.06] transition-colors flex items-center gap-2 ${
-                                  selectedBranch === b.name ? 'bg-white/[0.04] text-white' : 'text-gray-300'
+                                  selectedBranch === b.name
+                                    ? 'bg-white/[0.04] text-white'
+                                    : 'text-gray-300'
                                 }`}
                               >
-                                <GitBranch size={12} className={b.isRemote ? 'text-blue-400' : 'text-gray-500'} />
+                                <GitBranch
+                                  size={12}
+                                  className={b.isRemote ? 'text-blue-400' : 'text-gray-500'}
+                                />
                                 <span className="truncate">{b.name}</span>
                                 {b.isRemote && (
-                                  <span className="text-[10px] text-blue-400/60 ml-auto shrink-0">remote</span>
+                                  <span className="text-[10px] text-blue-400/60 ml-auto shrink-0">
+                                    remote
+                                  </span>
                                 )}
                                 {b.name === currentBranch && (
-                                  <span className="text-[10px] text-green-400/60 ml-auto shrink-0">current</span>
+                                  <span className="text-[10px] text-green-400/60 ml-auto shrink-0">
+                                    current
+                                  </span>
                                 )}
                               </button>
                             ))}
@@ -367,17 +398,26 @@ export function NewAgentDialog() {
                               : 'border-white/[0.04] bg-white/[0.02] hover:border-white/[0.1]'
                           }`}
                         >
-                          <div className={`w-8 h-[18px] rounded-full transition-colors relative ${
-                            useWorktree ? 'bg-amber-500' : 'bg-white/[0.1]'
-                          }`}>
-                            <div className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white transition-transform ${
-                              useWorktree ? 'translate-x-[16px]' : 'translate-x-[2px]'
-                            }`} />
+                          <div
+                            className={`w-8 h-[18px] rounded-full transition-colors relative ${
+                              useWorktree ? 'bg-amber-500' : 'bg-white/[0.1]'
+                            }`}
+                          >
+                            <div
+                              className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white transition-transform ${
+                                useWorktree ? 'translate-x-[16px]' : 'translate-x-[2px]'
+                              }`}
+                            />
                           </div>
                           <div className="text-left">
                             <div className="flex items-center gap-1.5">
-                              <FolderGit2 size={12} className={useWorktree ? 'text-amber-400' : 'text-gray-500'} />
-                              <span className={`text-sm ${useWorktree ? 'text-amber-300' : 'text-gray-300'}`}>
+                              <FolderGit2
+                                size={12}
+                                className={useWorktree ? 'text-amber-400' : 'text-gray-500'}
+                              />
+                              <span
+                                className={`text-sm ${useWorktree ? 'text-amber-300' : 'text-gray-300'}`}
+                              >
                                 Create worktree
                               </span>
                             </div>
@@ -401,7 +441,9 @@ export function NewAgentDialog() {
                 </label>
                 <input
                   type="text"
-                  placeholder={selectedProject || customPath.split('/').pop() || 'Uses project name by default'}
+                  placeholder={
+                    selectedProject || customPath.split('/').pop() || 'Uses project name by default'
+                  }
                   value={sessionName}
                   onChange={(e) => setSessionName(e.target.value)}
                   className="w-full px-4 py-2.5 bg-white/[0.03] border border-white/[0.06] rounded-lg text-sm

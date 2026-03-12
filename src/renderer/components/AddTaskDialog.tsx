@@ -132,7 +132,8 @@ export function AddTaskDialog() {
         images: images.length > 0 ? images : undefined
       })
     } else {
-      const existingTasks = config?.tasks?.filter((t) => t.projectName === projectName && t.status === 'todo') || []
+      const existingTasks =
+        config?.tasks?.filter((t) => t.projectName === projectName && t.status === 'todo') || []
       addTask({
         id: taskIdRef.current,
         projectName,
@@ -216,7 +217,9 @@ export function AddTaskDialog() {
                 >
                   <option value="">Select project</option>
                   {config?.projects.map((p) => (
-                    <option key={p.name} value={p.name}>{p.name}</option>
+                    <option key={p.name} value={p.name}>
+                      {p.name}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -240,13 +243,18 @@ export function AddTaskDialog() {
               <div>
                 <label className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2 block">
                   Images
-                  <span className="text-gray-600 normal-case tracking-normal ml-1">(optional — drag & drop or click to add)</span>
+                  <span className="text-gray-600 normal-case tracking-normal ml-1">
+                    (optional — drag & drop or click to add)
+                  </span>
                 </label>
                 <div className="flex flex-wrap gap-2">
                   {images.map((filename) => {
                     const absPath = imagePaths.get(filename)
                     return (
-                      <div key={filename} className="relative group/img w-16 h-16 rounded-lg border border-white/[0.08] overflow-hidden bg-white/[0.03]">
+                      <div
+                        key={filename}
+                        className="relative group/img w-16 h-16 rounded-lg border border-white/[0.08] overflow-hidden bg-white/[0.03]"
+                      >
                         {absPath && (
                           <img
                             src={`file://${absPath}`}
@@ -280,7 +288,9 @@ export function AddTaskDialog() {
                 <div className="flex-1">
                   <label className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2 block">
                     Branch
-                    <span className="text-gray-600 normal-case tracking-normal ml-1">(optional)</span>
+                    <span className="text-gray-600 normal-case tracking-normal ml-1">
+                      (optional)
+                    </span>
                   </label>
                   <input
                     type="text"

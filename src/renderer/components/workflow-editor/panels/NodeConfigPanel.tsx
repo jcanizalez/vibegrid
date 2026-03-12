@@ -1,5 +1,10 @@
 import { X, Trash2 } from 'lucide-react'
-import { WorkflowNode, TriggerConfig, LaunchAgentConfig, ScriptConfig } from '../../../../shared/types'
+import {
+  WorkflowNode,
+  TriggerConfig,
+  LaunchAgentConfig,
+  ScriptConfig
+} from '../../../../shared/types'
 import { TriggerConfigForm } from './TriggerConfigForm'
 import { LaunchAgentConfigForm } from './LaunchAgentConfigForm'
 import { ScriptConfigForm } from './ScriptConfigForm'
@@ -13,7 +18,14 @@ interface Props {
   triggerType?: TriggerConfig['triggerType']
 }
 
-export function NodeConfigPanel({ node, onChange, onLabelChange, onDelete, onClose, triggerType }: Props) {
+export function NodeConfigPanel({
+  node,
+  onChange,
+  onLabelChange,
+  onDelete,
+  onClose,
+  triggerType
+}: Props) {
   return (
     <div className="w-[300px] border-l border-white/[0.08] bg-[#1e1e22] flex flex-col h-full overflow-hidden titlebar-no-drag">
       <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.08]">

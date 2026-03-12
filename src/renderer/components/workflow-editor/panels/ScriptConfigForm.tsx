@@ -24,9 +24,11 @@ export function ScriptConfigForm({ config, onChange }: Props) {
               key={type}
               onClick={() => onChange({ ...config, scriptType: type })}
               className={`px-2.5 py-1.5 text-[12px] rounded-md transition-colors capitalize
-                         ${config.scriptType === type
-                           ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
-                           : 'bg-white/[0.04] text-gray-400 border border-white/[0.08] hover:bg-white/[0.08]'}`}
+                         ${
+                           config.scriptType === type
+                             ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                             : 'bg-white/[0.04] text-gray-400 border border-white/[0.08] hover:bg-white/[0.08]'
+                         }`}
             >
               {type}
             </button>
@@ -61,7 +63,9 @@ export function ScriptConfigForm({ config, onChange }: Props) {
         >
           <option value="">None (Use default CWD)</option>
           {projects.map((p) => (
-            <option key={p.name} value={p.name}>{p.name}</option>
+            <option key={p.name} value={p.name}>
+              {p.name}
+            </option>
           ))}
         </select>
       </div>

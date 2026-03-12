@@ -51,7 +51,15 @@ function WindowControls() {
         className="w-[46px] h-[32px] flex items-center justify-center hover:bg-white/[0.08] transition-colors"
         title="Maximize"
       >
-        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1" className="text-gray-400">
+        <svg
+          width="10"
+          height="10"
+          viewBox="0 0 10 10"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1"
+          className="text-gray-400"
+        >
           <rect x="0.5" y="0.5" width="9" height="9" />
         </svg>
       </button>
@@ -60,7 +68,15 @@ function WindowControls() {
         className="w-[46px] h-[32px] flex items-center justify-center hover:bg-red-500/80 transition-colors group"
         title="Close"
       >
-        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.2" className="text-gray-400 group-hover:text-white">
+        <svg
+          width="10"
+          height="10"
+          viewBox="0 0 10 10"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.2"
+          className="text-gray-400 group-hover:text-white"
+        >
           <path d="M1 1l8 8M9 1l-8 8" />
         </svg>
       </button>
@@ -96,7 +112,7 @@ export function App() {
 
   // Load config and previous sessions on mount
   useEffect(() => {
-    (async () => {
+    ;(async () => {
       try {
         const config = await window.api.loadConfig()
         useAppStore.getState().setConfig(config)
@@ -207,9 +223,11 @@ export function App() {
 
       <main className="flex-1 flex flex-col overflow-hidden">
         {/* Top bar — single line, same height as traffic lights */}
-        <div className="titlebar-drag shrink-0 border-b border-white/[0.06]
+        <div
+          className="titlebar-drag shrink-0 border-b border-white/[0.06]
                         h-[52px] flex items-center justify-between px-4"
-             style={!isSidebarOpen ? { paddingLeft: '80px' } : undefined}>
+          style={!isSidebarOpen ? { paddingLeft: '80px' } : undefined}
+        >
           <div className="flex items-center gap-2.5 titlebar-no-drag">
             {!isSidebarOpen && (
               <button
@@ -217,7 +235,14 @@ export function App() {
                 className="text-gray-400 hover:text-white p-1 rounded-md transition-colors flex items-center gap-1.5"
                 title="Show sidebar"
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
                   <rect x="3" y="3" width="18" height="18" rx="2" />
                   <path d="M9 3v18" />
                 </svg>
@@ -229,7 +254,9 @@ export function App() {
               <button
                 onClick={() => setMainViewMode('sessions')}
                 className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-colors ${
-                  mainViewMode === 'sessions' ? 'bg-white/[0.1] text-white' : 'text-gray-500 hover:text-gray-300'
+                  mainViewMode === 'sessions'
+                    ? 'bg-white/[0.1] text-white'
+                    : 'text-gray-500 hover:text-gray-300'
                 }`}
               >
                 <Monitor size={13} strokeWidth={2} />
@@ -239,7 +266,9 @@ export function App() {
               <button
                 onClick={() => setMainViewMode('tasks')}
                 className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-colors ${
-                  mainViewMode === 'tasks' ? 'bg-white/[0.1] text-white' : 'text-gray-500 hover:text-gray-300'
+                  mainViewMode === 'tasks'
+                    ? 'bg-white/[0.1] text-white'
+                    : 'text-gray-500 hover:text-gray-300'
                 }`}
               >
                 <ListTodo size={13} strokeWidth={2} />
@@ -261,7 +290,14 @@ export function App() {
                   }`}
                   title="Toggle terminal panel"
                 >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
                     <polyline points="4 17 10 11 4 5" />
                     <line x1="12" y1="19" x2="20" y2="19" />
                   </svg>
@@ -299,7 +335,14 @@ export function App() {
                   }`}
                   title="Toggle terminal panel"
                 >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
                     <polyline points="4 17 10 11 4 5" />
                     <line x1="12" y1="19" x2="20" y2="19" />
                   </svg>
@@ -323,10 +366,13 @@ export function App() {
         <UpdateBanner />
         <div className="flex-1 flex min-h-0">
           <div className="flex-1 min-w-0 h-full">
-            {mainViewMode === 'tasks'
-              ? <TaskBoardView />
-              : layoutMode === 'tabs' ? <TabView /> : <GridView />
-            }
+            {mainViewMode === 'tasks' ? (
+              <TaskBoardView />
+            ) : layoutMode === 'tabs' ? (
+              <TabView />
+            ) : (
+              <GridView />
+            )}
           </div>
           {mainViewMode === 'tasks' && selectedTaskId && <TaskDetailPanel />}
         </div>
@@ -344,17 +390,11 @@ export function App() {
       <MissedScheduleDialog />
       <DiffSidebar />
 
-      <AnimatePresence>
-        {isShortcutsPanelOpen && <KeyboardShortcutsPanel />}
-      </AnimatePresence>
+      <AnimatePresence>{isShortcutsPanelOpen && <KeyboardShortcutsPanel />}</AnimatePresence>
 
-      <AnimatePresence>
-        {isSettingsOpen && <SettingsPage />}
-      </AnimatePresence>
+      <AnimatePresence>{isSettingsOpen && <SettingsPage />}</AnimatePresence>
 
-      <AnimatePresence>
-        {isOnboardingOpen && <OnboardingModal />}
-      </AnimatePresence>
+      <AnimatePresence>{isOnboardingOpen && <OnboardingModal />}</AnimatePresence>
 
       <ToastContainer />
     </div>

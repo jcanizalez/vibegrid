@@ -75,8 +75,15 @@ body {
 
 /* Agent icon pulse animation for running status */
 @keyframes icon-pulse {
-  0%, 100% { transform: scale(1); opacity: 0.85; }
-  50% { transform: scale(1.18); opacity: 1; }
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.85;
+  }
+  50% {
+    transform: scale(1.18);
+    opacity: 1;
+  }
 }
 
 .agent-icon-pulse {
@@ -85,8 +92,13 @@ body {
 
 /* Glow ring behind pulsing icon */
 @keyframes glow-ring {
-  0%, 100% { box-shadow: 0 0 0 0 var(--glow-color, rgba(74, 222, 128, 0.4)); }
-  50% { box-shadow: 0 0 8px 3px var(--glow-color, rgba(74, 222, 128, 0.3)); }
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 var(--glow-color, rgba(74, 222, 128, 0.4));
+  }
+  50% {
+    box-shadow: 0 0 8px 3px var(--glow-color, rgba(74, 222, 128, 0.3));
+  }
 }
 
 .agent-icon-glow {
@@ -102,10 +114,18 @@ body {
   flex-shrink: 0;
 }
 
-.status-running { background: #4ade80; }
-.status-waiting { background: #facc15; }
-.status-idle { background: #6b7280; }
-.status-error { background: #ef4444; }
+.status-running {
+  background: #4ade80;
+}
+.status-waiting {
+  background: #facc15;
+}
+.status-idle {
+  background: #6b7280;
+}
+.status-error {
+  background: #ef4444;
+}
 
 /* App button (VG / VibeGrid label) */
 .widget-app-btn {
@@ -138,7 +158,9 @@ body {
   border-radius: 5px;
   color: rgba(255, 255, 255, 0.35);
   cursor: pointer;
-  transition: color 0.15s, background 0.15s;
+  transition:
+    color 0.15s,
+    background 0.15s;
 }
 
 .widget-header-btn:hover {
@@ -167,7 +189,9 @@ body {
   border-radius: 4px;
   color: rgba(255, 255, 255, 0.3);
   cursor: pointer;
-  transition: color 0.15s, background 0.15s;
+  transition:
+    color 0.15s,
+    background 0.15s;
 }
 
 .widget-mode-btn:hover {
@@ -221,7 +245,9 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
   padding: 8px 10px;
-  transition: border-color 0.15s, background 0.15s;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
 }
 
 .permission-focused {
@@ -301,7 +327,10 @@ body {
   font-size: 11px;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    color 0.15s;
 }
 
 .permission-allow {
@@ -346,7 +375,10 @@ body {
   background: transparent;
   cursor: pointer;
   text-align: left;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    border-color 0.15s;
 }
 
 .permission-suggestion-btn:hover {
@@ -392,7 +424,10 @@ body {
   background: transparent;
   cursor: pointer;
   text-align: left;
-  transition: background 0.12s, border-color 0.12s, color 0.12s;
+  transition:
+    background 0.12s,
+    border-color 0.12s,
+    color 0.12s;
 }
 
 .ask-option-btn:hover {

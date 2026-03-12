@@ -126,6 +126,7 @@ Agents running inside VibeGrid can access tasks, projects, workflows, sessions, 
 ### More
 
 - **Claude Code Hooks** — real-time agent status, permission request handling, and agent question responses
+
 ### Floating Widget
 
 A minimal always-on-top overlay that stays visible while you work in other apps. See agent status at a glance, get notified on permission requests, and jump back into any session with one click.
@@ -135,6 +136,7 @@ A minimal always-on-top overlay that stays visible while you work in other apps.
 </p>
 
 ### More
+
 - **Remote Hosts** — launch terminals on remote machines via SSH
 - **Terminal Panel** — lightweight shell tabs for quick operations
 - **Project Management** — organize sessions by project with custom icons, colors, and preferred agents
@@ -143,13 +145,13 @@ A minimal always-on-top overlay that stays visible while you work in other apps.
 
 ## Supported Agents
 
-| Agent | Command |
-|-------|---------|
-| Claude Code | `claude` |
+| Agent          | Command      |
+| -------------- | ------------ |
+| Claude Code    | `claude`     |
 | GitHub Copilot | `gh copilot` |
-| OpenAI Codex | `codex` |
-| OpenCode | `opencode` |
-| Google Gemini | `gemini` |
+| OpenAI Codex   | `codex`      |
+| OpenCode       | `opencode`   |
+| Google Gemini  | `gemini`     |
 
 Any CLI tool that runs in a terminal works with VibeGrid. These are the agents with built-in status detection and icons.
 

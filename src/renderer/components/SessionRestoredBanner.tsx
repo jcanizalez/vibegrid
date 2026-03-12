@@ -44,8 +44,10 @@ export function SessionRestoredBanner() {
   }
 
   return (
-    <div className="mx-4 mt-4 px-4 py-3 border border-white/[0.08] bg-white/[0.03]
-                    rounded-lg flex items-center justify-between">
+    <div
+      className="mx-4 mt-4 px-4 py-3 border border-white/[0.08] bg-white/[0.03]
+                    rounded-lg flex items-center justify-between"
+    >
       <div className="flex items-center gap-3">
         <RotateCcw size={16} className="text-gray-400 shrink-0" />
         <p className="text-sm text-gray-300">

@@ -3,7 +3,13 @@ import { z } from 'zod'
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import type { configManager as ConfigManagerInstance } from '../config-manager'
 import type { scheduler as SchedulerInstance } from '../scheduler'
-import type { WorkflowDefinition, WorkflowNode, WorkflowEdge, TriggerConfig, LaunchAgentConfig } from '../../shared/types'
+import type {
+  WorkflowDefinition,
+  WorkflowNode,
+  WorkflowEdge,
+  TriggerConfig,
+  LaunchAgentConfig
+} from '../../shared/types'
 import { dbListWorkflows, dbInsertWorkflow, dbUpdateWorkflow, dbDeleteWorkflow } from '../database'
 
 type ConfigManager = typeof ConfigManagerInstance
@@ -27,9 +33,18 @@ const launchAgentConfigSchema = z.object({
 const triggerConfigSchema = z.union([
   z.object({ triggerType: z.literal('manual') }),
   z.object({ triggerType: z.literal('once'), runAt: z.string() }),
-  z.object({ triggerType: z.literal('recurring'), cron: z.string(), timezone: z.string().optional() }),
+  z.object({
+    triggerType: z.literal('recurring'),
+    cron: z.string(),
+    timezone: z.string().optional()
+  }),
   z.object({ triggerType: z.literal('taskCreated'), projectFilter: z.string().optional() }),
-  z.object({ triggerType: z.literal('taskStatusChanged'), projectFilter: z.string().optional(), fromStatus: z.enum(['todo', 'in_progress', 'in_review', 'done', 'cancelled']).optional(), toStatus: z.enum(['todo', 'in_progress', 'in_review', 'done', 'cancelled']).optional() })
+  z.object({
+    triggerType: z.literal('taskStatusChanged'),
+    projectFilter: z.string().optional(),
+    fromStatus: z.enum(['todo', 'in_progress', 'in_review', 'done', 'cancelled']).optional(),
+    toStatus: z.enum(['todo', 'in_progress', 'in_review', 'done', 'cancelled']).optional()
+  })
 ])
 
 const nodeSchema = z.object({
@@ -59,12 +74,18 @@ function buildGraphFromFlat(
   const triggerNode: WorkflowNode = {
     id: crypto.randomUUID(),
     type: 'trigger',
-    label: trigger.triggerType === 'manual' ? 'Manual Trigger'
-      : trigger.triggerType === 'once' ? 'Schedule (Once)'
-      : trigger.triggerType === 'recurring' ? 'Schedule (Recurring)'
-      : trigger.triggerType === 'taskCreated' ? 'When Task Created'
-      : trigger.triggerType === 'taskStatusChanged' ? 'When Task Status Changes'
-      : 'Trigger',
+    label:
+      trigger.triggerType === 'manual'
+        ? 'Manual Trigger'
+        : trigger.triggerType === 'once'
+          ? 'Schedule (Once)'
+          : trigger.triggerType === 'recurring'
+            ? 'Schedule (Recurring)'
+            : trigger.triggerType === 'taskCreated'
+              ? 'When Task Created'
+              : trigger.triggerType === 'taskStatusChanged'
+                ? 'When Task Status Changes'
+                : 'Trigger',
     config: trigger,
     position: { x: 0, y: 0 }
   }
@@ -100,22 +121,23 @@ export function registerWorkflowTools(
 ): void {
   const { configManager, scheduler } = deps
 
-  server.tool(
-    'list_workflows',
-    'List all workflows',
-    async () => {
-      const workflows = dbListWorkflows()
-      return { content: [{ type: 'text', text: JSON.stringify(workflows, null, 2) }] }
-    }
-  )
+  server.tool('list_workflows', 'List all workflows', async () => {
+    const workflows = dbListWorkflows()
+    return { content: [{ type: 'text', text: JSON.stringify(workflows, null, 2) }] }
+  })
 
   server.tool(
     'create_workflow',
     'Create a new workflow. Accepts either full nodes/edges or a convenience flat format (trigger + actions array).',
     {
       name: z.string().describe('Workflow name'),
-      trigger: triggerConfigSchema.optional().describe('Trigger config (convenience mode). Defaults to manual.'),
-      actions: z.array(launchAgentConfigSchema).optional().describe('Actions to execute (convenience mode). Auto-generates graph.'),
+      trigger: triggerConfigSchema
+        .optional()
+        .describe('Trigger config (convenience mode). Defaults to manual.'),
+      actions: z
+        .array(launchAgentConfigSchema)
+        .optional()
+        .describe('Actions to execute (convenience mode). Auto-generates graph.'),
       nodes: z.array(nodeSchema).optional().describe('Full graph nodes (advanced mode)'),
       edges: z.array(edgeSchema).optional().describe('Full graph edges (advanced mode)'),
       icon: z.string().optional().describe('Lucide icon name (default: zap)'),
@@ -159,7 +181,7 @@ export function registerWorkflowTools(
 
   server.tool(
     'update_workflow',
-    'Update a workflow\'s properties',
+    "Update a workflow's properties",
     {
       id: z.string().describe('Workflow ID'),
       name: z.string().optional(),
@@ -172,9 +194,12 @@ export function registerWorkflowTools(
     },
     async (args) => {
       const workflows = dbListWorkflows()
-      const workflow = workflows.find(w => w.id === args.id)
+      const workflow = workflows.find((w) => w.id === args.id)
       if (!workflow) {
-        return { content: [{ type: 'text', text: `Error: workflow "${args.id}" not found` }], isError: true }
+        return {
+          content: [{ type: 'text', text: `Error: workflow "${args.id}" not found` }],
+          isError: true
+        }
       }
 
       const updates: Partial<WorkflowDefinition> = {}
@@ -190,7 +215,9 @@ export function registerWorkflowTools(
       scheduler.syncSchedules(dbListWorkflows())
       configManager.notifyChanged()
 
-      return { content: [{ type: 'text', text: JSON.stringify({ ...workflow, ...updates }, null, 2) }] }
+      return {
+        content: [{ type: 'text', text: JSON.stringify({ ...workflow, ...updates }, null, 2) }]
+      }
     }
   )
 
@@ -200,9 +227,12 @@ export function registerWorkflowTools(
     { id: z.string().describe('Workflow ID') },
     async (args) => {
       const workflows = dbListWorkflows()
-      const workflow = workflows.find(w => w.id === args.id)
+      const workflow = workflows.find((w) => w.id === args.id)
       if (!workflow) {
-        return { content: [{ type: 'text', text: `Error: workflow "${args.id}" not found` }], isError: true }
+        return {
+          content: [{ type: 'text', text: `Error: workflow "${args.id}" not found` }],
+          isError: true
+        }
       }
 
       dbDeleteWorkflow(args.id)

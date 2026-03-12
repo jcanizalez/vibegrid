@@ -27,7 +27,7 @@ win:
     - nsis
     - portable
   icon: resources/icon.ico
-  artifactName: "${productName}-Setup-${version}.${ext}"
+  artifactName: '${productName}-Setup-${version}.${ext}'
 
 linux:
   target:
@@ -38,5 +38,5 @@ linux:
 
 npmRebuild: true
 files:
-  - "out/**/*"
-  - "node_modules/**/*"
+  - 'out/**/*'
+  - 'node_modules/**/*'

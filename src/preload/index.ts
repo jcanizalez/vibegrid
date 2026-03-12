@@ -1,66 +1,84 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import { CreateTerminalPayload, ResizePayload, AppConfig, RecentSession, IPC, GitDiffStat, GitDiffResult, GitCommitPayload, GitCommitResult, ScheduleLogEntry, ArchivedSession, HeadlessSession, WorkflowExecution, ScriptConfig } from '../shared/types'
+import {
+  CreateTerminalPayload,
+  ResizePayload,
+  AppConfig,
+  RecentSession,
+  IPC,
+  GitDiffStat,
+  GitDiffResult,
+  GitCommitPayload,
+  GitCommitResult,
+  ScheduleLogEntry,
+  ArchivedSession,
+  HeadlessSession,
+  WorkflowExecution,
+  ScriptConfig
+} from '../shared/types'
 
 const api = {
   createTerminal: (payload: CreateTerminalPayload) =>
     ipcRenderer.invoke(IPC.TERMINAL_CREATE, payload),
 
-  writeTerminal: (id: string, data: string) =>
-    ipcRenderer.send(IPC.TERMINAL_WRITE, { id, data }),
+  writeTerminal: (id: string, data: string) => ipcRenderer.send(IPC.TERMINAL_WRITE, { id, data }),
 
-  resizeTerminal: (payload: ResizePayload) =>
-    ipcRenderer.send(IPC.TERMINAL_RESIZE, payload),
+  resizeTerminal: (payload: ResizePayload) => ipcRenderer.send(IPC.TERMINAL_RESIZE, payload),
 
-  killTerminal: (id: string) =>
-    ipcRenderer.invoke(IPC.TERMINAL_KILL, id),
+  killTerminal: (id: string) => ipcRenderer.invoke(IPC.TERMINAL_KILL, id),
 
   createShellTerminal: (cwd?: string): Promise<{ id: string; pid: number }> =>
     ipcRenderer.invoke(IPC.SHELL_CREATE, cwd),
 
   onTerminalData: (callback: (event: { id: string; data: string }) => void) => {
-    const listener = (_: Electron.IpcRendererEvent, event: { id: string; data: string }): void => callback(event)
+    const listener = (_: Electron.IpcRendererEvent, event: { id: string; data: string }): void =>
+      callback(event)
     ipcRenderer.on(IPC.TERMINAL_DATA, listener)
-    return () => { ipcRenderer.removeListener(IPC.TERMINAL_DATA, listener) }
+    return () => {
+      ipcRenderer.removeListener(IPC.TERMINAL_DATA, listener)
+    }
   },
 
   onTerminalExit: (callback: (event: { id: string; exitCode: number }) => void) => {
-    const listener = (_: Electron.IpcRendererEvent, event: { id: string; exitCode: number }): void => callback(event)
+    const listener = (
+      _: Electron.IpcRendererEvent,
+      event: { id: string; exitCode: number }
+    ): void => callback(event)
     ipcRenderer.on(IPC.TERMINAL_EXIT, listener)
-    return () => { ipcRenderer.removeListener(IPC.TERMINAL_EXIT, listener) }
+    return () => {
+      ipcRenderer.removeListener(IPC.TERMINAL_EXIT, listener)
+    }
   },
 
-  loadConfig: (): Promise<AppConfig> =>
-    ipcRenderer.invoke(IPC.CONFIG_LOAD),
+  loadConfig: (): Promise<AppConfig> => ipcRenderer.invoke(IPC.CONFIG_LOAD),
 
-  saveConfig: (config: AppConfig) =>
-    ipcRenderer.invoke(IPC.CONFIG_SAVE, config),
+  saveConfig: (config: AppConfig) => ipcRenderer.invoke(IPC.CONFIG_SAVE, config),
 
   onConfigChanged: (callback: (config: AppConfig) => void) => {
     const listener = (_: Electron.IpcRendererEvent, config: AppConfig): void => callback(config)
     ipcRenderer.on(IPC.CONFIG_CHANGED, listener)
-    return () => { ipcRenderer.removeListener(IPC.CONFIG_CHANGED, listener) }
+    return () => {
+      ipcRenderer.removeListener(IPC.CONFIG_CHANGED, listener)
+    }
   },
 
   onMenuNewAgent: (callback: () => void) => {
     const listener = (): void => callback()
     ipcRenderer.on('menu:new-agent', listener)
-    return () => { ipcRenderer.removeListener('menu:new-agent', listener) }
+    return () => {
+      ipcRenderer.removeListener('menu:new-agent', listener)
+    }
   },
 
-  getPreviousSessions: () =>
-    ipcRenderer.invoke(IPC.SESSIONS_GET_PREVIOUS),
+  getPreviousSessions: () => ipcRenderer.invoke(IPC.SESSIONS_GET_PREVIOUS),
 
-  clearPreviousSessions: () =>
-    ipcRenderer.invoke(IPC.SESSIONS_CLEAR),
+  clearPreviousSessions: () => ipcRenderer.invoke(IPC.SESSIONS_CLEAR),
 
   getRecentSessions: (projectPath?: string): Promise<RecentSession[]> =>
     ipcRenderer.invoke(IPC.SESSIONS_GET_RECENT, projectPath),
 
-  openDirectoryDialog: (): Promise<string | null> =>
-    ipcRenderer.invoke(IPC.DIALOG_OPEN_DIRECTORY),
+  openDirectoryDialog: (): Promise<string | null> => ipcRenderer.invoke(IPC.DIALOG_OPEN_DIRECTORY),
 
-  openFileDialog: (): Promise<string | null> =>
-    ipcRenderer.invoke(IPC.DIALOG_OPEN_FILE),
+  openFileDialog: (): Promise<string | null> => ipcRenderer.invoke(IPC.DIALOG_OPEN_FILE),
 
   detectIDEs: (): Promise<{ id: string; name: string; command: string }[]> =>
     ipcRenderer.invoke(IPC.IDE_DETECT),
@@ -74,13 +92,18 @@ const api = {
   listRemoteBranches: (projectPath: string): Promise<string[]> =>
     ipcRenderer.invoke(IPC.GIT_LIST_REMOTE_BRANCHES, projectPath),
 
-  createWorktree: (projectPath: string, branch: string): Promise<{ worktreePath: string; branch: string }> =>
+  createWorktree: (
+    projectPath: string,
+    branch: string
+  ): Promise<{ worktreePath: string; branch: string }> =>
     ipcRenderer.invoke(IPC.GIT_CREATE_WORKTREE, { projectPath, branch }),
 
   removeWorktree: (projectPath: string, worktreePath: string): Promise<boolean> =>
     ipcRenderer.invoke(IPC.GIT_REMOVE_WORKTREE, { projectPath, worktreePath }),
 
-  listWorktrees: (projectPath: string): Promise<{ path: string; branch: string; isMain: boolean }[]> =>
+  listWorktrees: (
+    projectPath: string
+  ): Promise<{ path: string; branch: string; isMain: boolean }[]> =>
     ipcRenderer.invoke(IPC.GIT_LIST_WORKTREES, projectPath),
 
   getGitDiffStat: (cwd: string): Promise<GitDiffStat | null> =>
@@ -92,12 +115,10 @@ const api = {
   gitCommit: (payload: GitCommitPayload): Promise<GitCommitResult> =>
     ipcRenderer.invoke(IPC.GIT_COMMIT, payload),
 
-  gitPush: (cwd: string): Promise<GitCommitResult> =>
-    ipcRenderer.invoke(IPC.GIT_PUSH, cwd),
+  gitPush: (cwd: string): Promise<GitCommitResult> => ipcRenderer.invoke(IPC.GIT_PUSH, cwd),
 
   // Task images
-  openImageDialog: (): Promise<string[] | null> =>
-    ipcRenderer.invoke(IPC.DIALOG_OPEN_IMAGE),
+  openImageDialog: (): Promise<string[] | null> => ipcRenderer.invoke(IPC.DIALOG_OPEN_IMAGE),
 
   saveTaskImage: (taskId: string, sourcePath: string): Promise<string> =>
     ipcRenderer.invoke(IPC.TASK_IMAGE_SAVE, { taskId, sourcePath }),
@@ -115,8 +136,7 @@ const api = {
   archiveSession: (session: ArchivedSession): Promise<void> =>
     ipcRenderer.invoke(IPC.SESSION_ARCHIVE, session),
 
-  unarchiveSession: (id: string): Promise<void> =>
-    ipcRenderer.invoke(IPC.SESSION_UNARCHIVE, id),
+  unarchiveSession: (id: string): Promise<void> => ipcRenderer.invoke(IPC.SESSION_UNARCHIVE, id),
 
   listArchivedSessions: (): Promise<ArchivedSession[]> =>
     ipcRenderer.invoke(IPC.SESSION_LIST_ARCHIVED),
@@ -125,28 +145,44 @@ const api = {
   createHeadlessSession: (payload: CreateTerminalPayload): Promise<HeadlessSession> =>
     ipcRenderer.invoke(IPC.HEADLESS_CREATE, payload),
 
-  killHeadlessSession: (id: string): Promise<void> =>
-    ipcRenderer.invoke(IPC.HEADLESS_KILL, id),
+  killHeadlessSession: (id: string): Promise<void> => ipcRenderer.invoke(IPC.HEADLESS_KILL, id),
 
   onHeadlessData: (callback: (event: { id: string; data: string }) => void) => {
-    const listener = (_: Electron.IpcRendererEvent, event: { id: string; data: string }): void => callback(event)
+    const listener = (_: Electron.IpcRendererEvent, event: { id: string; data: string }): void =>
+      callback(event)
     ipcRenderer.on(IPC.HEADLESS_DATA, listener)
-    return () => { ipcRenderer.removeListener(IPC.HEADLESS_DATA, listener) }
+    return () => {
+      ipcRenderer.removeListener(IPC.HEADLESS_DATA, listener)
+    }
   },
 
   onHeadlessExit: (callback: (event: { id: string; exitCode: number }) => void) => {
-    const listener = (_: Electron.IpcRendererEvent, event: { id: string; exitCode: number }): void => callback(event)
+    const listener = (
+      _: Electron.IpcRendererEvent,
+      event: { id: string; exitCode: number }
+    ): void => callback(event)
     ipcRenderer.on(IPC.HEADLESS_EXIT, listener)
-    return () => { ipcRenderer.removeListener(IPC.HEADLESS_EXIT, listener) }
+    return () => {
+      ipcRenderer.removeListener(IPC.HEADLESS_EXIT, listener)
+    }
   },
 
-  executeScript: (config: ScriptConfig): Promise<{ success: boolean; output: string; error?: string; exitCode?: number }> =>
+  executeScript: (
+    config: ScriptConfig
+  ): Promise<{ success: boolean; output: string; error?: string; exitCode?: number }> =>
     ipcRenderer.invoke(IPC.SCRIPT_EXECUTE, config),
 
-  onWorktreeCleanup: (callback: (session: { id: string; projectPath: string; worktreePath: string }) => void) => {
-    const listener = (_: Electron.IpcRendererEvent, session: { id: string; projectPath: string; worktreePath: string }): void => callback(session)
+  onWorktreeCleanup: (
+    callback: (session: { id: string; projectPath: string; worktreePath: string }) => void
+  ) => {
+    const listener = (
+      _: Electron.IpcRendererEvent,
+      session: { id: string; projectPath: string; worktreePath: string }
+    ): void => callback(session)
     ipcRenderer.on(IPC.WORKTREE_CONFIRM_CLEANUP, listener)
-    return () => { ipcRenderer.removeListener(IPC.WORKTREE_CONFIRM_CLEANUP, listener) }
+    return () => {
+      ipcRenderer.removeListener(IPC.WORKTREE_CONFIRM_CLEANUP, listener)
+    }
   },
 
   // Scheduler APIs
@@ -157,15 +193,25 @@ const api = {
     ipcRenderer.invoke(IPC.SCHEDULER_GET_NEXT_RUN, workflowId),
 
   onSchedulerExecute: (callback: (event: { workflowId: string }) => void) => {
-    const listener = (_: Electron.IpcRendererEvent, event: { workflowId: string }): void => callback(event)
+    const listener = (_: Electron.IpcRendererEvent, event: { workflowId: string }): void =>
+      callback(event)
     ipcRenderer.on(IPC.SCHEDULER_EXECUTE, listener)
-    return () => { ipcRenderer.removeListener(IPC.SCHEDULER_EXECUTE, listener) }
+    return () => {
+      ipcRenderer.removeListener(IPC.SCHEDULER_EXECUTE, listener)
+    }
   },
 
-  onSchedulerMissed: (callback: (missed: { workflow: { id: string; name: string }; scheduledFor: string }[]) => void) => {
-    const listener = (_: Electron.IpcRendererEvent, missed: { workflow: { id: string; name: string }; scheduledFor: string }[]): void => callback(missed)
+  onSchedulerMissed: (
+    callback: (missed: { workflow: { id: string; name: string }; scheduledFor: string }[]) => void
+  ) => {
+    const listener = (
+      _: Electron.IpcRendererEvent,
+      missed: { workflow: { id: string; name: string }; scheduledFor: string }[]
+    ): void => callback(missed)
     ipcRenderer.on(IPC.SCHEDULER_MISSED, listener)
-    return () => { ipcRenderer.removeListener(IPC.SCHEDULER_MISSED, listener) }
+    return () => {
+      ipcRenderer.removeListener(IPC.SCHEDULER_MISSED, listener)
+    }
   },
 
   // Window controls (Windows/Linux custom titlebar)
@@ -178,9 +224,12 @@ const api = {
   setWidgetEnabled: (enabled: boolean) => ipcRenderer.send(IPC.WIDGET_SET_ENABLED, enabled),
 
   onWidgetSelectTerminal: (callback: (terminalId: string) => void) => {
-    const listener = (_: Electron.IpcRendererEvent, terminalId: string): void => callback(terminalId)
+    const listener = (_: Electron.IpcRendererEvent, terminalId: string): void =>
+      callback(terminalId)
     ipcRenderer.on('widget:select-terminal', listener)
-    return () => { ipcRenderer.removeListener('widget:select-terminal', listener) }
+    return () => {
+      ipcRenderer.removeListener('widget:select-terminal', listener)
+    }
   },
 
   // Workflow runs
@@ -190,7 +239,10 @@ const api = {
   listWorkflowRuns: (workflowId: string, limit?: number): Promise<WorkflowExecution[]> =>
     ipcRenderer.invoke(IPC.WORKFLOW_RUN_LIST, workflowId, limit),
 
-  listWorkflowRunsByTask: (taskId: string, limit?: number): Promise<(WorkflowExecution & { workflowName?: string })[]> =>
+  listWorkflowRunsByTask: (
+    taskId: string,
+    limit?: number
+  ): Promise<(WorkflowExecution & { workflowName?: string })[]> =>
     ipcRenderer.invoke(IPC.WORKFLOW_RUN_LIST_BY_TASK, taskId, limit),
 
   // App info
@@ -200,9 +252,12 @@ const api = {
 
   // Auto-update
   onUpdateDownloaded: (callback: (info: { version: string }) => void) => {
-    const listener = (_: Electron.IpcRendererEvent, info: { version: string }): void => callback(info)
+    const listener = (_: Electron.IpcRendererEvent, info: { version: string }): void =>
+      callback(info)
     ipcRenderer.on(IPC.UPDATE_DOWNLOADED, listener)
-    return () => { ipcRenderer.removeListener(IPC.UPDATE_DOWNLOADED, listener) }
+    return () => {
+      ipcRenderer.removeListener(IPC.UPDATE_DOWNLOADED, listener)
+    }
   },
   installUpdate: () => ipcRenderer.send(IPC.UPDATE_INSTALL)
 }

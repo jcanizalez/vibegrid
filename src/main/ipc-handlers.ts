@@ -9,10 +9,35 @@ import { scheduleLogManager } from './schedule-log'
 import { scheduler } from './scheduler'
 import { getRecentSessions } from './agent-history'
 import { detectIDEs, openInIDE } from './ide-detector'
-import { CreateTerminalPayload, IPC, ResizePayload, AppConfig, ArchivedSession, TerminalSession } from '../shared/types'
-import { listBranches, listRemoteBranches, getGitBranch, createWorktree, removeWorktree, listWorktrees, getGitDiffStat, getGitDiffFull, gitCommit, gitPush } from './git-utils'
+import {
+  CreateTerminalPayload,
+  IPC,
+  ResizePayload,
+  AppConfig,
+  ArchivedSession,
+  TerminalSession
+} from '../shared/types'
+import {
+  listBranches,
+  listRemoteBranches,
+  getGitBranch,
+  createWorktree,
+  removeWorktree,
+  listWorktrees,
+  getGitDiffStat,
+  getGitDiffFull,
+  gitCommit,
+  gitPush
+} from './git-utils'
 import { saveTaskImage, deleteTaskImage, getTaskImagePath, cleanupTaskImages } from './task-images'
-import { archiveSession, unarchiveSession, listArchivedSessions, saveWorkflowRun, listWorkflowRuns, listWorkflowRunsByTask } from './database'
+import {
+  archiveSession,
+  unarchiveSession,
+  listArchivedSessions,
+  saveWorkflowRun,
+  listWorkflowRuns,
+  listWorkflowRunsByTask
+} from './database'
 import { executeScript } from './script-runner'
 import { WorkflowExecution, ScriptConfig } from '../shared/types'
 
@@ -27,33 +52,19 @@ export function registerIpcHandlers(options?: IpcHandlerOptions): void {
     return session
   })
 
-  safeHandle(IPC.TERMINAL_KILL, (_, id: string) =>
-    ptyManager.killPty(id)
-  )
+  safeHandle(IPC.TERMINAL_KILL, (_, id: string) => ptyManager.killPty(id))
 
-  safeHandle(IPC.SHELL_CREATE, (_, cwd?: string) =>
-    ptyManager.createShellPty(cwd)
-  )
+  safeHandle(IPC.SHELL_CREATE, (_, cwd?: string) => ptyManager.createShellPty(cwd))
 
-  safeHandle(IPC.CONFIG_LOAD, () =>
-    configManager.loadConfig()
-  )
+  safeHandle(IPC.CONFIG_LOAD, () => configManager.loadConfig())
 
-  safeHandle(IPC.CONFIG_SAVE, (_, config: AppConfig) =>
-    configManager.saveConfig(config)
-  )
+  safeHandle(IPC.CONFIG_SAVE, (_, config: AppConfig) => configManager.saveConfig(config))
 
-  safeHandle(IPC.SESSIONS_GET_PREVIOUS, () =>
-    sessionManager.getPreviousSessions()
-  )
+  safeHandle(IPC.SESSIONS_GET_PREVIOUS, () => sessionManager.getPreviousSessions())
 
-  safeHandle(IPC.SESSIONS_CLEAR, () =>
-    sessionManager.clear()
-  )
+  safeHandle(IPC.SESSIONS_CLEAR, () => sessionManager.clear())
 
-  safeHandle(IPC.SESSIONS_GET_RECENT, (_, projectPath?: string) =>
-    getRecentSessions(projectPath)
-  )
+  safeHandle(IPC.SESSIONS_GET_RECENT, (_, projectPath?: string) => getRecentSessions(projectPath))
 
   safeHandle(IPC.DIALOG_OPEN_DIRECTORY, async (event) => {
     const win = BrowserWindow.fromWebContents(event.sender)
@@ -95,33 +106,33 @@ export function registerIpcHandlers(options?: IpcHandlerOptions): void {
     listRemoteBranches(projectPath)
   )
 
-  safeHandle(IPC.GIT_CREATE_WORKTREE, (_, { projectPath, branch }: { projectPath: string; branch: string }) =>
-    createWorktree(projectPath, branch)
+  safeHandle(
+    IPC.GIT_CREATE_WORKTREE,
+    (_, { projectPath, branch }: { projectPath: string; branch: string }) =>
+      createWorktree(projectPath, branch)
   )
 
-  safeHandle(IPC.GIT_REMOVE_WORKTREE, (_, { projectPath, worktreePath }: { projectPath: string; worktreePath: string }) =>
-    removeWorktree(projectPath, worktreePath)
+  safeHandle(
+    IPC.GIT_REMOVE_WORKTREE,
+    (_, { projectPath, worktreePath }: { projectPath: string; worktreePath: string }) =>
+      removeWorktree(projectPath, worktreePath)
   )
 
-  safeHandle(IPC.GIT_LIST_WORKTREES, (_, projectPath: string) =>
-    listWorktrees(projectPath)
+  safeHandle(IPC.GIT_LIST_WORKTREES, (_, projectPath: string) => listWorktrees(projectPath))
+
+  safeHandle(IPC.GIT_DIFF_STAT, (_, cwd: string) => getGitDiffStat(cwd))
+
+  safeHandle(IPC.GIT_DIFF_FULL, (_, cwd: string) => getGitDiffFull(cwd))
+
+  safeHandle(
+    IPC.GIT_COMMIT,
+    (
+      _,
+      { cwd, message, includeUnstaged }: { cwd: string; message: string; includeUnstaged: boolean }
+    ) => gitCommit(cwd, message, includeUnstaged)
   )
 
-  safeHandle(IPC.GIT_DIFF_STAT, (_, cwd: string) =>
-    getGitDiffStat(cwd)
-  )
-
-  safeHandle(IPC.GIT_DIFF_FULL, (_, cwd: string) =>
-    getGitDiffFull(cwd)
-  )
-
-  safeHandle(IPC.GIT_COMMIT, (_, { cwd, message, includeUnstaged }: { cwd: string; message: string; includeUnstaged: boolean }) =>
-    gitCommit(cwd, message, includeUnstaged)
-  )
-
-  safeHandle(IPC.GIT_PUSH, (_, cwd: string) =>
-    gitPush(cwd)
-  )
+  safeHandle(IPC.GIT_PUSH, (_, cwd: string) => gitPush(cwd))
 
   // Scheduler
   safeHandle(IPC.SCHEDULER_GET_LOG, (_, workflowId?: string) =>
@@ -144,21 +155,25 @@ export function registerIpcHandlers(options?: IpcHandlerOptions): void {
     return result.canceled ? null : result.filePaths
   })
 
-  safeHandle(IPC.TASK_IMAGE_SAVE, (_, { taskId, sourcePath }: { taskId: string; sourcePath: string }) =>
-    saveTaskImage(taskId, sourcePath)
+  safeHandle(
+    IPC.TASK_IMAGE_SAVE,
+    (_, { taskId, sourcePath }: { taskId: string; sourcePath: string }) =>
+      saveTaskImage(taskId, sourcePath)
   )
 
-  safeHandle(IPC.TASK_IMAGE_DELETE, (_, { taskId, filename }: { taskId: string; filename: string }) =>
-    deleteTaskImage(taskId, filename)
+  safeHandle(
+    IPC.TASK_IMAGE_DELETE,
+    (_, { taskId, filename }: { taskId: string; filename: string }) =>
+      deleteTaskImage(taskId, filename)
   )
 
-  safeHandle(IPC.TASK_IMAGE_GET_PATH, (_, { taskId, filename }: { taskId: string; filename: string }) =>
-    getTaskImagePath(taskId, filename)
+  safeHandle(
+    IPC.TASK_IMAGE_GET_PATH,
+    (_, { taskId, filename }: { taskId: string; filename: string }) =>
+      getTaskImagePath(taskId, filename)
   )
 
-  safeHandle(IPC.TASK_IMAGE_CLEANUP, (_, taskId: string) =>
-    cleanupTaskImages(taskId)
-  )
+  safeHandle(IPC.TASK_IMAGE_CLEANUP, (_, taskId: string) => cleanupTaskImages(taskId))
 
   // Session archive
   safeHandle(IPC.SESSION_ARCHIVE, (_, session: ArchivedSession) =>
@@ -174,31 +189,21 @@ export function registerIpcHandlers(options?: IpcHandlerOptions): void {
     })
   )
 
-  safeHandle(IPC.SESSION_UNARCHIVE, (_, id: string) =>
-    unarchiveSession(id)
-  )
+  safeHandle(IPC.SESSION_UNARCHIVE, (_, id: string) => unarchiveSession(id))
 
-  safeHandle(IPC.SESSION_LIST_ARCHIVED, () =>
-    listArchivedSessions()
-  )
+  safeHandle(IPC.SESSION_LIST_ARCHIVED, () => listArchivedSessions())
 
   // Headless sessions
   safeHandle(IPC.HEADLESS_CREATE, (_, payload: CreateTerminalPayload) =>
     headlessManager.createHeadless(payload)
   )
 
-  safeHandle(IPC.HEADLESS_KILL, (_, id: string) =>
-    headlessManager.killHeadless(id)
-  )
+  safeHandle(IPC.HEADLESS_KILL, (_, id: string) => headlessManager.killHeadless(id))
 
-  safeHandle(IPC.SCRIPT_EXECUTE, (_, config: ScriptConfig) =>
-    executeScript(config)
-  )
+  safeHandle(IPC.SCRIPT_EXECUTE, (_, config: ScriptConfig) => executeScript(config))
 
   // Workflow runs
-  safeHandle(IPC.WORKFLOW_RUN_SAVE, (_, execution: WorkflowExecution) =>
-    saveWorkflowRun(execution)
-  )
+  safeHandle(IPC.WORKFLOW_RUN_SAVE, (_, execution: WorkflowExecution) => saveWorkflowRun(execution))
 
   safeHandle(IPC.WORKFLOW_RUN_LIST, (_, workflowId: string, limit?: number) =>
     listWorkflowRuns(workflowId, limit)

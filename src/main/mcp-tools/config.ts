@@ -3,7 +3,10 @@ import type { configManager as ConfigManagerInstance } from '../config-manager'
 
 type ConfigManager = typeof ConfigManagerInstance
 
-export function registerConfigTools(server: McpServer, deps: { configManager: ConfigManager }): void {
+export function registerConfigTools(
+  server: McpServer,
+  deps: { configManager: ConfigManager }
+): void {
   const { configManager } = deps
 
   server.tool(

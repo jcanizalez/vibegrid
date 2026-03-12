@@ -28,9 +28,10 @@ export function TaskBoardView() {
   )
 
   // Apply status filter
-  const allTasks = taskStatusFilter === 'all'
-    ? projectTasks
-    : projectTasks.filter((t) => t.status === taskStatusFilter)
+  const allTasks =
+    taskStatusFilter === 'all'
+      ? projectTasks
+      : projectTasks.filter((t) => t.status === taskStatusFilter)
 
   const todoTasks = allTasks.filter((t) => t.status === 'todo').sort((a, b) => a.order - b.order)
   const inProgressTasks = allTasks.filter((t) => t.status === 'in_progress')
@@ -42,7 +43,7 @@ export function TaskBoardView() {
     const project = config?.projects.find((p) => p.name === task.projectName)
     if (!project) return
     const agentType = config?.defaults.defaultAgent || 'claude'
-    const siblingTasks = (config?.tasks || []).filter(t => t.projectName === task.projectName)
+    const siblingTasks = (config?.tasks || []).filter((t) => t.projectName === task.projectName)
     const session = await window.api.createTerminal({
       agentType,
       projectName: project.name,
@@ -64,7 +65,11 @@ export function TaskBoardView() {
     if (task.assignedSessionId && terminals.has(task.assignedSessionId)) {
       return () => setFocusedTerminal(task.assignedSessionId!)
     }
-    if (task.agentSessionId && task.assignedAgent && (task.status === 'in_progress' || task.status === 'in_review' || task.status === 'done')) {
+    if (
+      task.agentSessionId &&
+      task.assignedAgent &&
+      (task.status === 'in_progress' || task.status === 'in_review' || task.status === 'done')
+    ) {
       return async () => {
         const project = config?.projects.find((p) => p.name === task.projectName)
         const agentType = task.assignedAgent!
@@ -144,13 +149,25 @@ export function TaskBoardView() {
           <TaskKanbanBoard
             allTasks={allTasks}
             onEdit={handleEdit}
-            onDelete={(id) => { removeTask(id); toast.success('Task deleted') }}
+            onDelete={(id) => {
+              removeTask(id)
+              toast.success('Task deleted')
+            }}
             onStart={handleStartTask}
             onDrop={handleKanbanDrop}
             onOpenSession={getOpenSessionHandler}
-            onComplete={(id) => { completeTask(id); toast.success('Task completed') }}
-            onCancel={(id) => { cancelTask(id); toast.info('Task cancelled') }}
-            onReopen={(id) => { reopenTask(id); toast.success('Task reopened') }}
+            onComplete={(id) => {
+              completeTask(id)
+              toast.success('Task completed')
+            }}
+            onCancel={(id) => {
+              cancelTask(id)
+              toast.info('Task cancelled')
+            }}
+            onReopen={(id) => {
+              reopenTask(id)
+              toast.success('Task reopened')
+            }}
             onReviewDiff={(id) => setSelectedTaskId(id)}
             onSelect={handleSelect}
             isSessionLive={isSessionLive}
@@ -159,12 +176,24 @@ export function TaskBoardView() {
           <TaskListView
             sections={sections}
             onEdit={handleEdit}
-            onDelete={(id) => { removeTask(id); toast.success('Task deleted') }}
+            onDelete={(id) => {
+              removeTask(id)
+              toast.success('Task deleted')
+            }}
             onStart={handleStartTask}
             onOpenSession={getOpenSessionHandler}
-            onComplete={(id) => { completeTask(id); toast.success('Task completed') }}
-            onCancel={(id) => { cancelTask(id); toast.info('Task cancelled') }}
-            onReopen={(id) => { reopenTask(id); toast.success('Task reopened') }}
+            onComplete={(id) => {
+              completeTask(id)
+              toast.success('Task completed')
+            }}
+            onCancel={(id) => {
+              cancelTask(id)
+              toast.info('Task cancelled')
+            }}
+            onReopen={(id) => {
+              reopenTask(id)
+              toast.success('Task reopened')
+            }}
             onReviewDiff={(id) => setSelectedTaskId(id)}
             onSelect={handleSelect}
             isSessionLive={isSessionLive}
