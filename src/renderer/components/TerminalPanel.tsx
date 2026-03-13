@@ -77,7 +77,7 @@ export function TerminalPanel() {
 
   const closeTab = useCallback(
     (id: string) => {
-      window.api.killTerminal(id)
+      window.api.killTerminal(id).catch(() => {})
       destroyTerminal(id)
       removeTab(id)
     },

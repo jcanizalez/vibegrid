@@ -3,6 +3,7 @@ import { promisify } from 'node:util'
 import { AgentType, AgentCommandConfig } from '../shared/types'
 import { DEFAULT_AGENT_COMMANDS } from '../shared/agent-defaults'
 import { configManager } from './config-manager'
+import { getSafeEnv } from './pty-manager'
 
 const execFileAsync = promisify(execFile)
 
@@ -11,7 +12,7 @@ export type AgentInstallStatus = Record<AgentType, boolean>
 async function commandExists(cmd: string): Promise<boolean> {
   try {
     const bin = process.platform === 'win32' ? 'where' : 'which'
-    await execFileAsync(bin, [cmd], { timeout: 3000 })
+    await execFileAsync(bin, [cmd], { timeout: 3000, env: getSafeEnv() })
     return true
   } catch {
     return false

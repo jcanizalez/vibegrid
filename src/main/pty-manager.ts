@@ -4,6 +4,7 @@ import os from 'node:os'
 import { EventEmitter } from 'node:events'
 import { execFileSync } from 'node:child_process'
 import { BrowserWindow } from 'electron'
+import log from './logger'
 import {
   AgentType,
   AgentStatus,
@@ -392,7 +393,11 @@ class PtyManager extends EventEmitter {
       }
     }
     if (p) {
-      p.kill()
+      try {
+        p.kill()
+      } catch (err) {
+        log.warn(`[pty] kill failed for ${id} (already dead?):`, err)
+      }
     }
   }
 

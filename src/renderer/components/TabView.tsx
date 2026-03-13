@@ -65,7 +65,11 @@ export function TabView() {
       setActiveTabId(nextId)
     }
 
-    await window.api.killTerminal(id)
+    try {
+      await window.api.killTerminal(id)
+    } catch {
+      // Terminal may already be dead — proceed with cleanup
+    }
     destroyTerminal(id)
     removeTerminal(id)
     toast.success(`Session "${name}" closed`)
