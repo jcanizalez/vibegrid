@@ -12,6 +12,15 @@ import {
   ArchivedSession
 } from '../../shared/types'
 
+export interface WorktreeInfo {
+  path: string
+  branch: string
+  isMain: boolean
+  isDirty?: boolean
+  diffStat?: { filesChanged: number; insertions: number; deletions: number }
+  linkedSessionId?: string
+}
+
 export type SortMode = 'manual' | 'created' | 'recent'
 export type StatusFilter = AgentStatus | 'all'
 export type TaskStatusFilter = 'all' | 'todo' | 'in_progress' | 'in_review' | 'done' | 'cancelled'
@@ -138,6 +147,8 @@ export interface UISlice {
   loadArchivedSessions: () => Promise<void>
   archiveSession: (id: string) => Promise<void>
   unarchiveSession: (id: string) => Promise<void>
+  worktreeCache: Map<string, WorktreeInfo[]>
+  loadWorktrees: (projectPath: string) => Promise<void>
 }
 
 export interface TasksSlice {

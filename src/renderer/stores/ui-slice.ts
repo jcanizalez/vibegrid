@@ -243,5 +243,36 @@ export const createUISlice: StateCreator<AppStore, [], [], UISlice> = (set, get)
     await window.api.unarchiveSession(id)
     const sessions = await window.api.listArchivedSessions()
     set({ archivedSessions: sessions })
+  },
+
+  worktreeCache: new Map(),
+  loadWorktrees: async (projectPath) => {
+    const worktrees = await window.api.listWorktrees(projectPath)
+    const terminals = get().terminals
+
+    const enriched = await Promise.all(
+      worktrees
+        .filter((wt) => !wt.isMain)
+        .map(async (wt) => {
+          const isDirty = await window.api.isWorktreeDirty(wt.path)
+          const diffStat = isDirty
+            ? ((await window.api.getGitDiffStat(wt.path)) ?? undefined)
+            : undefined
+          let linkedSessionId: string | undefined
+          for (const [id, t] of terminals) {
+            if (t.session.worktreePath === wt.path) {
+              linkedSessionId = id
+              break
+            }
+          }
+          return { ...wt, isDirty, diffStat, linkedSessionId }
+        })
+    )
+
+    set((state) => {
+      const next = new Map(state.worktreeCache)
+      next.set(projectPath, enriched)
+      return { worktreeCache: next }
+    })
   }
 })
