@@ -1,16 +1,26 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { execFile } from 'node:child_process'
 
+type ExecFileCallback = (err: Error | null, stdout: string, stderr: string) => void
+
 // Capture the env passed to execFile so we can assert on it
-const execFileMock = vi.fn((_cmd, _args, _opts, cb) => {
-  // Simulate "command not found" by default
-  const err = new Error('not found') as NodeJS.ErrnoException
-  err.code = 'ENOENT'
-  cb(err, '', '')
-})
+const execFileMock = vi.fn(
+  (_cmd: string, _args: string[], _opts: Record<string, unknown>, cb: ExecFileCallback) => {
+    // Simulate "command not found" by default
+    const err = new Error('not found') as NodeJS.ErrnoException
+    err.code = 'ENOENT'
+    cb(err, '', '')
+  }
+)
 
 vi.mock('node:child_process', () => ({
-  execFile: (...args: unknown[]) => (execFileMock as Function)(...args),
+  execFile: (...args: unknown[]) =>
+    execFileMock(
+      args[0] as string,
+      args[1] as string[],
+      args[2] as Record<string, unknown>,
+      args[3] as ExecFileCallback
+    ),
   execFileSync: vi.fn(() => {
     throw new Error('mock shell env')
   })
@@ -21,7 +31,7 @@ vi.mock('node:util', async () => {
   return {
     ...actual,
     // promisify(execFile) should return a function that calls our mock as a promise
-    promisify: (fn: Function) => {
+    promisify: (fn: unknown) => {
       if (fn === execFile) {
         return (cmd: string, args: string[], opts: Record<string, unknown>) =>
           new Promise((resolve, reject) => {
@@ -54,6 +64,8 @@ vi.mock('../src/main/config-manager', () => ({
 let detectInstalledAgents: typeof import('../src/main/agent-detector').detectInstalledAgents
 let clearAgentDetectionCache: typeof import('../src/main/agent-detector').clearAgentDetectionCache
 
+const originalEnv = process.env
+
 describe('agent-detector', () => {
   beforeEach(async () => {
     vi.resetModules()
@@ -68,6 +80,11 @@ describe('agent-detector', () => {
     ;({ detectInstalledAgents, clearAgentDetectionCache } = await import(
       '../src/main/agent-detector'
     ))
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    process.env = originalEnv
   })
 
   it('passes shell-resolved env to which/where (the production bug)', async () => {
@@ -102,8 +119,6 @@ describe('agent-detector', () => {
     for (const call of execFileMock.mock.calls) {
       expect(call[0]).toBe('which')
     }
-
-    vi.unstubAllGlobals()
   })
 
   it('uses "where" on Windows', async () => {
@@ -120,8 +135,6 @@ describe('agent-detector', () => {
     for (const call of execFileMock.mock.calls) {
       expect(call[0]).toBe('where')
     }
-
-    vi.unstubAllGlobals()
   })
 
   it('detects installed agents when which succeeds', async () => {
