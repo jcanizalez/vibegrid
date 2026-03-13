@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { FolderGit2, Trash2, FolderOpen, AlertTriangle } from 'lucide-react'
 
@@ -8,22 +8,30 @@ interface WorktreeCleanupInfo {
   worktreePath: string
 }
 
+type DirtyState = 'checking' | 'clean' | 'dirty' | 'unknown'
+
 export function WorktreeCleanupDialog() {
   const [pending, setPending] = useState<WorktreeCleanupInfo | null>(null)
   const [removing, setRemoving] = useState(false)
-  const [isDirty, setIsDirty] = useState(false)
-  const [checking, setChecking] = useState(false)
+  const [removeError, setRemoveError] = useState(false)
+  const [dirtyState, setDirtyState] = useState<DirtyState>('checking')
+  const checkIdRef = useRef(0)
 
   useEffect(() => {
     const unsub = window.api.onWorktreeCleanup((session) => {
-      setIsDirty(false)
-      setChecking(true)
+      const id = ++checkIdRef.current
+      setDirtyState('checking')
+      setRemoveError(false)
+      setRemoving(false)
       setPending(session)
       window.api
         .isWorktreeDirty(session.worktreePath)
-        .then(setIsDirty)
-        .catch(() => setIsDirty(false))
-        .finally(() => setChecking(false))
+        .then((dirty) => {
+          if (checkIdRef.current === id) setDirtyState(dirty ? 'dirty' : 'clean')
+        })
+        .catch(() => {
+          if (checkIdRef.current === id) setDirtyState('unknown')
+        })
     })
     return unsub
   }, [])
@@ -35,10 +43,27 @@ export function WorktreeCleanupDialog() {
   const handleRemove = async (): Promise<void> => {
     if (!pending) return
     setRemoving(true)
-    await window.api.removeWorktree(pending.projectPath, pending.worktreePath, isDirty)
-    setRemoving(false)
-    setPending(null)
+    setRemoveError(false)
+    try {
+      const force = dirtyState === 'dirty' || dirtyState === 'unknown'
+      const removed = await window.api.removeWorktree(
+        pending.projectPath,
+        pending.worktreePath,
+        force
+      )
+      if (removed) {
+        setPending(null)
+      } else {
+        setRemoveError(true)
+      }
+    } catch {
+      setRemoveError(true)
+    } finally {
+      setRemoving(false)
+    }
   }
+
+  const showWarning = dirtyState === 'dirty' || dirtyState === 'unknown'
 
   return (
     <AnimatePresence>
@@ -78,13 +103,22 @@ export function WorktreeCleanupDialog() {
               </div>
             </div>
 
-            {/* Dirty warning */}
-            {!checking && isDirty && (
+            {/* Dirty / unknown warning */}
+            {dirtyState !== 'checking' && showWarning && (
               <div className="mx-5 mb-2 px-3 py-2 bg-amber-500/[0.08] border border-amber-500/20 rounded-lg flex items-start gap-2">
                 <AlertTriangle size={14} className="text-amber-400 shrink-0 mt-0.5" />
                 <p className="text-[11px] text-amber-300/90">
-                  This worktree has uncommitted changes that will be permanently lost.
+                  {dirtyState === 'dirty'
+                    ? 'This worktree has uncommitted changes that will be permanently lost.'
+                    : 'Unable to check for uncommitted changes. Removal will use --force.'}
                 </p>
+              </div>
+            )}
+
+            {/* Remove error */}
+            {removeError && (
+              <div className="mx-5 mb-2 px-3 py-2 bg-red-500/[0.08] border border-red-500/20 rounded-lg">
+                <p className="text-[11px] text-red-300">Failed to remove worktree.</p>
               </div>
             )}
 
@@ -99,10 +133,10 @@ export function WorktreeCleanupDialog() {
               </button>
               <button
                 onClick={handleRemove}
-                disabled={removing || checking}
+                disabled={removing || dirtyState === 'checking'}
                 className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg transition-colors
                            disabled:opacity-50 ${
-                             isDirty
+                             showWarning
                                ? 'text-red-300 bg-red-500/[0.15] hover:bg-red-500/[0.25] border border-red-500/30'
                                : 'text-red-400 bg-red-500/[0.08] hover:bg-red-500/[0.15]'
                            }`}
@@ -110,9 +144,9 @@ export function WorktreeCleanupDialog() {
                 <Trash2 size={12} />
                 {removing
                   ? 'Removing...'
-                  : checking
+                  : dirtyState === 'checking'
                     ? 'Checking...'
-                    : isDirty
+                    : showWarning
                       ? 'Remove anyway'
                       : 'Remove'}
               </button>

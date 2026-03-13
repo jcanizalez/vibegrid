@@ -127,7 +127,8 @@ export function isWorktreeDirty(worktreePath: string): boolean {
     }).trim()
     return output.length > 0
   } catch {
-    return false
+    // Treat errors/timeouts as dirty to avoid accidental data loss
+    return true
   }
 }
 
