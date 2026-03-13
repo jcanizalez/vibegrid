@@ -107,6 +107,11 @@ export function WorkflowEditor() {
       const usedSlugs = new Set<string>()
       const migratedNodes = existingWorkflow.nodes.map((n) => {
         if (n.slug) {
+          if (usedSlugs.has(n.slug)) {
+            const uniqueSlug = ensureUniqueSlug(n.slug, usedSlugs)
+            usedSlugs.add(uniqueSlug)
+            return { ...n, slug: uniqueSlug }
+          }
           usedSlugs.add(n.slug)
           return n
         }
@@ -331,11 +336,27 @@ export function WorkflowEditor() {
 
   const handleNodeLabelChange = useCallback((nodeId: string, label: string) => {
     setNodes((nds) => {
+      const node = nds.find((n) => n.id === nodeId)
+      const oldSlug = node?.slug
       const existingSlugs = new Set(
         nds.filter((n) => n.id !== nodeId && n.slug).map((n) => n.slug!)
       )
       const newSlug = ensureUniqueSlug(slugify(label), existingSlugs)
-      return nds.map((n) => (n.id === nodeId ? { ...n, label, slug: newSlug } : n))
+
+      return nds.map((n) => {
+        if (n.id === nodeId) return { ...n, label, slug: newSlug }
+        // Update template references in other nodes when slug changes
+        if (oldSlug && oldSlug !== newSlug && n.config) {
+          const configStr = JSON.stringify(n.config)
+          if (configStr.includes(`steps.${oldSlug}.`)) {
+            return {
+              ...n,
+              config: JSON.parse(configStr.split(`steps.${oldSlug}.`).join(`steps.${newSlug}.`))
+            }
+          }
+        }
+        return n
+      })
     })
   }, [])
 

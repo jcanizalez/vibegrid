@@ -287,6 +287,20 @@ export function removeNode(
 
 // --- Flow Layout ---
 
+function collectNodeIds(rows: FlowRow[]): Set<string> {
+  const ids = new Set<string>()
+  for (const row of rows) {
+    if (row.kind === 'node') {
+      ids.add(row.node.id)
+    } else {
+      for (const branch of row.branches) {
+        collectNodeIds(branch).forEach((id) => ids.add(id))
+      }
+    }
+  }
+  return ids
+}
+
 export function computeFlowLayout(nodes: WorkflowNode[], edges: WorkflowEdge[]): FlowRow[] {
   if (nodes.length === 0) return []
 
@@ -296,7 +310,17 @@ export function computeFlowLayout(nodes: WorkflowNode[], edges: WorkflowEdge[]):
 
   if (!triggerNode) return nodes.map((n) => ({ kind: 'node' as const, node: n }))
 
-  return buildFlowFromNode(triggerNode.id, null, nodeMap, successorsMap)
+  const rows = buildFlowFromNode(triggerNode.id, null, nodeMap, successorsMap)
+
+  // Append orphan nodes not reachable from the trigger
+  const visited = collectNodeIds(rows)
+  for (const node of nodes) {
+    if (!visited.has(node.id)) {
+      rows.push({ kind: 'node', node })
+    }
+  }
+
+  return rows
 }
 
 function buildFlowFromNode(

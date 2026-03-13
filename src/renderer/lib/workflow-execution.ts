@@ -347,6 +347,17 @@ export async function executeWorkflow(
       await Promise.all(promises)
     }
 
+    // Mark any nodes still pending as skipped (unreachable due to missing edges or cycles)
+    const pendingNodes = execution.nodeStates.filter((ns) => ns.status === 'pending')
+    if (pendingNodes.length > 0) {
+      for (const ns of pendingNodes) {
+        ns.status = 'error'
+        ns.completedAt = new Date().toISOString()
+        ns.error = 'Skipped: predecessor nodes did not complete'
+      }
+      persistExecution(workflow.id, execution)
+    }
+
     const hasErrors = execution.nodeStates.some((ns) => ns.status === 'error')
     execution.status = hasErrors ? 'error' : 'success'
     execution.completedAt = new Date().toISOString()

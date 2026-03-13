@@ -1,4 +1,12 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
+import {
+  useState,
+  useRef,
+  useEffect,
+  useCallback,
+  useMemo,
+  type KeyboardEvent,
+  type ChangeEvent
+} from 'react'
 import { Braces, ChevronDown, ChevronRight } from 'lucide-react'
 import type { StepVariableGroup, TemplateVariable } from '../../../lib/template-vars'
 
@@ -15,6 +23,7 @@ interface Props {
 
 interface DropdownItem {
   group: string
+  groupId: string
   key: string
   label: string
   description: string
@@ -47,6 +56,7 @@ export function VariableAutocomplete({
       for (const k of group.keys) {
         items.push({
           group: group.label,
+          groupId: group.slug,
           key: k.key,
           label: k.label,
           description: k.description,
@@ -57,11 +67,25 @@ export function VariableAutocomplete({
     }
 
     for (const v of contextVars.filter((v) => v.category === 'task')) {
-      items.push({ group: 'Task', key: v.key, label: v.label, description: '', pattern: v.key })
+      items.push({
+        group: 'Task',
+        groupId: 'task',
+        key: v.key,
+        label: v.label,
+        description: '',
+        pattern: v.key
+      })
     }
 
     for (const v of contextVars.filter((v) => v.category === 'trigger')) {
-      items.push({ group: 'Trigger', key: v.key, label: v.label, description: '', pattern: v.key })
+      items.push({
+        group: 'Trigger',
+        groupId: 'trigger',
+        key: v.key,
+        label: v.label,
+        description: '',
+        pattern: v.key
+      })
     }
 
     return items
@@ -79,17 +103,17 @@ export function VariableAutocomplete({
   }, [allItems, filter])
 
   const visibleItems = useMemo(() => {
-    return filteredItems.filter((item) => !collapsedGroups.has(item.group))
+    return filteredItems.filter((item) => !collapsedGroups.has(item.groupId))
   }, [filteredItems, collapsedGroups])
 
   const groupedItems = useMemo(() => {
-    const groups: { name: string; items: DropdownItem[]; disabled?: boolean }[] = []
-    let currentGroup = ''
+    const groups: { id: string; name: string; items: DropdownItem[]; disabled?: boolean }[] = []
+    let currentGroupId = ''
 
     for (const item of filteredItems) {
-      if (item.group !== currentGroup) {
-        currentGroup = item.group
-        groups.push({ name: item.group, items: [], disabled: item.disabled })
+      if (item.groupId !== currentGroupId) {
+        currentGroupId = item.groupId
+        groups.push({ id: item.groupId, name: item.group, items: [], disabled: item.disabled })
       }
       groups[groups.length - 1].items.push(item)
     }
@@ -128,7 +152,7 @@ export function VariableAutocomplete({
   )
 
   const handleChange = useCallback(
-    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    (e: ChangeEvent<HTMLTextAreaElement>) => {
       const newValue = e.target.value
       onChange(newValue)
 
@@ -157,7 +181,7 @@ export function VariableAutocomplete({
   )
 
   const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
+    (e: KeyboardEvent<HTMLTextAreaElement>) => {
       if (!showDropdown) return
 
       if (e.key === 'Escape') {
@@ -230,6 +254,7 @@ export function VariableAutocomplete({
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           rows={rows}
+          spellCheck={false}
           className={`w-full px-3 py-2 text-[13px] bg-white/[0.06] border border-white/[0.1] rounded-md
                      text-white placeholder:text-gray-600 focus:outline-none focus:border-blue-500/50
                      resize-none ${mono ? 'font-mono text-[12px]' : ''} ${className || ''}`}
@@ -287,13 +312,13 @@ export function VariableAutocomplete({
             )}
 
             {groupedItems.map((group) => {
-              const isCollapsed = collapsedGroups.has(group.name)
+              const isCollapsed = collapsedGroups.has(group.id)
               const Chevron = isCollapsed ? ChevronRight : ChevronDown
 
               return (
-                <div key={group.name}>
+                <div key={group.id}>
                   <button
-                    onClick={() => toggleGroup(group.name)}
+                    onClick={() => toggleGroup(group.id)}
                     className={`w-full flex items-center gap-1.5 px-2.5 py-1.5 text-[10px] font-semibold
                                uppercase tracking-wider transition-colors
                                ${group.disabled ? 'text-gray-600' : 'text-gray-500 hover:text-gray-400 hover:bg-white/[0.03]'}`}

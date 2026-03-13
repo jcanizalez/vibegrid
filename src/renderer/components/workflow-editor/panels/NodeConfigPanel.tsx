@@ -58,7 +58,7 @@ export function NodeConfigPanel({
           />
           {node.slug && node.type !== 'trigger' && (
             <p className="text-[10px] text-gray-600 mt-1 font-mono">
-              Ref: steps.{node.slug}.output
+              Ref: {`{{steps.${node.slug}.output}}`}
             </p>
           )}
         </div>
