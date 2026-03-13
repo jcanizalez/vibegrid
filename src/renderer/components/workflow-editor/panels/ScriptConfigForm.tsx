@@ -65,7 +65,7 @@ export function ScriptConfigForm({ config, onChange, triggerType, stepGroups = [
               })
             } else {
               // Clear project context
-              const { projectName, projectPath, ...rest } = config
+              const { projectName: _pn, projectPath: _pp, ...rest } = config
               onChange(rest as ScriptConfig)
             }
           }}

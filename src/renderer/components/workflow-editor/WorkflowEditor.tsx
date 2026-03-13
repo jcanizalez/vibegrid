@@ -7,7 +7,6 @@ import {
   WorkflowNode,
   WorkflowEdge,
   TriggerConfig,
-  LaunchAgentConfig,
   AgentType
 } from '../../../shared/types'
 import { WorkflowCanvas } from './WorkflowCanvas'
@@ -23,8 +22,7 @@ import {
   insertNodeBetween,
   insertBeforeFork,
   addParallelBranch,
-  removeNode,
-  autoLayoutNodes
+  removeNode
 } from '../../lib/workflow-helpers'
 import { executeWorkflow } from '../../lib/workflow-execution'
 import {
@@ -94,6 +92,7 @@ export function WorkflowEditor() {
     }
     if (!isOpen) {
       loadedRunsForId.current = null
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setExecutionHistory([])
     }
   }, [editingId, isOpen])
@@ -101,6 +100,7 @@ export function WorkflowEditor() {
   // Load existing workflow when editing (with slug migration)
   useEffect(() => {
     if (existingWorkflow) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setName(existingWorkflow.name)
       setIcon(existingWorkflow.icon)
       setIconColor(existingWorkflow.iconColor)
@@ -209,7 +209,6 @@ export function WorkflowEditor() {
     edges,
     enabled,
     staggerDelayMs,
-    existingWorkflow,
     updateWorkflow,
     addWorkflow,
     handleClose

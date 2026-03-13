@@ -122,7 +122,7 @@ export function VariableAutocomplete({
   }, [filteredItems])
 
   useEffect(() => {
-    setHighlightIndex(0)
+    setHighlightIndex(0) // eslint-disable-line react-hooks/set-state-in-effect
   }, [filter])
 
   const insertPattern = useCallback(

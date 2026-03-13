@@ -13,6 +13,13 @@ import { resolveTemplateVars, StepOutputs } from './template-vars'
 import { buildTaskPrompt } from '../../shared/prompt-builder'
 import { useAppStore } from '../stores'
 
+/** Guard against concurrent execution of the same workflow */
+const runningWorkflows = new Set<string>()
+
+export interface ExecuteWorkflowOptions {
+  source?: 'scheduler' | 'manual'
+}
+
 function resolveTaskContext(task: TaskConfig, fallbackBranch?: string, fallbackWorktree?: boolean) {
   const state = useAppStore.getState()
   const project = state.config?.projects.find((p) => p.name === task.projectName)
@@ -194,7 +201,8 @@ async function executeNode(
         initialPrompt,
         promptDelayMs: config.promptDelayMs,
         headless: true,
-        taskId: resolvedTaskId
+        taskId: resolvedTaskId,
+        args: config.args
       })
 
       sessionId = headlessSession.id
@@ -237,7 +245,8 @@ async function executeNode(
       useWorktree,
       initialPrompt,
       promptDelayMs: config.promptDelayMs,
-      taskId: resolvedTaskId
+      taskId: resolvedTaskId,
+      args: config.args
     })
     useAppStore.getState().addTerminal(session)
 
@@ -258,8 +267,18 @@ async function executeNode(
 
 export async function executeWorkflow(
   workflow: WorkflowDefinition,
-  context?: WorkflowExecutionContext
+  context?: WorkflowExecutionContext,
+  options?: ExecuteWorkflowOptions
 ): Promise<WorkflowExecution> {
+  // Concurrency guard — prevent duplicate runs of the same workflow
+  if (runningWorkflows.has(workflow.id)) {
+    console.warn(`[workflow] skipping execution of "${workflow.name}" — already running`)
+    const existing = useAppStore.getState().workflowExecutions.get(workflow.id)
+    if (existing) return existing
+    throw new Error(`Workflow "${workflow.name}" is already executing`)
+  }
+  runningWorkflows.add(workflow.id)
+
   const triggerNode = getTriggerNode(workflow)
 
   const execution: WorkflowExecution = {
@@ -372,6 +391,8 @@ export async function executeWorkflow(
         ns.error = err instanceof Error ? err.message : String(err)
       }
     }
+  } finally {
+    runningWorkflows.delete(workflow.id)
   }
 
   const terminals = useAppStore.getState().terminals
@@ -385,6 +406,16 @@ export async function executeWorkflow(
   }
 
   persistExecution(workflow.id, execution)
+
+  // Report completion to main process for schedule log + workflow status update
+  await window.api.reportWorkflowComplete({
+    workflowId: workflow.id,
+    workflowName: workflow.name,
+    completedAt: execution.completedAt!,
+    status: execution.status,
+    sessionsLaunched: actionNodeCount,
+    source: options?.source
+  })
 
   if (Notification.permission === 'granted') {
     new Notification('VibeGrid', {
