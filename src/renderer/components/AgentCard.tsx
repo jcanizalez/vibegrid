@@ -87,7 +87,11 @@ export const AgentCard = forwardRef<HTMLDivElement, Props>(function AgentCard(
   const handleKill = async (): Promise<void> => {
     const name = getDisplayName(terminal.session)
     if (focusedId === terminalId) setFocused(null)
-    await window.api.killTerminal(terminalId)
+    try {
+      await window.api.killTerminal(terminalId)
+    } catch (err) {
+      console.warn(`[AgentCard] killTerminal failed for ${terminalId}:`, err)
+    }
     destroyTerminal(terminalId)
     removeTerminal(terminalId)
     toast.success(`Session "${name}" closed`)

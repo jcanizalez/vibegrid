@@ -742,7 +742,11 @@ export function ProjectSidebar() {
                                   <button
                                     onClick={async (e) => {
                                       e.stopPropagation()
-                                      await window.api.killTerminal(s.id)
+                                      try {
+                                        await window.api.killTerminal(s.id)
+                                      } catch {
+                                        // Terminal may already be dead
+                                      }
                                       useAppStore.getState().removeTerminal(s.id)
                                     }}
                                     className="opacity-0 group-hover/session:opacity-100 text-gray-600 hover:text-red-400

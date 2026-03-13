@@ -4,6 +4,7 @@ import os from 'node:os'
 import { EventEmitter } from 'node:events'
 import { execFileSync } from 'node:child_process'
 import { BrowserWindow } from 'electron'
+import log from './logger'
 import {
   AgentType,
   AgentStatus,
@@ -392,7 +393,17 @@ class PtyManager extends EventEmitter {
       }
     }
     if (p) {
-      p.kill()
+      // Defer the actual kill so the IPC response returns immediately.
+      // All state cleanup is already done above, so the renderer can proceed
+      // without waiting for the process to die (avoids UI freeze on Windows
+      // where conpty termination can block the event loop).
+      setImmediate(() => {
+        try {
+          p.kill()
+        } catch (err) {
+          log.warn(`[pty] kill failed for ${id} (already dead?):`, err)
+        }
+      })
     }
   }
 
