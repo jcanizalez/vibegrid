@@ -882,9 +882,8 @@ export function ProjectSidebar() {
                                               const session = await window.api.createTerminal({
                                                 agentType,
                                                 projectName: project.name,
-                                                projectPath: project.path,
-                                                branch: wt.branch,
-                                                useWorktree: true
+                                                projectPath: wt.path,
+                                                branch: wt.branch
                                               })
                                               addTerminal(session)
                                             }}
