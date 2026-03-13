@@ -7,6 +7,7 @@ import {
   AgentType,
   TaskConfig
 } from '../../shared/types'
+import type { WorktreeInfo } from '../stores/types'
 import { buildTaskPrompt } from '../../shared/prompt-builder'
 import { getDisplayName } from '../lib/terminal-display'
 import {
@@ -68,6 +69,8 @@ const STATUS_DOT_COLOR: Record<AgentStatus, string> = {
   idle: 'bg-gray-500',
   error: 'bg-red-400'
 }
+
+const EMPTY_WORKTREES: WorktreeInfo[] = []
 
 const ICON_MAP: Record<
   string,
@@ -333,6 +336,8 @@ export function ProjectSidebar() {
   const setShowArchivedSessions = useAppStore((s) => s.setShowArchivedSessions)
   const loadArchivedSessions = useAppStore((s) => s.loadArchivedSessions)
   const unarchiveSession = useAppStore((s) => s.unarchiveSession)
+  const worktreeCache = useAppStore((s) => s.worktreeCache)
+  const loadWorktrees = useAppStore((s) => s.loadWorktrees)
 
   const [sidebarWidth, setSidebarWidth] = useState(256)
   const [openMenuProject, setOpenMenuProject] = useState<string | null>(null)
@@ -340,6 +345,7 @@ export function ProjectSidebar() {
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set())
   const [collapsedSessions, setCollapsedSessions] = useState<Set<string>>(new Set())
   const [collapsedTasks, setCollapsedTasks] = useState<Set<string>>(new Set())
+  const [expandedWorktrees, setExpandedWorktrees] = useState<Set<string>>(new Set())
   const [projectsSectionCollapsed, setProjectsSectionCollapsed] = useState(false)
   const [workflowsSectionCollapsed, setWorkflowsSectionCollapsed] = useState(false)
   const isResizing = useRef(false)
@@ -416,7 +422,14 @@ export function ProjectSidebar() {
 
   const projectTerminals = new Map<
     string,
-    { id: string; name: string; status: AgentStatus; agentType: AgentType; branch?: string }[]
+    {
+      id: string
+      name: string
+      status: AgentStatus
+      agentType: AgentType
+      branch?: string
+      isWorktree?: boolean
+    }[]
   >()
   for (const [id, t] of terminals) {
     const pName = t.session.projectName
@@ -426,7 +439,8 @@ export function ProjectSidebar() {
       name: getDisplayName(t.session),
       status: t.status,
       agentType: t.session.agentType,
-      branch: t.session.branch
+      branch: t.session.branch,
+      isWorktree: t.session.isWorktree
     })
   }
 
@@ -453,6 +467,19 @@ export function ProjectSidebar() {
       const next = new Set(prev)
       if (next.has(name)) next.delete(name)
       else next.add(name)
+      return next
+    })
+  }
+
+  const toggleWorktreesExpanded = (project: ProjectConfig): void => {
+    setExpandedWorktrees((prev) => {
+      const next = new Set(prev)
+      if (next.has(project.name)) {
+        next.delete(project.name)
+      } else {
+        next.add(project.name)
+        loadWorktrees(project.path)
+      }
       return next
     })
   }
@@ -737,6 +764,13 @@ export function ProjectSidebar() {
                                     />
                                   </span>
                                   <span className="truncate">{s.name}</span>
+                                  {s.isWorktree && (
+                                    <FolderGit2
+                                      size={10}
+                                      className="text-amber-500 shrink-0 ml-auto"
+                                      strokeWidth={1.5}
+                                    />
+                                  )}
                                 </button>
                                 <Tooltip label="Close session" position="right">
                                   <button
@@ -761,6 +795,144 @@ export function ProjectSidebar() {
                         </div>
                       )}
                     </div>
+
+                    {/* Worktrees sub-group */}
+                    {(() => {
+                      const worktrees = worktreeCache.get(project.path) ?? EMPTY_WORKTREES
+                      const isWorktreesExpanded = expandedWorktrees.has(project.name)
+                      return (
+                        <div>
+                          <div className="group/worktrees flex items-center gap-1.5 px-2 py-1">
+                            <button
+                              onClick={() => toggleWorktreesExpanded(project)}
+                              className="flex items-center gap-1.5 flex-1 min-w-0"
+                            >
+                              <ChevronRight
+                                size={10}
+                                strokeWidth={2}
+                                className={`text-gray-600 transition-transform shrink-0 ${isWorktreesExpanded ? 'rotate-90' : ''}`}
+                              />
+                              <FolderGit2
+                                size={11}
+                                strokeWidth={2}
+                                className="text-amber-500/60 shrink-0"
+                              />
+                              <span className="text-[11px] font-medium text-gray-500 uppercase tracking-wider">
+                                Worktrees
+                              </span>
+                              {worktrees.length > 0 && (
+                                <span className="text-[10px] text-gray-600 bg-white/[0.06] px-1.5 py-0.5 rounded-full">
+                                  {worktrees.length}
+                                </span>
+                              )}
+                            </button>
+                          </div>
+                          {isWorktreesExpanded && (
+                            <div className="space-y-0.5">
+                              {worktrees.length === 0 ? (
+                                <p className="text-[11px] text-gray-600 py-0.5 pl-2">
+                                  No worktrees
+                                </p>
+                              ) : (
+                                worktrees.map((wt) => (
+                                  <div key={wt.path} className="group/wt flex items-center">
+                                    <div className="flex-1 px-2 py-1 rounded-md text-[12px] flex items-center gap-2 min-w-0">
+                                      <FolderGit2
+                                        size={11}
+                                        className="text-amber-500 shrink-0"
+                                        strokeWidth={1.5}
+                                      />
+                                      <span className="text-amber-400 font-mono text-[11px] truncate">
+                                        {wt.branch}
+                                      </span>
+                                      {wt.isDirty && (
+                                        <span
+                                          className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0"
+                                          title={
+                                            wt.diffStat
+                                              ? `+${wt.diffStat.insertions} -${wt.diffStat.deletions} in ${wt.diffStat.filesChanged} file${wt.diffStat.filesChanged !== 1 ? 's' : ''}`
+                                              : 'Has uncommitted changes'
+                                          }
+                                        />
+                                      )}
+                                      {wt.linkedSessionId && (
+                                        <span
+                                          className="w-1.5 h-1.5 rounded-full bg-green-400 shrink-0"
+                                          title="Active session"
+                                        />
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-0.5">
+                                      {wt.linkedSessionId ? (
+                                        <Tooltip label="Focus session" position="right">
+                                          <button
+                                            onClick={() => setFocusedTerminal(wt.linkedSessionId!)}
+                                            className="opacity-0 group-hover/wt:opacity-100 text-gray-600 hover:text-green-400
+                                                     p-1 rounded-md hover:bg-white/[0.06] transition-all shrink-0"
+                                          >
+                                            <Terminal size={12} strokeWidth={2} />
+                                          </button>
+                                        </Tooltip>
+                                      ) : (
+                                        <Tooltip label="Open terminal here" position="right">
+                                          <button
+                                            onClick={async () => {
+                                              const agentType =
+                                                config?.defaults.defaultAgent || 'claude'
+                                              const session = await window.api.createTerminal({
+                                                agentType,
+                                                projectName: project.name,
+                                                projectPath: project.path,
+                                                branch: wt.branch,
+                                                useWorktree: true
+                                              })
+                                              addTerminal(session)
+                                            }}
+                                            className="opacity-0 group-hover/wt:opacity-100 text-gray-600 hover:text-green-400
+                                                     p-1 rounded-md hover:bg-white/[0.06] transition-all shrink-0"
+                                          >
+                                            <Play size={12} strokeWidth={2} />
+                                          </button>
+                                        </Tooltip>
+                                      )}
+                                      {!wt.linkedSessionId && (
+                                        <Tooltip label="Remove worktree" position="right">
+                                          <button
+                                            onClick={async () => {
+                                              if (wt.isDirty) {
+                                                const ok = confirm(
+                                                  'This worktree has uncommitted changes that will be permanently lost. Remove anyway?'
+                                                )
+                                                if (!ok) return
+                                              }
+                                              const removed = await window.api.removeWorktree(
+                                                project.path,
+                                                wt.path,
+                                                wt.isDirty
+                                              )
+                                              if (removed) {
+                                                toast.success('Worktree removed')
+                                                loadWorktrees(project.path)
+                                              } else {
+                                                toast.error('Failed to remove worktree')
+                                              }
+                                            }}
+                                            className="opacity-0 group-hover/wt:opacity-100 text-gray-600 hover:text-red-400
+                                                     p-1 rounded-md hover:bg-white/[0.06] transition-all shrink-0"
+                                          >
+                                            <Trash2 size={12} strokeWidth={2} />
+                                          </button>
+                                        </Tooltip>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })()}
 
                     {/* Tasks sub-group */}
                     {(() => {
