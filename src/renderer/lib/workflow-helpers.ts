@@ -350,10 +350,7 @@ export function appendNodeAfter(
   newNode: WorkflowNode
 ): { nodes: WorkflowNode[]; edges: WorkflowEdge[] } {
   const newNodes = [...nodes, newNode]
-  const newEdges = [
-    ...edges,
-    { id: crypto.randomUUID(), source: afterNodeId, target: newNode.id }
-  ]
+  const newEdges = [...edges, { id: crypto.randomUUID(), source: afterNodeId, target: newNode.id }]
   return { nodes: autoLayoutNodes(newNodes, newEdges), edges: newEdges }
 }
 
@@ -364,9 +361,7 @@ export function insertBeforeFork(
   newNode: WorkflowNode
 ): { nodes: WorkflowNode[]; edges: WorkflowEdge[] } {
   const newEdges = edges.map((e) =>
-    e.source === forkNodeId
-      ? { id: crypto.randomUUID(), source: newNode.id, target: e.target }
-      : e
+    e.source === forkNodeId ? { id: crypto.randomUUID(), source: newNode.id, target: e.target } : e
   )
   newEdges.push({ id: crypto.randomUUID(), source: forkNodeId, target: newNode.id })
 

@@ -8,11 +8,13 @@ import {
 // --- Slug Utilities ---
 
 export function slugify(label: string): string {
-  return label
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '_')
-    .replace(/^_|_$/g, '')
-    .replace(/_+/g, '_') || 'step'
+  return (
+    label
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_|_$/g, '')
+      .replace(/_+/g, '_') || 'step'
+  )
 }
 
 export function ensureUniqueSlug(slug: string, existing: Set<string>): string {

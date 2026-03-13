@@ -16,11 +16,7 @@ interface Props {
   nodes: WorkflowNode[]
   edges: WorkflowEdge[]
   onNodeClick: (nodeId: string) => void
-  onInsertNode: (
-    afterNodeId: string,
-    beforeNodeId: string | null,
-    type: 'agent' | 'script'
-  ) => void
+  onInsertNode: (afterNodeId: string, beforeNodeId: string | null, type: 'agent' | 'script') => void
   onAddParallelBranch: (forkFromId: string, type: 'agent' | 'script') => void
   selectedNodeId: string | null
 }
@@ -87,11 +83,7 @@ function FlowRowRenderer({
 }: {
   rows: FlowRow[]
   onNodeClick: (nodeId: string) => void
-  onInsertNode: (
-    afterNodeId: string,
-    beforeNodeId: string | null,
-    type: 'agent' | 'script'
-  ) => void
+  onInsertNode: (afterNodeId: string, beforeNodeId: string | null, type: 'agent' | 'script') => void
   onAddParallelBranch: (forkFromId: string, type: 'agent' | 'script') => void
   selectedNodeId: string | null
   isInsideBranch?: boolean
@@ -139,9 +131,7 @@ function FlowRowRenderer({
                     onAddAction={() => onInsertNode(row.node.id, null, 'agent')}
                     onAddScript={() => onInsertNode(row.node.id, null, 'script')}
                     onAddParallelBranch={
-                      !isInsideBranch
-                        ? () => onAddParallelBranch(row.node.id, 'agent')
-                        : undefined
+                      !isInsideBranch ? () => onAddParallelBranch(row.node.id, 'agent') : undefined
                     }
                   />
                 </>
@@ -170,9 +160,7 @@ function HorizontalBar({ branchCount }: { branchCount: number }) {
     <div className="flex w-full">
       {Array.from({ length: branchCount }, (_, i) => (
         <div key={i} className="flex-1 relative h-px">
-          {i > 0 && (
-            <div className="absolute left-0 right-1/2 top-0 h-px bg-white/[0.15]" />
-          )}
+          {i > 0 && <div className="absolute left-0 right-1/2 top-0 h-px bg-white/[0.15]" />}
           {i < branchCount - 1 && (
             <div className="absolute left-1/2 right-0 top-0 h-px bg-white/[0.15]" />
           )}
@@ -191,11 +179,7 @@ function ForkRenderer({
 }: {
   row: Extract<FlowRow, { kind: 'fork' }>
   onNodeClick: (nodeId: string) => void
-  onInsertNode: (
-    afterNodeId: string,
-    beforeNodeId: string | null,
-    type: 'agent' | 'script'
-  ) => void
+  onInsertNode: (afterNodeId: string, beforeNodeId: string | null, type: 'agent' | 'script') => void
   onAddParallelBranch: (forkFromId: string, type: 'agent' | 'script') => void
   selectedNodeId: string | null
 }) {
@@ -207,8 +191,7 @@ function ForkRenderer({
 
       <div className="flex w-full">
         {row.branches.map((branch, bi) => {
-          const branchKey =
-            branch[0]?.kind === 'node' ? branch[0].node.id : `branch-${bi}`
+          const branchKey = branch[0]?.kind === 'node' ? branch[0].node.id : `branch-${bi}`
 
           return (
             <div

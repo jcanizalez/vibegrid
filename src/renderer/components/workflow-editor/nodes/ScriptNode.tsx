@@ -28,7 +28,10 @@ export function ScriptNode({ label, config, selected, executionStatus, onClick }
   const color = SCRIPT_COLORS[config.scriptType] || '#6b7280'
 
   const preview = config.scriptContent
-    ? config.scriptContent.split('\n').find((l) => l.trim() && !l.startsWith('#'))?.trim()
+    ? config.scriptContent
+        .split('\n')
+        .find((l) => l.trim() && !l.startsWith('#'))
+        ?.trim()
     : undefined
 
   const statusColor =

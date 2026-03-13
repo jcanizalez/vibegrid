@@ -271,9 +271,7 @@ export function WorkflowEditor() {
         type === 'script'
           ? createScriptNode()
           : createLaunchAgentNode(
-              firstProject
-                ? { projectName: firstProject.name, projectPath: firstProject.path }
-                : {}
+              firstProject ? { projectName: firstProject.name, projectPath: firstProject.path } : {}
             )
       if (newNode.slug) {
         const existingSlugs = new Set(nodes.filter((n) => n.slug).map((n) => n.slug!))
@@ -333,7 +331,9 @@ export function WorkflowEditor() {
 
   const handleNodeLabelChange = useCallback((nodeId: string, label: string) => {
     setNodes((nds) => {
-      const existingSlugs = new Set(nds.filter((n) => n.id !== nodeId && n.slug).map((n) => n.slug!))
+      const existingSlugs = new Set(
+        nds.filter((n) => n.id !== nodeId && n.slug).map((n) => n.slug!)
+      )
       const newSlug = ensureUniqueSlug(slugify(label), existingSlugs)
       return nds.map((n) => (n.id === nodeId ? { ...n, label, slug: newSlug } : n))
     })
