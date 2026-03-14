@@ -30,7 +30,16 @@ export async function launchServer(): Promise<ServerBridge> {
     stdio: ['pipe', 'pipe', 'pipe'],
     env: {
       ...process.env,
-      NODE_ENV: process.env.NODE_ENV ?? (isDev ? 'development' : 'production')
+      NODE_ENV: process.env.NODE_ENV ?? (isDev ? 'development' : 'production'),
+      // In production, native modules live in the asar-unpacked node_modules
+      ...(isDev
+        ? {}
+        : {
+            NODE_PATH: [
+              path.join(app.getAppPath(), 'node_modules'),
+              path.join(app.getAppPath() + '.unpacked', 'node_modules')
+            ].join(path.delimiter)
+          })
     },
     cwd: isDev ? path.join(__dirname, '../..') : undefined
   })
