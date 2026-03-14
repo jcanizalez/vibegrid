@@ -152,7 +152,7 @@ export async function stopServer(): Promise<void> {
 
 function resolveServerEntry(): string {
   // In dev: packages/server/src/index.ts (run via tsx)
-  // In production: resources/server/index.js (bundled)
+  // In production: resources/server/index.cjs (bundled)
   if (process.env.ELECTRON_RENDERER_URL) {
     // Dev mode — use tsx to run TypeScript directly
     return path.join(__dirname, '../../packages/server/src/index.ts')
@@ -185,16 +185,11 @@ function readServerPort(child: ChildProcess | UtilityProcess): Promise<number> {
       }
     })
 
-    // Listen for process exit — use type-safe approach since ChildProcess
-    // and UtilityProcess have different event signatures for 'exit'
+    // Both ChildProcess and UtilityProcess support .on('exit', cb)
     const onExit = (code: number | null) => {
       clearTimeout(timeout)
       reject(new Error(`Server exited before reporting port (code=${code})`))
     }
-    if ('pid' in child && typeof (child as ChildProcess).on === 'function') {
-      ;(child as ChildProcess).on('exit', onExit)
-    } else {
-      ;(child as UtilityProcess).on('exit', onExit)
-    }
+    ;(child as UtilityProcess).on('exit', onExit)
   })
 }

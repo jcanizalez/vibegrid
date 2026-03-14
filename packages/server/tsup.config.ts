@@ -43,17 +43,19 @@ const NATIVE_MODULE_PATCH = `
       // Shim the 'bindings' package — return a function that resolves
       // addon names from our known unpacked paths
       if (request === 'bindings') {
-        return function(addonName) {
-          if (knownAddons[addonName]) {
-            return origLoad.call(Module, knownAddons[addonName], parent, false);
+        return function(opts) {
+          // bindings accepts a string or { bindings: 'name.node', ... }
+          var name = typeof opts === 'object' ? opts.bindings : opts;
+          if (knownAddons[name]) {
+            return origLoad.call(Module, knownAddons[name], parent, false);
           }
           // Fallback: try original bindings module
-          return origLoad.call(Module, 'bindings', parent, isMain)(addonName);
+          return origLoad.call(Module, 'bindings', parent, isMain)(opts);
         };
       }
       return origLoad.call(this, request, parent, isMain);
     };
-  } catch(e) { /* skip */ }
+  } catch(e) { console.error('[native-module-patch] failed:', e); }
 })();
 `
 
