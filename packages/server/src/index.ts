@@ -1,7 +1,9 @@
 import os from 'node:os'
 import path from 'node:path'
+import fs from 'node:fs'
 import Fastify from 'fastify'
 import websocket from '@fastify/websocket'
+import fastifyStatic from '@fastify/static'
 import { handleConnection, registerMethod } from './ws-handler'
 import { registerAllMethods, setServerPort } from './register-methods'
 import { configManager } from './config-manager'
@@ -61,6 +63,21 @@ export async function startServer(
   })
 
   app.get('/health', async () => ({ status: 'ok' }))
+
+  // Serve built PWA at / (only if web dist exists)
+  const webDistPath = path.join(__dirname, '../../web/dist')
+  if (fs.existsSync(webDistPath)) {
+    await app.register(fastifyStatic, {
+      root: webDistPath,
+      prefix: '/',
+      decorateReply: false
+    })
+    // SPA fallback: serve index.html for all non-API routes
+    app.setNotFoundHandler((_req, reply) => {
+      reply.sendFile('index.html')
+    })
+    log.info(`[server] serving PWA from ${webDistPath}`)
+  }
 
   // Register all RPC methods
   registerAllMethods()
