@@ -7,7 +7,7 @@ import { RichMarkdownEditor } from './rich-editor/RichMarkdownEditor'
 import { AgentIcon } from './AgentIcon'
 import { DiffFileList, DiffContent } from './DiffSidebar'
 import { CommitDialog } from './CommitDialog'
-import { STATUS_BADGE, STATUS_ICON } from './task-board/TaskCard'
+import { STATUS_BADGE, STATUS_ICON } from '../lib/task-status'
 import { toast } from './Toast'
 import {
   X,
@@ -143,7 +143,7 @@ export function TaskDetailPanel() {
       return
     }
     window.api.listWorkflowRunsByTask(task.id, 20).then(setRelatedRuns)
-  }, [task?.id])
+  }, [task])
 
   // Live refresh: re-query when any related workflow execution changes
   useEffect(() => {
@@ -158,7 +158,7 @@ export function TaskDetailPanel() {
     if (relevant) {
       window.api.listWorkflowRunsByTask(task.id, 20).then(setRelatedRuns)
     }
-  }, [task?.id, workflowExecutions])
+  }, [task, workflowExecutions])
 
   // Initialize form when entering edit mode
   useEffect(() => {
