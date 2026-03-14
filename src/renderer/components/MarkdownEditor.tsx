@@ -1,9 +1,33 @@
 import { useState } from 'react'
 import { Eye, Pencil } from 'lucide-react'
 
+/** Escape HTML special characters to prevent XSS injection. */
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
 function renderMarkdown(text: string): string {
+  // Escape ALL user content first to prevent XSS, then apply markdown formatting.
+  // Order matters: escape HTML entities before any regex replacements that produce HTML.
+  const escaped = escapeHtml(text)
+
   return (
-    text
+    escaped
+      // Code blocks (before inline patterns to avoid double-matching)
+      .replace(/```[\s\S]*?```/g, (match) => {
+        const code = match.replace(/```\w*\n?/, '').replace(/\n?```$/, '')
+        return `<pre class="px-2 py-1.5 bg-white/[0.04] rounded-md text-[11px] font-mono text-gray-300 overflow-x-auto my-1">${code}</pre>`
+      })
+      // Inline code
+      .replace(
+        /`([^`]+)`/g,
+        '<code class="px-1 py-0.5 bg-white/[0.06] rounded text-[11px] font-mono text-gray-300">$1</code>'
+      )
       // Headers
       .replace(/^### (.+)$/gm, '<h3 class="text-xs font-semibold text-gray-300 mt-3 mb-1">$1</h3>')
       .replace(/^## (.+)$/gm, '<h2 class="text-sm font-semibold text-gray-200 mt-3 mb-1">$1</h2>')
@@ -11,16 +35,6 @@ function renderMarkdown(text: string): string {
       .replace(/\*\*(.+?)\*\*/g, '<strong class="text-gray-200">$1</strong>')
       // Italic
       .replace(/\*(.+?)\*/g, '<em>$1</em>')
-      // Inline code
-      .replace(
-        /`([^`]+)`/g,
-        '<code class="px-1 py-0.5 bg-white/[0.06] rounded text-[11px] font-mono text-gray-300">$1</code>'
-      )
-      // Code blocks
-      .replace(/```[\s\S]*?```/g, (match) => {
-        const code = match.replace(/```\w*\n?/, '').replace(/\n?```$/, '')
-        return `<pre class="px-2 py-1.5 bg-white/[0.04] rounded-md text-[11px] font-mono text-gray-300 overflow-x-auto my-1">${code}</pre>`
-      })
       // Checkboxes
       .replace(
         /^- \[x\] (.+)$/gm,
