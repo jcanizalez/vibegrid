@@ -1,7 +1,6 @@
 {
   "name": "@vibegrid/mcp",
   "version": "0.7.2",
-  "private": true,
   "type": "module",
   "bin": {
     "vibegrid-mcp": "./dist/index.js"

@@ -6,9 +6,11 @@ import { ptyManager } from '@vibegrid/server/pty-manager'
 import { scheduler } from '@vibegrid/server/scheduler'
 import { createMcpServer } from './server'
 
-// Redirect console to stderr (stdout is for JSON-RPC)
+// Redirect all console methods to stderr (stdout is reserved for JSON-RPC)
 const _origError = console.error
 console.log = (...args: unknown[]) => _origError('[mcp]', ...args)
+console.info = (...args: unknown[]) => _origError('[mcp]', ...args)
+console.debug = (...args: unknown[]) => _origError('[mcp:debug]', ...args)
 console.warn = (...args: unknown[]) => _origError('[mcp:warn]', ...args)
 console.error = (...args: unknown[]) => _origError('[mcp:error]', ...args)
 
