@@ -292,31 +292,35 @@ function migrateSchema(d: Database.Database): void {
   const version = row ? parseInt(row.value, 10) : 0
 
   if (version < 1) {
-    // Add workspace_id to projects and workflows
-    const projectCols = d.prepare('PRAGMA table_info(projects)').all() as Array<{ name: string }>
-    if (!projectCols.some((c) => c.name === 'workspace_id')) {
-      d.exec("ALTER TABLE projects ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'personal'")
-    }
+    d.transaction(() => {
+      // Add workspace_id to projects and workflows
+      const projectCols = d.prepare('PRAGMA table_info(projects)').all() as Array<{ name: string }>
+      if (!projectCols.some((c) => c.name === 'workspace_id')) {
+        d.exec("ALTER TABLE projects ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'personal'")
+      }
 
-    const workflowCols = d.prepare('PRAGMA table_info(workflows)').all() as Array<{ name: string }>
-    if (!workflowCols.some((c) => c.name === 'workspace_id')) {
-      d.exec("ALTER TABLE workflows ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'personal'")
-    }
+      const workflowCols = d.prepare('PRAGMA table_info(workflows)').all() as Array<{
+        name: string
+      }>
+      if (!workflowCols.some((c) => c.name === 'workspace_id')) {
+        d.exec("ALTER TABLE workflows ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'personal'")
+      }
 
-    // Seed default workspace
-    d.prepare(
-      `INSERT OR IGNORE INTO workspaces (id, name, icon, icon_color, "order") VALUES (?, ?, ?, ?, ?)`
-    ).run(
-      DEFAULT_WORKSPACE.id,
-      DEFAULT_WORKSPACE.name,
-      DEFAULT_WORKSPACE.icon ?? null,
-      DEFAULT_WORKSPACE.iconColor ?? null,
-      DEFAULT_WORKSPACE.order
-    )
+      // Seed default workspace
+      d.prepare(
+        `INSERT OR IGNORE INTO workspaces (id, name, icon, icon_color, "order") VALUES (?, ?, ?, ?, ?)`
+      ).run(
+        DEFAULT_WORKSPACE.id,
+        DEFAULT_WORKSPACE.name,
+        DEFAULT_WORKSPACE.icon ?? null,
+        DEFAULT_WORKSPACE.iconColor ?? null,
+        DEFAULT_WORKSPACE.order
+      )
 
-    d.prepare(
-      "INSERT OR REPLACE INTO schema_meta (key, value) VALUES ('schema_version', '1')"
-    ).run()
+      d.prepare(
+        "INSERT OR REPLACE INTO schema_meta (key, value) VALUES ('schema_version', '1')"
+      ).run()
+    })()
     log.info('[database] migrated schema to version 1 (workspaces)')
   }
 }

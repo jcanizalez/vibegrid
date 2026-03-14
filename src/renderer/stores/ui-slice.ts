@@ -25,7 +25,6 @@ const savedGrid = loadGridSettings()
 
 export const createUISlice: StateCreator<AppStore, [], [], UISlice> = (set, get) => ({
   activeWorkspace: 'personal',
-  isWorkspaceSwitcherOpen: false,
   focusedTerminalId: null,
   selectedTerminalId: null,
   renamingTerminalId: null,
@@ -74,8 +73,6 @@ export const createUISlice: StateCreator<AppStore, [], [], UISlice> = (set, get)
       set({ config: updated })
     }
   },
-  setWorkspaceSwitcherOpen: (open) => set({ isWorkspaceSwitcherOpen: open }),
-
   setFocusedTerminal: (id) =>
     set(() => ({
       focusedTerminalId: id,

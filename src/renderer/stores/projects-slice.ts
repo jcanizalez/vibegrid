@@ -127,6 +127,7 @@ export const createProjectsSlice: StateCreator<AppStore, [], [], ProjectsSlice> 
   removeWorkspace: (id) =>
     set((state) => {
       if (!state.config || id === 'personal') return {}
+      const switchToPersonal = state.activeWorkspace === id
       // Move projects and workflows from deleted workspace to 'personal'
       const updated = {
         ...state.config,
@@ -136,12 +137,14 @@ export const createProjectsSlice: StateCreator<AppStore, [], [], ProjectsSlice> 
         ),
         workflows: (state.config.workflows || []).map((w) =>
           (w.workspaceId ?? 'personal') === id ? { ...w, workspaceId: 'personal' } : w
-        )
+        ),
+        defaults: {
+          ...state.config.defaults,
+          ...(switchToPersonal && { activeWorkspace: 'personal' })
+        }
       }
       window.api.saveConfig(updated)
-      // If active workspace is being deleted, switch to personal
-      const activeWorkspace = state.activeWorkspace === id ? 'personal' : state.activeWorkspace
-      return { config: updated, activeWorkspace }
+      return { config: updated, ...(switchToPersonal && { activeWorkspace: 'personal' }) }
     }),
 
   updateWorkspace: (id, updates) =>

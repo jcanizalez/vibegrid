@@ -66,7 +66,6 @@ export type SettingsCategory = 'general' | 'agents' | 'hosts' | 'mcp'
 
 export interface UISlice {
   activeWorkspace: string
-  isWorkspaceSwitcherOpen: boolean
   focusedTerminalId: string | null
   selectedTerminalId: string | null
   renamingTerminalId: string | null
@@ -105,7 +104,6 @@ export interface UISlice {
   shellTabs: { id: string; title: string }[]
   activeShellTab: string | null
   setActiveWorkspace: (id: string) => void
-  setWorkspaceSwitcherOpen: (open: boolean) => void
   setFocusedTerminal: (id: string | null) => void
   setSelectedTerminal: (id: string | null) => void
   setRenamingTerminalId: (id: string | null) => void
