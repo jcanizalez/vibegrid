@@ -279,6 +279,7 @@
         z-index: 99;
         transform: translateY(-10px);
         opacity: 0;
+        pointer-events: none;
         transition:
           transform 0.3s var(--ease-out-expo),
           opacity 0.3s ease;
@@ -286,6 +287,7 @@
       .mobile-menu.open {
         transform: translateY(0);
         opacity: 1;
+        pointer-events: auto;
       }
       .mobile-menu a {
         font-size: 1rem;
@@ -975,6 +977,20 @@
         background: var(--border-subtle);
         margin: 0;
       }
+
+      /* ========== REDUCED MOTION ========== */
+      @media (prefers-reduced-motion: reduce) {
+        html {
+          scroll-behavior: auto;
+        }
+        *,
+        *::before,
+        *::after {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+        }
+      }
     </style>
   </head>
   <body>
@@ -983,7 +999,7 @@
     <!-- ===== NAVBAR ===== -->
     <nav class="nav" id="nav">
       <div class="nav-inner">
-        <a href="#" class="nav-logo">
+        <a href="/" class="nav-logo">
           <img src="assets/vibegrid-logo.png" alt="VibeGrid" height="26" />
         </a>
         <div class="nav-links">
@@ -1005,13 +1021,19 @@
           </a>
           <a href="#install" class="nav-cta">Download</a>
         </div>
-        <button class="hamburger" id="hamburger" aria-label="Toggle menu" aria-expanded="false">
+        <button
+          class="hamburger"
+          id="hamburger"
+          aria-label="Toggle menu"
+          aria-expanded="false"
+          aria-controls="mobile-menu"
+        >
           <span></span><span></span><span></span>
         </button>
       </div>
     </nav>
 
-    <div class="mobile-menu" id="mobile-menu">
+    <div class="mobile-menu" id="mobile-menu" aria-hidden="true">
       <a href="#features">Features</a>
       <a href="#agents">Agents</a>
       <a href="#install">Install</a>
@@ -1651,20 +1673,23 @@
     </footer>
 
     <script>
-      // Scroll reveal
-      const observer = new IntersectionObserver(
-        (entries) => {
-          entries.forEach((entry) => {
-            if (entry.isIntersecting) {
-              entry.target.classList.add('visible')
-              observer.unobserve(entry.target)
-            }
-          })
-        },
-        { threshold: 0.08, rootMargin: '0px 0px -40px 0px' }
-      )
-
-      document.querySelectorAll('.reveal').forEach((el) => observer.observe(el))
+      // Scroll reveal (with feature detection)
+      if ('IntersectionObserver' in window) {
+        const observer = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((entry) => {
+              if (entry.isIntersecting) {
+                entry.target.classList.add('visible')
+                observer.unobserve(entry.target)
+              }
+            })
+          },
+          { threshold: 0.08, rootMargin: '0px 0px -40px 0px' }
+        )
+        document.querySelectorAll('.reveal').forEach((el) => observer.observe(el))
+      } else {
+        document.querySelectorAll('.reveal').forEach((el) => el.classList.add('visible'))
+      }
 
       // Navbar scroll
       const nav = document.getElementById('nav')
@@ -1690,12 +1715,14 @@
         const open = mobileMenu.classList.toggle('open')
         hamburger.classList.toggle('open')
         hamburger.setAttribute('aria-expanded', open)
+        mobileMenu.setAttribute('aria-hidden', !open)
       })
       mobileMenu.querySelectorAll('a').forEach((link) => {
         link.addEventListener('click', () => {
           mobileMenu.classList.remove('open')
           hamburger.classList.remove('open')
           hamburger.setAttribute('aria-expanded', 'false')
+          mobileMenu.setAttribute('aria-hidden', 'true')
         })
       })
 
@@ -1717,15 +1744,24 @@
 
       // Copy to clipboard
       document.querySelector('.copy-btn').addEventListener('click', function () {
+        const btn = this
         const activeCode = document.querySelector('.terminal-line.active code')
-        navigator.clipboard.writeText(activeCode.textContent.trim()).then(() => {
-          this.textContent = 'Copied!'
-          this.classList.add('copied')
-          setTimeout(() => {
-            this.textContent = 'Copy'
-            this.classList.remove('copied')
-          }, 2000)
-        })
+        navigator.clipboard.writeText(activeCode.textContent.trim()).then(
+          () => {
+            btn.textContent = 'Copied!'
+            btn.classList.add('copied')
+            setTimeout(() => {
+              btn.textContent = 'Copy'
+              btn.classList.remove('copied')
+            }, 2000)
+          },
+          () => {
+            btn.textContent = 'Failed'
+            setTimeout(() => {
+              btn.textContent = 'Copy'
+            }, 2000)
+          }
+        )
       })
     </script>
   </body>
