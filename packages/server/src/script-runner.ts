@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process'
 import { ScriptConfig } from '@vibegrid/shared/types'
+import { getSafeEnv } from './process-utils'
 import log from './logger'
 
 export interface ScriptExecutionResult {
@@ -53,7 +54,7 @@ export async function executeScript(config: ScriptConfig): Promise<ScriptExecuti
     const child = spawn(command, args, {
       cwd,
       stdio: ['pipe', 'pipe', 'pipe'],
-      env: process.env // Inherit environment
+      env: getSafeEnv()
     })
 
     let stdout = ''

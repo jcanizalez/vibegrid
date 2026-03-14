@@ -1,5 +1,6 @@
 import fs from 'node:fs'
 import { execFileSync, spawn } from 'node:child_process'
+import { getSafeEnv } from './process-utils'
 
 export interface DetectedIDE {
   id: string
@@ -114,7 +115,11 @@ export function openInIDE(ideId: string, projectPath: string): void {
   if (!ide) return
 
   const parts = ide.command.split(' ')
-  const spawnOpts: import('node:child_process').SpawnOptions = { detached: true, stdio: 'ignore' }
+  const spawnOpts: import('node:child_process').SpawnOptions = {
+    detached: true,
+    stdio: 'ignore',
+    env: getSafeEnv()
+  }
   if (process.platform === 'win32') spawnOpts.shell = true
   spawn(parts[0], [...parts.slice(1), projectPath], spawnOpts).unref()
 }
