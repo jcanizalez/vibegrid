@@ -2556,7 +2556,7 @@ __metadata:
     better-sqlite3: "npm:^12.8.0"
     fastify: "npm:^5.3.3"
     node-cron: "npm:^3.0.3"
-    node-pty: "npm:^1.2.0-beta.12"
+    node-pty: "npm:1.2.0-beta.12"
     pino: "npm:^9.6.0"
     tsup: "npm:^8.5.0"
     tsx: "npm:^4.19.4"
@@ -6651,7 +6651,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"node-pty@npm:1.2.0-beta.12, node-pty@npm:^1.2.0-beta.12":
+"node-pty@npm:1.2.0-beta.12":
   version: 1.2.0-beta.12
   resolution: "node-pty@npm:1.2.0-beta.12"
   dependencies:
