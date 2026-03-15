@@ -117,6 +117,9 @@ if (isDirectRun) {
 
   startServer({ port, dataDir }).catch((err) => {
     log.error({ err }, '[server] failed to start')
+    const msg =
+      '[server] failed to start: ' + (err instanceof Error ? err.stack || err.message : String(err))
+    process.stderr.write(msg + '\n')
     process.exit(1)
   })
 }
