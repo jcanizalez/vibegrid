@@ -34,7 +34,8 @@ module.exports = async function afterPack(context) {
   // Replace the naive string replace with a regex-based one that uses a
   // negative lookahead to avoid matching 'app.asar.unpacked'
   const oldLine = "helperPath = helperPath.replace('app.asar', 'app.asar.unpacked');"
-  const newLine = "helperPath = helperPath.replace(/app\\.asar(?!\\.unpacked)/g, 'app.asar.unpacked');"
+  const newLine =
+    "helperPath = helperPath.replace(/app\\.asar(?!\\.unpacked)/g, 'app.asar.unpacked');"
 
   if (content.includes(oldLine)) {
     content = content.replace(oldLine, newLine)
