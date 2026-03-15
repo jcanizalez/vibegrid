@@ -1095,7 +1095,9 @@
       <!-- ===== HERO ===== -->
       <section class="hero">
         <div class="container">
-          <div class="hero-badge hero-enter"><span class="dot"></span> v0.7.0 alpha</div>
+          <div class="hero-badge hero-enter" id="version-badge">
+            <span class="dot"></span> v0.1.0
+          </div>
           <h1 class="hero-enter">
             Your personal space for<br />coding with <span class="gradient-text">AI agents</span>
           </h1>
@@ -1922,6 +1924,12 @@
           return res.json()
         })
         .then((release) => {
+          // Update version badge
+          const badge = document.getElementById('version-badge')
+          if (badge && release.tag_name) {
+            badge.innerHTML = '<span class="dot"></span> ' + release.tag_name
+          }
+
           const assets = release.assets || []
           osButtons.forEach((btn) => {
             const matcher = ASSET_MATCH[btn.dataset.os]
