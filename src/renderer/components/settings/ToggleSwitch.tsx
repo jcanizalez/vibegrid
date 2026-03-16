@@ -9,6 +9,9 @@ export function ToggleSwitch({
 }) {
   return (
     <button
+      role="switch"
+      aria-checked={checked}
+      aria-disabled={disabled}
       onClick={() => !disabled && onChange(!checked)}
       disabled={disabled}
       className={`w-10 h-6 rounded-full transition-colors relative ${

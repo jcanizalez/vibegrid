@@ -18,10 +18,12 @@ export function SegmentedControl({
   onChange: (value: string) => void
 }) {
   return (
-    <div className="flex bg-white/[0.04] rounded-lg p-0.5 gap-0.5">
+    <div role="radiogroup" className="flex bg-white/[0.04] rounded-lg p-0.5 gap-0.5">
       {options.map((opt) => (
         <button
           key={opt.value}
+          role="radio"
+          aria-checked={value === opt.value}
           onClick={() => !opt.disabled && onChange(opt.value)}
           disabled={opt.disabled}
           title={opt.title}
