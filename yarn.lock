@@ -2544,7 +2544,7 @@ __metadata:
     typescript: "npm:^5.6.0"
     zod: "npm:^4.3.6"
   bin:
-    vibegrid-mcp: ./dist/index.js
+    vibegrid-mcp: dist/index.js
   languageName: unknown
   linkType: soft
 
