@@ -9,6 +9,7 @@
     "packages/*"
   ],
   "scripts": {
+    "predev": "node-gyp rebuild --directory=node_modules/better-sqlite3",
     "dev": "electron-vite dev",
     "build:server": "cd packages/server && npx tsup src/index.ts --format cjs --target node22 --external node-pty --external better-sqlite3 --clean",
     "build": "yarn build:server && electron-vite build",
@@ -86,6 +87,7 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "lint-staged": "^16.3.3",
+    "node-gyp": "^12.2.0",
     "postcss": "^8.4.0",
     "prettier": "^3.8.1",
     "simple-git-hooks": "^2.13.1",

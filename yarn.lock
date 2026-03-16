@@ -6631,7 +6631,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"node-gyp@npm:latest":
+"node-gyp@npm:^12.2.0, node-gyp@npm:latest":
   version: 12.2.0
   resolution: "node-gyp@npm:12.2.0"
   dependencies:
@@ -9059,6 +9059,7 @@ __metadata:
     lowlight: "npm:^3.3.0"
     lucide-react: "npm:^0.576.0"
     node-cron: "npm:^3.0.3"
+    node-gyp: "npm:^12.2.0"
     node-pty: "npm:1.2.0-beta.12"
     postcss: "npm:^8.4.0"
     prettier: "npm:^3.8.1"
