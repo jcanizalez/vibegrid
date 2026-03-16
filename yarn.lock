@@ -2536,6 +2536,7 @@ __metadata:
     "@vibegrid/server": "workspace:*"
     "@vibegrid/shared": "workspace:*"
     better-sqlite3: "npm:^12.8.0"
+    pino: "npm:^9.6.0"
     tsup: "npm:^8.5.0"
     tsx: "npm:^4.19.4"
     typescript: "npm:^5.6.0"
