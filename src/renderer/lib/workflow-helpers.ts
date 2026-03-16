@@ -5,6 +5,7 @@ import {
   TriggerConfig,
   LaunchAgentConfig,
   ScriptConfig,
+  ConditionConfig,
   WorkflowNodePosition
 } from '../../shared/types'
 import { slugify } from './template-vars'
@@ -183,6 +184,65 @@ export function createScriptNode(config: Partial<ScriptConfig> = {}): WorkflowNo
     } as ScriptConfig,
     position: { x: 0, y: 0 }
   }
+}
+
+export function createConditionNode(config: Partial<ConditionConfig> = {}): WorkflowNode {
+  return {
+    id: crypto.randomUUID(),
+    type: 'condition',
+    label: 'Condition',
+    slug: slugify('Condition'),
+    config: {
+      variable: '',
+      operator: 'equals',
+      value: '',
+      ...config
+    } as ConditionConfig,
+    position: { x: 0, y: 0 }
+  }
+}
+
+/**
+ * Insert a condition node between two nodes (or at the end).
+ * Creates the condition + two branch edges (true/false).
+ * If there's a downstream node, both branches rejoin at it.
+ */
+export function insertConditionBetween(
+  nodes: WorkflowNode[],
+  edges: WorkflowEdge[],
+  afterNodeId: string,
+  beforeNodeId: string | null
+): { nodes: WorkflowNode[]; edges: WorkflowEdge[] } {
+  const conditionNode = createConditionNode()
+
+  const newNodes = [...nodes, conditionNode]
+  let newEdges = [...edges]
+
+  if (beforeNodeId) {
+    // Remove the direct edge between after → before
+    newEdges = newEdges.filter((e) => !(e.source === afterNodeId && e.target === beforeNodeId))
+    // after → condition
+    newEdges.push({ id: crypto.randomUUID(), source: afterNodeId, target: conditionNode.id })
+    // condition → before (true branch)
+    newEdges.push({
+      id: crypto.randomUUID(),
+      source: conditionNode.id,
+      target: beforeNodeId,
+      conditionBranch: 'true'
+    })
+    // condition → before (false branch also rejoins — user can insert nodes into each branch later)
+    newEdges.push({
+      id: crypto.randomUUID(),
+      source: conditionNode.id,
+      target: beforeNodeId,
+      conditionBranch: 'false'
+    })
+  } else {
+    // Appending at the end — just connect after → condition
+    newEdges.push({ id: crypto.randomUUID(), source: afterNodeId, target: conditionNode.id })
+  }
+
+  return { nodes: autoLayoutNodes(newNodes, newEdges), edges: newEdges }
 }
 
 export function autoLayoutNodes(nodes: WorkflowNode[], edges: WorkflowEdge[]): WorkflowNode[] {
