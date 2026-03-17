@@ -35,6 +35,7 @@ import {
   dbDeleteSSHKey
 } from './database'
 import { executeScript } from './script-runner'
+import { testSshConnection } from './process-utils'
 import log from './logger'
 
 const copilotInstallations = new Map<string, CopilotHookInstallation>()
@@ -138,6 +139,9 @@ export function registerAllMethods(): void {
   registerMethod('credential:listKeys', () => dbListSSHKeys())
   registerMethod('credential:deleteKey', (id) => dbDeleteSSHKey(id))
   registerMethod('credential:getEncryptedKey', (id) => dbGetSSHKey(id))
+
+  // SSH
+  registerMethod('ssh:testConnection', (host) => testSshConnection(host))
 
   // Fire-and-forget notifications
   registerNotification('terminal:write', ({ id, data }) => ptyManager.writeToPty(id, data))

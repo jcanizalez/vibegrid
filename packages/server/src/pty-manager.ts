@@ -181,7 +181,8 @@ class PtyManager extends EventEmitter {
       env: getSafeEnv()
     })
 
-    // Build SSH command based on auth method
+    // Build SSH command based on auth method, with a ready marker for reliable prompt detection
+    const marker = `__VIBEGRID_READY_${id.slice(0, 8)}__`
     const sshParts: string[] = ['ssh', '-t']
     if (host.port !== 22) sshParts.push('-p', String(host.port))
 
@@ -210,13 +211,16 @@ class PtyManager extends EventEmitter {
       sshParts.push(...opts)
     }
     sshParts.push(`${host.user}@${host.hostname}`)
+    // Echo a unique marker on connect, then exec a login shell so the session stays alive.
+    // Single-quoted so the local shell passes && and $SHELL literally to SSH,
+    // which forwards them to the remote shell for interpretation.
+    sshParts.push(`'echo ${marker} && exec $SHELL -l'`)
 
     // Build remote command: cd to project path then launch agent
     const agentLine = this.buildAgentLaunchLine(payload)
     const remoteCmd = `cd ${shellEscape(payload.projectPath)} && ${agentLine}`
 
-    // Write SSH command, then detect prompt and send the agent command
-    // All delayed writes guard against the PTY having exited before the timeout fires.
+    // Write SSH command after local shell is ready
     setTimeout(() => {
       if (this.ptys.has(id)) ptyProcess.write(sshParts.join(' ') + '\r')
     }, 300)
@@ -240,27 +244,56 @@ class PtyManager extends EventEmitter {
     delete payload._decryptedPassword
 
     let connected = false
+    let sshOutput = ''
+
+    // Fallback: if marker never arrives (non-standard shell), send command after timeout
     const fallbackTimer = setTimeout(() => {
       if (!connected) {
         connected = true
+        log.warn(`[pty] SSH marker not detected for ${id}, using fallback`)
         if (this.ptys.has(id)) ptyProcess.write(remoteCmd + '\r')
         this.deleteTempKey(id)
       }
-    }, 5000)
+    }, 8000)
 
     const promptListener = ptyProcess.onData((data: string) => {
-      if (!connected && /[$#>]\s*$/.test(data)) {
+      if (connected) return
+      sshOutput += data
+
+      // Primary: detect our unique marker
+      if (sshOutput.includes(marker)) {
         connected = true
         clearTimeout(fallbackTimer)
+        // Small delay to let the login shell fully initialize
         setTimeout(() => {
           if (this.ptys.has(id)) ptyProcess.write(remoteCmd + '\r')
           this.deleteTempKey(id)
-        }, 100)
+        }, 200)
+        return
+      }
+
+      // Detect SSH errors early to avoid waiting for full timeout
+      const errorPatterns = [
+        'Permission denied',
+        'Connection refused',
+        'Connection timed out',
+        'Could not resolve hostname',
+        'No route to host',
+        'Connection closed',
+        'Host key verification failed'
+      ]
+      for (const pattern of errorPatterns) {
+        if (sshOutput.includes(pattern)) {
+          log.error(`[pty] SSH connection error for ${id}: ${pattern}`)
+          clearTimeout(fallbackTimer)
+          this.deleteTempKey(id)
+          // Don't set connected — let the PTY show the error to the user
+          return
+        }
       }
     })
 
-    // Replace the prompt listener with the normal forwarding once connected
-    // We still need to forward all data to the renderer from the start
+    // Forward all data to the renderer from the start
     this.setupPtyEvents(id, ptyProcess)
     this.ptys.set(id, ptyProcess)
 
@@ -277,7 +310,7 @@ class PtyManager extends EventEmitter {
     setTimeout(() => {
       cleanup()
       clearInterval(checkConnected)
-    }, 6000)
+    }, 10000)
 
     const session: TerminalSession = {
       id,

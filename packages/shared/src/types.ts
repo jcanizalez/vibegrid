@@ -467,7 +467,8 @@ export const IPC = {
   CREDENTIAL_LIST_KEYS: 'credential:listKeys',
   CREDENTIAL_GET_ENCRYPTED_KEY: 'credential:getEncryptedKey',
   CREDENTIAL_ENCRYPT: 'credential:encrypt',
-  CREDENTIAL_SAFE_STORAGE_AVAILABLE: 'credential:safeStorageAvailable'
+  CREDENTIAL_SAFE_STORAGE_AVAILABLE: 'credential:safeStorageAvailable',
+  SSH_TEST_CONNECTION: 'ssh:testConnection'
 } as const
 
 export interface PermissionSuggestion {

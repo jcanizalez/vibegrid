@@ -125,6 +125,11 @@ export function registerIpcHandlers(): void {
   // ─── Credential vault (requires safeStorage in main process) ───
   registerCredentialHandlers(requireBridge())
 
+  // SSH
+  safeHandle(IPC.SSH_TEST_CONNECTION, (_, host) =>
+    requireBridge().request(IPC.SSH_TEST_CONNECTION, host)
+  )
+
   // ─── Electron-only handlers (stay local) ───────────────────────
 
   safeHandle(IPC.DIALOG_OPEN_DIRECTORY, async (event) => {

@@ -16,7 +16,8 @@ import {
   WorkflowExecution,
   ScriptConfig,
   AgentType,
-  SSHKeyMeta
+  SSHKeyMeta,
+  RemoteHost
 } from '../shared/types'
 
 const api = {
@@ -292,6 +293,12 @@ const api = {
 
   isSafeStorageAvailable: (): Promise<boolean> =>
     ipcRenderer.invoke(IPC.CREDENTIAL_SAFE_STORAGE_AVAILABLE),
+
+  // SSH
+  testSshConnection: (
+    host: RemoteHost
+  ): Promise<{ success: boolean; message: string; durationMs: number }> =>
+    ipcRenderer.invoke(IPC.SSH_TEST_CONNECTION, host),
 
   // App info
   getAppVersion: (): string => ipcRenderer.sendSync('get-app-version'),
