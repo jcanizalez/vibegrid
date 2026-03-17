@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
+import { isElectron } from '../lib/platform'
 import { useAppStore } from '../stores'
 import {
   WorkflowDefinition,
@@ -530,8 +531,8 @@ export function ProjectSidebar() {
     >
       {/* Traffic light safe zone + Workspace switcher */}
       <div
-        className="titlebar-drag h-[52px] pl-[78px] pr-3 flex items-center
-                      border-b border-white/[0.06] shrink-0"
+        className={`titlebar-drag h-[52px] pr-3 flex items-center
+                      border-b border-white/[0.06] shrink-0 ${isElectron ? 'pl-[78px]' : 'pl-3'}`}
       >
         {!isCollapsed && (
           <div className="flex-1 titlebar-no-drag min-w-0">

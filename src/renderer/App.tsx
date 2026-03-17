@@ -32,11 +32,12 @@ import { TerminalPanel } from './components/TerminalPanel'
 import { UpdateBanner } from './components/UpdateBanner'
 import { ToastContainer } from './components/Toast'
 import { AddTaskDialog } from './components/AddTaskDialog'
+import { isWeb } from './lib/platform'
 
 const isMac = navigator.platform.toUpperCase().includes('MAC')
 
 function WindowControls() {
-  if (isMac) return null
+  if (isMac || isWeb) return null
   return (
     <div className="flex items-center titlebar-no-drag ml-2">
       <button
@@ -252,7 +253,7 @@ export function App() {
         <div
           className="titlebar-drag shrink-0 border-b border-white/[0.06]
                         h-[52px] flex items-center justify-between px-4"
-          style={!isSidebarOpen ? { paddingLeft: '80px' } : undefined}
+          style={!isSidebarOpen && !isWeb ? { paddingLeft: '80px' } : undefined}
         >
           <div className="flex items-center gap-2.5 titlebar-no-drag">
             {!isSidebarOpen && (

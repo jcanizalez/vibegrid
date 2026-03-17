@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import { isElectron } from '../lib/platform'
 import { useAppStore } from '../stores'
 import { SettingsCategory } from '../stores/types'
 import { SectionHeader } from './settings/SectionHeader'
@@ -151,8 +152,10 @@ export function SettingsPage() {
         className="w-56 border-r border-white/[0.06] flex flex-col shrink-0"
         style={{ background: '#141416' }}
       >
-        {/* Header — pl-[78px] for macOS traffic light safe zone */}
-        <div className="titlebar-drag h-[52px] pl-[78px] pr-3 flex items-center border-b border-white/[0.06] shrink-0">
+        {/* Header — pl-[78px] for macOS traffic light safe zone (Electron only) */}
+        <div
+          className={`titlebar-drag h-[52px] pr-3 flex items-center border-b border-white/[0.06] shrink-0 ${isElectron ? 'pl-[78px]' : 'pl-3'}`}
+        >
           <button
             onClick={() => setSettingsOpen(false)}
             className="titlebar-no-drag flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors"

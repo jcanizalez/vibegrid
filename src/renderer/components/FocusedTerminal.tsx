@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
+import { isElectron } from '../lib/platform'
 import { useAppStore } from '../stores'
 import { TerminalInstance } from './TerminalInstance'
 import { AgentIcon } from './AgentIcon'
@@ -143,9 +144,9 @@ export function FocusedTerminal() {
         animate={{ opacity: 1, scale: 1 }}
         transition={{ type: 'spring', stiffness: 400, damping: 30 }}
       >
-        {/* Title bar — pl-[78px] for macOS traffic light safe zone */}
+        {/* Title bar — pl-[78px] for macOS traffic light safe zone (Electron only) */}
         <div
-          className="flex items-center gap-3 pl-[78px] pr-4 py-2.5 border-b border-white/[0.06] titlebar-no-drag"
+          className={`flex items-center gap-3 pr-4 py-2.5 border-b border-white/[0.06] titlebar-no-drag ${isElectron ? 'pl-[78px]' : 'pl-4'}`}
           onDoubleClick={(e) => {
             // Contract on double-click, but not if clicking on a button or interactive element
             if ((e.target as HTMLElement).closest('button, input, [role="button"]')) return

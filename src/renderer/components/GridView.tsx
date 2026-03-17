@@ -33,7 +33,7 @@ export function GridView() {
   const gridStyle: React.CSSProperties = {
     ...(gridColumns > 0
       ? { gridTemplateColumns: `repeat(${gridColumns}, 1fr)` }
-      : { gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))' }),
+      : { gridTemplateColumns: 'repeat(auto-fill, minmax(min(320px, 100%), 1fr))' }),
     gridAutoRows: `${rowHeight + 42}px`
   }
 
