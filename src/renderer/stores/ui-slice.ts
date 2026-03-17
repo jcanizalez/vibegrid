@@ -167,6 +167,15 @@ export const createUISlice: StateCreator<AppStore, [], [], UISlice> = (set, get)
       return { gitDiffStats: next }
     }),
 
+  updateGitDiffStats: (stats) =>
+    set((state) => {
+      const next = new Map(state.gitDiffStats)
+      for (const [id, stat] of stats) {
+        next.set(id, stat)
+      }
+      return { gitDiffStats: next }
+    }),
+
   setMainViewMode: (mode) => {
     const config = get().config
     if (config) {
