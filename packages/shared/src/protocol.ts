@@ -143,6 +143,7 @@ export interface RequestMethods {
 export interface ServerNotifications {
   'terminal:data': { id: string; data: string }
   'terminal:exit': { id: string; exitCode: number }
+  'session:created': TerminalSession
   'headless:data': { id: string; data: string }
   'headless:exit': { id: string; exitCode: number }
   'config:changed': AppConfig

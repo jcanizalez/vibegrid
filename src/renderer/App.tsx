@@ -200,6 +200,13 @@ export function App() {
       }
     })
 
+    const removeSessionCreatedListener = window.api.onSessionCreated((session) => {
+      const state = useAppStore.getState()
+      if (!state.terminals.has(session.id)) {
+        state.addTerminal(session)
+      }
+    })
+
     const removeConfigListener = window.api.onConfigChanged((config) => {
       useAppStore.getState().setConfig(config)
     })
@@ -227,6 +234,7 @@ export function App() {
 
     return () => {
       removeExitListener()
+      removeSessionCreatedListener()
       removeConfigListener()
       removeMenuListener()
       removeSchedulerListener()
