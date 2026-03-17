@@ -179,8 +179,10 @@ export function registerAllMethods(): void {
 
   // ─── Hook server integration ──────────────────────────────────
 
-  // Handle new terminal sessions (Copilot hook setup)
+  // Handle new terminal sessions: broadcast to UI + Copilot hook setup
   ptyManager.on('session-created', (session, payload) => {
+    clientRegistry.broadcast(IPC.SESSION_CREATED, session)
+
     if (payload.agentType === 'copilot') {
       const port = hookServer.getPort()
       if (port <= 0) return

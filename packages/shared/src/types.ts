@@ -373,6 +373,7 @@ export const IPC = {
   TERMINAL_KILL: 'terminal:kill',
   TERMINAL_DATA: 'terminal:data',
   TERMINAL_EXIT: 'terminal:exit',
+  SESSION_CREATED: 'session:created',
   CONFIG_LOAD: 'config:load',
   CONFIG_SAVE: 'config:save',
   CONFIG_CHANGED: 'config:changed',

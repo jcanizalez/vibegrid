@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import {
   CreateTerminalPayload,
+  TerminalSession,
   ResizePayload,
   AppConfig,
   RecentSession,
@@ -47,6 +48,15 @@ const api = {
     ipcRenderer.on(IPC.TERMINAL_EXIT, listener)
     return () => {
       ipcRenderer.removeListener(IPC.TERMINAL_EXIT, listener)
+    }
+  },
+
+  onSessionCreated: (callback: (session: TerminalSession) => void) => {
+    const listener = (_: Electron.IpcRendererEvent, session: TerminalSession): void =>
+      callback(session)
+    ipcRenderer.on(IPC.SESSION_CREATED, listener)
+    return () => {
+      ipcRenderer.removeListener(IPC.SESSION_CREATED, listener)
     }
   },
 
