@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
+// Force macOS platform so tests use MAC_IDES (appPath-based detection)
+vi.hoisted(() => {
+  Object.defineProperty(process, 'platform', { value: 'darwin' })
+})
+
 vi.mock('node:fs', () => ({
   default: { existsSync: vi.fn(() => false) }
 }))
@@ -18,7 +23,6 @@ import { spawn } from 'node:child_process'
 
 beforeEach(() => {
   vi.clearAllMocks()
-  // Reset module cache to clear cached IDEs
   vi.resetModules()
 })
 
@@ -40,7 +44,6 @@ describe('detectIDEs', () => {
     const { detectIDEs } = await import('../packages/server/src/ide-detector')
     detectIDEs()
     detectIDEs()
-    // existsSync should only be called during the first call
     const callCount = vi.mocked(fs.existsSync).mock.calls.length
     detectIDEs()
     expect(vi.mocked(fs.existsSync).mock.calls.length).toBe(callCount)

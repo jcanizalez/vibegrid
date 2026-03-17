@@ -1,7 +1,15 @@
 import { describe, it, expect, vi } from 'vitest'
 
-// Mock navigator.platform before module load
-vi.stubGlobal('navigator', { platform: 'MacIntel' })
+// navigator must exist before the module evaluates its top-level const.
+// vi.stubGlobal is NOT hoisted, so we use vi.hoisted to run before imports.
+// navigator is a read-only getter in Node, so we must use defineProperty.
+vi.hoisted(() => {
+  Object.defineProperty(globalThis, 'navigator', {
+    value: { platform: 'MacIntel' },
+    writable: true,
+    configurable: true
+  })
+})
 
 import { SHORTCUTS, SHORTCUT_CATEGORIES, getShortcut } from '../src/renderer/lib/keyboard-shortcuts'
 
