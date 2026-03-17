@@ -3,6 +3,7 @@ import { AGENT_LIST } from '../../lib/agent-definitions'
 import { AgentIcon } from '../AgentIcon'
 import { AgentType } from '../../../shared/types'
 import { useAgentInstallStatus } from '../../hooks/useAgentInstallStatus'
+import { isElectron } from '../../lib/platform'
 import { SettingsPageHeader } from './SettingsPageHeader'
 import { SettingRow } from './SettingRow'
 import { ToggleSwitch } from './ToggleSwitch'
@@ -82,44 +83,48 @@ export function GeneralSettings() {
           />
         </SettingRow>
 
-        {/* Floating Widget */}
-        <SettingRow
-          label="Floating Widget"
-          description="Show agent status widget when app is not focused"
-        >
-          <ToggleSwitch
-            checked={config.defaults.widgetEnabled !== false}
-            onChange={(enabled) => {
-              updateDefaults({ widgetEnabled: enabled })
-              window.api.setWidgetEnabled(enabled)
-            }}
-          />
-        </SettingRow>
+        {/* Floating Widget — Electron only */}
+        {isElectron && (
+          <SettingRow
+            label="Floating Widget"
+            description="Show agent status widget when app is not focused"
+          >
+            <ToggleSwitch
+              checked={config.defaults.widgetEnabled !== false}
+              onChange={(enabled) => {
+                updateDefaults({ widgetEnabled: enabled })
+                window.api.setWidgetEnabled(enabled)
+              }}
+            />
+          </SettingRow>
+        )}
 
-        {/* Update Channel */}
-        <SettingRow
-          label="Update Channel"
-          description="Beta receives early releases; stable receives tested releases only"
-        >
-          <div className="flex bg-white/[0.04] rounded-lg p-0.5 gap-0.5">
-            {(['stable', 'beta'] as const).map((ch) => (
-              <button
-                key={ch}
-                onClick={() => {
-                  updateDefaults({ updateChannel: ch })
-                  window.api.setUpdateChannel(ch)
-                }}
-                className={`px-3 py-1 rounded-md text-xs transition-colors ${
-                  (config.defaults.updateChannel ?? 'stable') === ch
-                    ? 'bg-white/[0.1] text-white'
-                    : 'text-gray-500 hover:text-gray-300'
-                }`}
-              >
-                {ch === 'stable' ? 'Stable' : 'Beta'}
-              </button>
-            ))}
-          </div>
-        </SettingRow>
+        {/* Update Channel — Electron only */}
+        {isElectron && (
+          <SettingRow
+            label="Update Channel"
+            description="Beta receives early releases; stable receives tested releases only"
+          >
+            <div className="flex bg-white/[0.04] rounded-lg p-0.5 gap-0.5">
+              {(['stable', 'beta'] as const).map((ch) => (
+                <button
+                  key={ch}
+                  onClick={() => {
+                    updateDefaults({ updateChannel: ch })
+                    window.api.setUpdateChannel(ch)
+                  }}
+                  className={`px-3 py-1 rounded-md text-xs transition-colors ${
+                    (config.defaults.updateChannel ?? 'stable') === ch
+                      ? 'bg-white/[0.1] text-white'
+                      : 'text-gray-500 hover:text-gray-300'
+                  }`}
+                >
+                  {ch === 'stable' ? 'Stable' : 'Beta'}
+                </button>
+              ))}
+            </div>
+          </SettingRow>
+        )}
       </div>
     </div>
   )

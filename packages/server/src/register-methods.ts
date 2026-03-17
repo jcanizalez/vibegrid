@@ -19,7 +19,13 @@ import {
 } from './copilot-hook-installer'
 import { IPC, WidgetAgentInfo, PermissionRequestInfo } from '@vibegrid/shared/types'
 import * as gitUtils from './git-utils'
-import { saveTaskImage, deleteTaskImage, getTaskImagePath, cleanupTaskImages } from './task-images'
+import {
+  saveTaskImage,
+  saveTaskImageFromBase64,
+  deleteTaskImage,
+  getTaskImagePath,
+  cleanupTaskImages
+} from './task-images'
 import {
   archiveSession,
   unarchiveSession,
@@ -91,6 +97,9 @@ export function registerAllMethods(): void {
   registerMethod('task:imageDelete', ({ taskId, filename }) => deleteTaskImage(taskId, filename))
   registerMethod('task:imageGetPath', ({ taskId, filename }) => getTaskImagePath(taskId, filename))
   registerMethod('task:imageCleanup', (taskId) => cleanupTaskImages(taskId))
+  registerMethod('task:imageUpload', ({ taskId, base64, filename }) =>
+    saveTaskImageFromBase64(taskId, base64, filename)
+  )
 
   // Session archive
   registerMethod('session:archive', (session) => archiveSession(session))

@@ -155,6 +155,43 @@ class RpcClient {
   }
 }
 
+// ─── File Picker Helpers ─────────────────────────────────────────
+
+function pickFiles(accept: string, multiple = false): Promise<File[] | null> {
+  return new Promise((resolve) => {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = accept
+    input.multiple = multiple
+    input.style.display = 'none'
+    document.body.appendChild(input)
+    input.addEventListener('change', () => {
+      const files = input.files ? Array.from(input.files) : null
+      document.body.removeChild(input)
+      resolve(files && files.length > 0 ? files : null)
+    })
+    // Handle cancel (user closes the dialog without selecting)
+    input.addEventListener('cancel', () => {
+      document.body.removeChild(input)
+      resolve(null)
+    })
+    input.click()
+  })
+}
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      const dataUrl = reader.result as string
+      // Strip "data:...;base64," prefix
+      resolve(dataUrl.split(',')[1])
+    }
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
+}
+
 // ─── API Shim ───────────────────────────────────────────────────
 
 export function createApiShim(wsUrl: string) {
@@ -193,10 +230,26 @@ export function createApiShim(wsUrl: string) {
     clearPreviousSessions: () => rpc.invoke('sessions:clear'),
     getRecentSessions: (projectPath?: string) => rpc.invoke('sessions:getRecent', projectPath),
 
-    // ── Dialogs (Electron-only, return null/empty in web) ──
-    openDirectoryDialog: () => Promise.resolve(null),
-    openFileDialog: () => Promise.resolve(null),
-    openImageDialog: () => Promise.resolve(null),
+    // ── Dialogs (web: use HTML5 file inputs) ──
+    openDirectoryDialog: async (): Promise<string | null> => {
+      // Web cannot pick server-side directories; prompt user to type a path
+      const path = window.prompt('Enter the project directory path on the server:')
+      return path?.trim() || null
+    },
+    openFileDialog: async (): Promise<string | null> => {
+      // Web cannot pick server-side files; prompt user to type a path
+      const path = window.prompt('Enter the file path on the server:')
+      return path?.trim() || null
+    },
+    openImageDialog: async (): Promise<string[] | null> => {
+      const files = await pickFiles('image/*', true)
+      if (!files)
+        return null
+        // Store files for the next saveTaskImage call
+      ;(api as Record<string, unknown>).__pendingImageFiles = files
+      // Return fake paths so the caller iterates correctly
+      return files.map((f) => f.name)
+    },
 
     // ── IDE Detection & Launch ──
     detectIDEs: () => rpc.invoke('ide:detect'),
@@ -218,13 +271,33 @@ export function createApiShim(wsUrl: string) {
     gitCommit: (payload: unknown) => rpc.invoke('git:commit', payload),
     gitPush: (cwd: string) => rpc.invoke('git:push', cwd),
 
-    // ── Task Images ──
-    saveTaskImage: (taskId: string, sourcePath: string) =>
-      rpc.invoke('task:imageSave', { taskId, sourcePath }),
+    // ── Task Images (web: upload via base64 RPC, serve via HTTP) ──
+    saveTaskImage: async (taskId: string, sourcePath: string): Promise<string> => {
+      // In web mode, sourcePath is actually the original filename from openImageDialog
+      const pendingFiles = (api as Record<string, unknown>).__pendingImageFiles as
+        | File[]
+        | undefined
+      if (pendingFiles) {
+        const file = pendingFiles.find((f) => f.name === sourcePath)
+        if (file) {
+          const base64 = await fileToBase64(file)
+          const filename = (await rpc.invoke('task:imageUpload', {
+            taskId,
+            base64,
+            filename: file.name
+          })) as string
+          return filename
+        }
+      }
+      // Fallback to server-side path (e.g. drag-and-drop won't work in web)
+      return rpc.invoke('task:imageSave', { taskId, sourcePath }) as Promise<string>
+    },
     deleteTaskImage: (taskId: string, filename: string) =>
       rpc.invoke('task:imageDelete', { taskId, filename }),
-    getTaskImagePath: (taskId: string, filename: string) =>
-      rpc.invoke('task:imageGetPath', { taskId, filename }),
+    getTaskImagePath: async (taskId: string, filename: string): Promise<string> => {
+      // Return HTTP URL instead of filesystem path
+      return `/api/task-images/${taskId}/${filename}`
+    },
     cleanupTaskImages: (taskId: string) => rpc.invoke('task:imageCleanup', taskId),
 
     // ── Session Archive ──

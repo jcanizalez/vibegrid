@@ -70,6 +70,25 @@ export function getTaskImagePath(taskId: string, filename: string): string {
   return resolveSafePath(taskId, filename)
 }
 
+export function saveTaskImageFromBase64(
+  taskId: string,
+  base64Data: string,
+  originalFilename: string
+): string {
+  if (!isSafeId(taskId)) throw new Error(`Invalid taskId: ${taskId}`)
+
+  const taskDir = resolveSafePath(taskId)
+  ensureDir(taskDir)
+
+  const ext = path.extname(originalFilename) || '.png'
+  const filename = `${randomUUID()}${ext}`
+  const destPath = resolveSafePath(taskId, filename)
+
+  const buffer = Buffer.from(base64Data, 'base64')
+  fs.writeFileSync(destPath, buffer)
+  return filename
+}
+
 export function cleanupTaskImages(taskId: string): void {
   if (!isSafeId(taskId)) throw new Error(`Invalid taskId: ${taskId}`)
 

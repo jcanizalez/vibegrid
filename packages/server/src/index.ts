@@ -11,7 +11,7 @@ import { configManager } from './config-manager'
 import { ptyManager } from './pty-manager'
 import { headlessManager } from './headless-manager'
 import { scheduler } from './scheduler'
-import { setDataDir } from './task-images'
+import { setDataDir, getTaskImagePath as resolveTaskImagePath } from './task-images'
 import log from './logger'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -54,6 +54,32 @@ export async function startServer(
   })
 
   app.get('/health', async () => ({ status: 'ok' }))
+
+  // Serve task images via HTTP (used by web app instead of file:// protocol)
+  app.get('/api/task-images/:taskId/:filename', async (req, reply) => {
+    const { taskId, filename } = req.params as { taskId: string; filename: string }
+    try {
+      const filePath = resolveTaskImagePath(taskId, filename)
+      if (!fs.existsSync(filePath)) {
+        return reply.code(404).send({ error: 'Image not found' })
+      }
+      const ext = path.extname(filename).toLowerCase()
+      const mimeTypes: Record<string, string> = {
+        '.png': 'image/png',
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.gif': 'image/gif',
+        '.webp': 'image/webp',
+        '.svg': 'image/svg+xml',
+        '.bmp': 'image/bmp'
+      }
+      reply.header('Content-Type', mimeTypes[ext] || 'application/octet-stream')
+      reply.header('Cache-Control', 'public, max-age=86400')
+      return reply.send(fs.readFileSync(filePath))
+    } catch {
+      return reply.code(400).send({ error: 'Invalid request' })
+    }
+  })
 
   // Serve web app static files at /app/ if the dist directory exists
   const webDistDir = path.resolve(__dirname, '../../web/dist')
