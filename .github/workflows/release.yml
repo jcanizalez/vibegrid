@@ -63,9 +63,25 @@ jobs:
           else
             tag="v$(node -p 'require("./package.json").version')"
           fi
-          for f in dist/*.dmg dist/*.dmg.blockmap dist/*.zip dist/*.zip.blockmap dist/latest-mac.yml; do
+
+          # Determine if this is a beta release
+          is_beta=false
+          if [[ "$tag" == *"-beta"* ]] || [[ "$tag" == *"-alpha"* ]] || [[ "$tag" == *"-rc"* ]]; then
+            is_beta=true
+          fi
+
+          # Upload platform artifacts
+          for f in dist/*.dmg dist/*.dmg.blockmap dist/*.zip dist/*.zip.blockmap; do
             [ -f "$f" ] && gh release upload "$tag" "$f" --clobber
           done
+
+          # Upload update metadata file
+          # For beta: rename latest-mac.yml → beta-mac.yml so electron-updater finds it
+          if [ "$is_beta" = true ] && [ -f dist/latest-mac.yml ]; then
+            cp dist/latest-mac.yml dist/beta-mac.yml
+            gh release upload "$tag" dist/beta-mac.yml --clobber
+          fi
+          [ -f dist/latest-mac.yml ] && gh release upload "$tag" dist/latest-mac.yml --clobber
 
       - name: Clean up keychain
         if: always()
@@ -107,8 +123,20 @@ jobs:
           } else {
             $tag = "v" + (node -p "require('./package.json').version")
           }
-          Get-ChildItem dist\*.exe, dist\*.blockmap, dist\latest*.yml | ForEach-Object {
+
+          $is_beta = $tag -match '-(beta|alpha|rc)'
+
+          Get-ChildItem dist\*.exe, dist\*.blockmap | ForEach-Object {
             gh release upload $tag $_.FullName --clobber
+          }
+
+          # Upload update metadata
+          if ($is_beta -and (Test-Path dist\latest.yml)) {
+            Copy-Item dist\latest.yml dist\beta.yml
+            gh release upload $tag dist\beta.yml --clobber
+          }
+          if (Test-Path dist\latest.yml) {
+            gh release upload $tag dist\latest.yml --clobber
           }
 
   build-linux:
@@ -147,9 +175,21 @@ jobs:
           else
             tag="v$(node -p 'require("./package.json").version')"
           fi
-          for f in dist/*.AppImage dist/*.deb dist/*.rpm dist/latest-linux.yml; do
+
+          is_beta=false
+          if [[ "$tag" == *"-beta"* ]] || [[ "$tag" == *"-alpha"* ]] || [[ "$tag" == *"-rc"* ]]; then
+            is_beta=true
+          fi
+
+          for f in dist/*.AppImage dist/*.deb dist/*.rpm; do
             [ -f "$f" ] && gh release upload "$tag" "$f" --clobber
           done
+
+          if [ "$is_beta" = true ] && [ -f dist/latest-linux.yml ]; then
+            cp dist/latest-linux.yml dist/beta-linux.yml
+            gh release upload "$tag" dist/beta-linux.yml --clobber
+          fi
+          [ -f dist/latest-linux.yml ] && gh release upload "$tag" dist/latest-linux.yml --clobber
 
   publish-mcp:
     if: startsWith(github.ref, 'refs/tags/v')
@@ -186,11 +226,20 @@ jobs:
         working-directory: packages/mcp
         run: |
           VERSION=$(node -p 'require("./package.json").version')
+          TAG="${GITHUB_REF_NAME}"
+
+          # Determine npm dist-tag: beta releases get "beta" tag, stable get "latest"
+          NPM_TAG="latest"
+          if [[ "$TAG" == *"-beta"* ]] || [[ "$TAG" == *"-alpha"* ]] || [[ "$TAG" == *"-rc"* ]]; then
+            NPM_TAG="beta"
+          fi
+
           PUBLISHED=$(npm view @vibegrid/mcp version 2>/dev/null || echo "none")
           if [ "$VERSION" = "$PUBLISHED" ]; then
             echo "Version $VERSION already published, skipping"
           else
-            yarn npm publish --access public
+            yarn npm publish --access public --tag "$NPM_TAG"
+            echo "Published @vibegrid/mcp@$VERSION with dist-tag '$NPM_TAG'"
           fi
         env:
           YARN_NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

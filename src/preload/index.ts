@@ -272,7 +272,9 @@ const api = {
       ipcRenderer.removeListener(IPC.UPDATE_DOWNLOADED, listener)
     }
   },
-  installUpdate: () => ipcRenderer.send(IPC.UPDATE_INSTALL)
+  installUpdate: () => ipcRenderer.send(IPC.UPDATE_INSTALL),
+  setUpdateChannel: (channel: 'stable' | 'beta') =>
+    ipcRenderer.send(IPC.UPDATE_SET_CHANNEL, channel)
 }
 
 contextBridge.exposeInMainWorld('api', api)
