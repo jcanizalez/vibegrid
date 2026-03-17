@@ -304,15 +304,19 @@ app.whenReady().then(async () => {
   // Wire server notifications → renderer/widget
   wireServerNotifications(bridge)
 
-  updateManager.init(mainWindow)
-
-  // Load widget setting via bridge
+  // Load config for widget + update channel
+  let updateChannel: 'stable' | 'beta' = 'stable'
   try {
-    const config = await bridge.request<{ defaults: { widgetEnabled?: boolean } }>(IPC.CONFIG_LOAD)
+    const config = await bridge.request<{
+      defaults: { widgetEnabled?: boolean; updateChannel?: 'stable' | 'beta' }
+    }>(IPC.CONFIG_LOAD)
     widgetEnabled = config.defaults.widgetEnabled !== false
+    updateChannel = config.defaults.updateChannel ?? 'stable'
   } catch {
-    // Config not available yet, use default
+    // Config not available yet, use defaults
   }
+
+  updateManager.init(mainWindow, updateChannel)
 
   // Auto show/hide widget based on main window focus
   mainWindow.on('blur', () => {
@@ -329,6 +333,11 @@ app.whenReady().then(async () => {
   // Widget IPC handlers
   ipcMain.on(IPC.UPDATE_INSTALL, () => {
     updateManager.installUpdate()
+  })
+
+  ipcMain.on(IPC.UPDATE_SET_CHANNEL, (_e, channel: 'stable' | 'beta') => {
+    updateManager.setChannel(channel)
+    updateManager.checkForUpdates()
   })
 
   ipcMain.on(IPC.WIDGET_HIDE, () => {

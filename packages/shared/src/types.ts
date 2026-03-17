@@ -277,6 +277,7 @@ export interface AppConfig {
     layoutMode?: 'grid' | 'tabs'
     mainViewMode?: MainViewMode
     activeWorkspace?: string
+    updateChannel?: 'stable' | 'beta'
   }
   projects: ProjectConfig[]
   agentCommands?: Partial<Record<AgentType, AgentCommandConfig>>
@@ -413,6 +414,7 @@ export const IPC = {
   SHELL_CREATE: 'shell:create',
   UPDATE_DOWNLOADED: 'update:downloaded',
   UPDATE_INSTALL: 'update:install',
+  UPDATE_SET_CHANNEL: 'update:set-channel',
   TASK_IMAGE_SAVE: 'task:imageSave',
   TASK_IMAGE_DELETE: 'task:imageDelete',
   TASK_IMAGE_GET_PATH: 'task:imageGetPath',
