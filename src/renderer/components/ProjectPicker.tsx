@@ -53,7 +53,15 @@ const ICON_MAP: Record<
   Rocket
 }
 
-function ProjectIcon({ icon, color, size = 13 }: { icon?: string; color?: string; size?: number }) {
+export function ProjectIcon({
+  icon,
+  color,
+  size = 13
+}: {
+  icon?: string
+  color?: string
+  size?: number
+}) {
   const Icon = icon && ICON_MAP[icon] ? ICON_MAP[icon] : Folder
   return <Icon size={size} color={color || '#6b7280'} strokeWidth={1.5} />
 }
@@ -61,16 +69,20 @@ function ProjectIcon({ icon, color, size = 13 }: { icon?: string; color?: string
 export function ProjectPicker({
   currentProject,
   projects,
-  onChange
+  onChange,
+  variant = 'compact',
+  allowNone = false
 }: {
   currentProject: string
   projects: ProjectConfig[]
   onChange: (projectName: string) => void
+  variant?: 'compact' | 'form'
+  allowNone?: boolean
 }) {
   const [open, setOpen] = useState(false)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
-  const [position, setPosition] = useState({ top: 0, left: 0 })
+  const [position, setPosition] = useState({ top: 0, left: 0, width: 0 })
 
   const current = projects.find((p) => p.name === currentProject)
 
@@ -82,7 +94,7 @@ export function ProjectPicker({
     }
     const rect = triggerRef.current?.getBoundingClientRect()
     if (rect) {
-      setPosition({ top: rect.bottom + 4, left: rect.left })
+      setPosition({ top: rect.bottom + 4, left: rect.left, width: rect.width })
     }
     setOpen(true)
   }
@@ -117,10 +129,16 @@ export function ProjectPicker({
       <button
         ref={triggerRef}
         onClick={handleTrigger}
-        className="flex items-center gap-1.5 hover:bg-white/[0.04] rounded px-1.5 py-0.5 -mx-1.5 transition-colors text-[12px] text-gray-300"
+        className={
+          variant === 'form'
+            ? 'w-full flex items-center gap-2 px-3 py-2 text-[13px] bg-white/[0.06] border border-white/[0.1] rounded-md text-white hover:border-white/[0.2] transition-colors'
+            : 'flex items-center gap-1.5 hover:bg-white/[0.04] rounded px-1.5 py-0.5 -mx-1.5 transition-colors text-[12px] text-gray-300'
+        }
       >
         <ProjectIcon icon={current?.icon} color={current?.iconColor} />
-        <span>{currentProject || 'Select project'}</span>
+        <span className={`flex-1 text-left ${currentProject ? '' : 'text-gray-600'}`}>
+          {currentProject || 'Select project...'}
+        </span>
         <ChevronDown size={11} className="text-gray-500" />
       </button>
 
@@ -138,9 +156,22 @@ export function ProjectPicker({
                 top: position.top,
                 left: position.left,
                 background: '#1e1e22',
-                minWidth: 180
+                minWidth: Math.max(180, position.width)
               }}
             >
+              {allowNone && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleSelect('')
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs text-gray-500 hover:bg-white/[0.06] transition-colors"
+                >
+                  <Folder size={13} className="text-gray-600" />
+                  <span className="flex-1 text-left italic">None</span>
+                  {!currentProject && <Check size={13} className="text-gray-400" />}
+                </button>
+              )}
               {projects.map((p) => (
                 <button
                   key={p.name}
