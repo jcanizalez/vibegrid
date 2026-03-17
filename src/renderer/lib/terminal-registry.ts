@@ -19,7 +19,7 @@ const registry = new Map<string, TerminalEntry>()
 const readyCallbacks = new Map<string, Set<() => void>>()
 
 // --- Write batching: single global listener + requestAnimationFrame ---
-const pendingWrites = new Map<string, string>()
+const pendingWrites = new Map<string, string[]>()
 let rafId: number | null = null
 
 function scheduleFlush(): void {
@@ -29,7 +29,8 @@ function scheduleFlush(): void {
 
 function flushWrites(): void {
   rafId = null
-  for (const [id, data] of pendingWrites) {
+  for (const [id, chunks] of pendingWrites) {
+    const data = chunks.length === 1 ? chunks[0] : chunks.join('')
     const entry = registry.get(id)
     if (entry) entry.term.write(data)
     statusHandlers.get(id)?.(data)
@@ -43,7 +44,11 @@ export function initGlobalDataListener(): void {
   if (removeGlobalDataListener) return
   removeGlobalDataListener = window.api.onTerminalData(({ id, data }) => {
     const existing = pendingWrites.get(id)
-    pendingWrites.set(id, existing ? existing + data : data)
+    if (existing) {
+      existing.push(data)
+    } else {
+      pendingWrites.set(id, [data])
+    }
     scheduleFlush()
   })
 }
@@ -335,9 +340,9 @@ export function destroyTerminal(terminalId: string): void {
   const entry = registry.get(terminalId)
   if (!entry) return
   // Flush any pending batched writes before destroying
-  const pending = pendingWrites.get(terminalId)
-  if (pending) {
-    entry.term.write(pending)
+  const chunks = pendingWrites.get(terminalId)
+  if (chunks) {
+    entry.term.write(chunks.join(''))
     pendingWrites.delete(terminalId)
   }
   statusHandlers.delete(terminalId)

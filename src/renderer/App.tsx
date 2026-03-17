@@ -102,6 +102,7 @@ export function App() {
     isShortcutsPanelOpen,
     isOnboardingOpen,
     isTerminalPanelOpen,
+    isWorkflowEditorOpen,
     layoutMode,
     mainViewMode,
     selectedTaskId
@@ -114,6 +115,7 @@ export function App() {
       isShortcutsPanelOpen: s.isShortcutsPanelOpen,
       isOnboardingOpen: s.isOnboardingOpen,
       isTerminalPanelOpen: s.isTerminalPanelOpen,
+      isWorkflowEditorOpen: s.isWorkflowEditorOpen,
       layoutMode: s.config?.defaults?.layoutMode ?? 'grid',
       mainViewMode: s.config?.defaults?.mainViewMode ?? 'sessions',
       selectedTaskId: s.selectedTaskId
@@ -429,9 +431,11 @@ export function App() {
 
       <PromptLauncher mode="overlay" onClose={() => setDialogOpen(false)} />
       <AddProjectDialog />
-      <Suspense fallback={null}>
-        <WorkflowEditor />
-      </Suspense>
+      {isWorkflowEditorOpen && (
+        <Suspense fallback={null}>
+          <WorkflowEditor />
+        </Suspense>
+      )}
       <CommandPalette />
       <AddTaskDialog />
       <WorktreeCleanupDialog />

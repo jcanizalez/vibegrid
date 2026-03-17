@@ -53,7 +53,7 @@ export function TerminalInstance({ terminalId, isFocused }: Props) {
 
   // Fit on window resize (debounced to avoid IPC flooding)
   useEffect(() => {
-    let timer: ReturnType<typeof setTimeout>
+    let timer: ReturnType<typeof setTimeout> | null = null
     const onResize = (): void => {
       clearTimeout(timer)
       timer = setTimeout(() => fitTerminal(terminalId), 100)
