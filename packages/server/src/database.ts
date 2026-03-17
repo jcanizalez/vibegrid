@@ -374,6 +374,15 @@ function loadDefaults(d: Database.Database): AppConfig['defaults'] {
     }),
     ...(map.activeWorkspace !== undefined && {
       activeWorkspace: map.activeWorkspace as string
+    }),
+    ...(map.mainViewMode !== undefined && {
+      mainViewMode: map.mainViewMode as AppConfig['defaults']['mainViewMode']
+    }),
+    ...(map.layoutMode !== undefined && {
+      layoutMode: map.layoutMode as 'grid' | 'tabs'
+    }),
+    ...(map.updateChannel !== undefined && {
+      updateChannel: map.updateChannel as 'stable' | 'beta'
     })
   }
 }
