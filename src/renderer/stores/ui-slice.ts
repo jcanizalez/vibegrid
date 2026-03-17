@@ -1,6 +1,8 @@
 import { StateCreator } from 'zustand'
+import { TerminalSession } from '../../shared/types'
 import { AppStore, UISlice } from './types'
 
+const EMPTY_SESSIONS: TerminalSession[] = []
 const GRID_STORAGE_KEY = 'vibegrid:gridSettings'
 
 function loadGridSettings(): { gridColumns?: number; sortMode?: string; statusFilter?: string } {
@@ -66,12 +68,13 @@ export const createUISlice: StateCreator<AppStore, [], [], UISlice> = (set, get)
   activeShellTab: null,
 
   setActiveWorkspace: (id) => {
-    set({ activeWorkspace: id, activeProject: null })
     const config = get().config
     if (config) {
       const updated = { ...config, defaults: { ...config.defaults, activeWorkspace: id } }
       window.api.saveConfig(updated)
-      set({ config: updated })
+      set({ activeWorkspace: id, activeProject: null, config: updated })
+    } else {
+      set({ activeWorkspace: id, activeProject: null })
     }
   },
   setFocusedTerminal: (id) =>
@@ -112,7 +115,7 @@ export const createUISlice: StateCreator<AppStore, [], [], UISlice> = (set, get)
   setSessionBanner: (show, sessions) =>
     set({
       showSessionBanner: show,
-      previousSessions: sessions || []
+      previousSessions: sessions ?? EMPTY_SESSIONS
     }),
 
   setGridColumns: (cols) => {
@@ -120,17 +123,16 @@ export const createUISlice: StateCreator<AppStore, [], [], UISlice> = (set, get)
     set({ gridColumns: cols })
   },
 
-  setRowHeight: (height) =>
-    set((state) => {
-      if (state.config) {
-        const updated = {
-          ...state.config,
-          defaults: { ...state.config.defaults, rowHeight: height }
-        }
-        window.api.saveConfig(updated)
-      }
-      return { rowHeight: height }
-    }),
+  setRowHeight: (height) => {
+    const config = get().config
+    if (config) {
+      const updated = { ...config, defaults: { ...config.defaults, rowHeight: height } }
+      window.api.saveConfig(updated)
+      set({ rowHeight: height, config: updated })
+    } else {
+      set({ rowHeight: height })
+    }
+  },
 
   setTerminalOrder: (order) => set({ terminalOrder: order }),
   setVisibleTerminalIds: (ids) => set({ visibleTerminalIds: ids }),
@@ -166,12 +168,13 @@ export const createUISlice: StateCreator<AppStore, [], [], UISlice> = (set, get)
     }),
 
   setMainViewMode: (mode) => {
-    set({ mainViewMode: mode })
     const config = get().config
     if (config) {
       const updated = { ...config, defaults: { ...config.defaults, mainViewMode: mode } }
       window.api.saveConfig(updated)
-      set({ config: updated })
+      set({ mainViewMode: mode, config: updated })
+    } else {
+      set({ mainViewMode: mode })
     }
   },
   setSelectedTaskId: (id) => set({ selectedTaskId: id }),
@@ -236,19 +239,28 @@ export const createUISlice: StateCreator<AppStore, [], [], UISlice> = (set, get)
     const state = get()
     const term = state.terminals.get(id)
     if (!term) return
-    await window.api.archiveSession({
-      id: term.id,
-      agentType: term.session.agentType,
-      projectName: term.session.projectName,
-      projectPath: term.session.projectPath,
-      displayName: term.session.displayName,
-      branch: term.session.branch,
-      agentSessionId: term.session.hookSessionId,
-      archivedAt: Date.now()
-    })
-    state.removeTerminal(id)
-    const sessions = await window.api.listArchivedSessions()
-    set({ archivedSessions: sessions })
+    const [, sessions] = await Promise.all([
+      window.api.archiveSession({
+        id: term.id,
+        agentType: term.session.agentType,
+        projectName: term.session.projectName,
+        projectPath: term.session.projectPath,
+        displayName: term.session.displayName,
+        branch: term.session.branch,
+        agentSessionId: term.session.hookSessionId,
+        archivedAt: Date.now()
+      }),
+      window.api.listArchivedSessions()
+    ])
+    const terminals = new Map(get().terminals)
+    terminals.delete(id)
+    const terminalOrder = get().terminalOrder.filter((tid) => tid !== id)
+    const minimizedTerminals = new Set(get().minimizedTerminals)
+    minimizedTerminals.delete(id)
+    const gitDiffStats = new Map(get().gitDiffStats)
+    gitDiffStats.delete(id)
+    set({ terminals, terminalOrder, minimizedTerminals, gitDiffStats, archivedSessions: sessions })
+    window.api.notifyWidgetStatus()
   },
 
   unarchiveSession: async (id) => {

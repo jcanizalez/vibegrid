@@ -1,5 +1,14 @@
 import { StateCreator } from 'zustand'
+import { AppConfig } from '../../shared/types'
 import { AppStore, ProjectsSlice } from './types'
+
+/** Apply a patch to config, persist it, and return the new state. */
+function saveConfig(config: AppConfig | null, patch: Partial<AppConfig>): Partial<AppStore> {
+  if (!config) return {}
+  const updated = { ...config, ...patch }
+  window.api.saveConfig(updated)
+  return { config: updated }
+}
 
 export const createProjectsSlice: StateCreator<AppStore, [], [], ProjectsSlice> = (set) => ({
   config: null,
@@ -15,114 +24,54 @@ export const createProjectsSlice: StateCreator<AppStore, [], [], ProjectsSlice> 
   setActiveProject: (name) => set({ activeProject: name }),
 
   addProject: (project) =>
-    set((state) => {
-      if (!state.config) return {}
-      const updated = {
-        ...state.config,
-        projects: [...state.config.projects, project]
-      }
-      window.api.saveConfig(updated)
-      return { config: updated }
-    }),
+    set((s) => saveConfig(s.config, { projects: [...s.config!.projects, project] })),
 
   removeProject: (name) =>
-    set((state) => {
-      if (!state.config) return {}
-      const updated = {
-        ...state.config,
-        projects: state.config.projects.filter((p) => p.name !== name)
-      }
-      window.api.saveConfig(updated)
-      return { config: updated }
-    }),
+    set((s) =>
+      saveConfig(s.config, { projects: s.config!.projects.filter((p) => p.name !== name) })
+    ),
 
   updateProject: (originalName, project) =>
-    set((state) => {
-      if (!state.config) return {}
-      const updated = {
-        ...state.config,
-        projects: state.config.projects.map((p) => (p.name === originalName ? project : p))
-      }
-      window.api.saveConfig(updated)
-      return { config: updated }
-    }),
+    set((s) =>
+      saveConfig(s.config, {
+        projects: s.config!.projects.map((p) => (p.name === originalName ? project : p))
+      })
+    ),
 
   addWorkflow: (workflow) =>
-    set((state) => {
-      if (!state.config) return {}
-      const updated = {
-        ...state.config,
-        workflows: [...(state.config.workflows || []), workflow]
-      }
-      window.api.saveConfig(updated)
-      return { config: updated }
-    }),
+    set((s) => saveConfig(s.config, { workflows: [...(s.config!.workflows || []), workflow] })),
 
   removeWorkflow: (id) =>
-    set((state) => {
-      if (!state.config) return {}
-      const updated = {
-        ...state.config,
-        workflows: (state.config.workflows || []).filter((w) => w.id !== id)
-      }
-      window.api.saveConfig(updated)
-      return { config: updated }
-    }),
+    set((s) =>
+      saveConfig(s.config, { workflows: (s.config!.workflows || []).filter((w) => w.id !== id) })
+    ),
 
   updateWorkflow: (id, workflow) =>
-    set((state) => {
-      if (!state.config) return {}
-      const updated = {
-        ...state.config,
-        workflows: (state.config.workflows || []).map((w) => (w.id === id ? workflow : w))
-      }
-      window.api.saveConfig(updated)
-      return { config: updated }
-    }),
+    set((s) =>
+      saveConfig(s.config, {
+        workflows: (s.config!.workflows || []).map((w) => (w.id === id ? workflow : w))
+      })
+    ),
 
   addRemoteHost: (host) =>
-    set((state) => {
-      if (!state.config) return {}
-      const updated = {
-        ...state.config,
-        remoteHosts: [...(state.config.remoteHosts || []), host]
-      }
-      window.api.saveConfig(updated)
-      return { config: updated }
-    }),
+    set((s) => saveConfig(s.config, { remoteHosts: [...(s.config!.remoteHosts || []), host] })),
 
   removeRemoteHost: (id) =>
-    set((state) => {
-      if (!state.config) return {}
-      const updated = {
-        ...state.config,
-        remoteHosts: (state.config.remoteHosts || []).filter((h) => h.id !== id)
-      }
-      window.api.saveConfig(updated)
-      return { config: updated }
-    }),
+    set((s) =>
+      saveConfig(s.config, {
+        remoteHosts: (s.config!.remoteHosts || []).filter((h) => h.id !== id)
+      })
+    ),
 
   updateRemoteHost: (id, host) =>
-    set((state) => {
-      if (!state.config) return {}
-      const updated = {
-        ...state.config,
-        remoteHosts: (state.config.remoteHosts || []).map((h) => (h.id === id ? host : h))
-      }
-      window.api.saveConfig(updated)
-      return { config: updated }
-    }),
+    set((s) =>
+      saveConfig(s.config, {
+        remoteHosts: (s.config!.remoteHosts || []).map((h) => (h.id === id ? host : h))
+      })
+    ),
 
   addWorkspace: (workspace) =>
-    set((state) => {
-      if (!state.config) return {}
-      const updated = {
-        ...state.config,
-        workspaces: [...(state.config.workspaces || []), workspace]
-      }
-      window.api.saveConfig(updated)
-      return { config: updated }
-    }),
+    set((s) => saveConfig(s.config, { workspaces: [...(s.config!.workspaces || []), workspace] })),
 
   removeWorkspace: (id) =>
     set((state) => {
@@ -148,15 +97,11 @@ export const createProjectsSlice: StateCreator<AppStore, [], [], ProjectsSlice> 
     }),
 
   updateWorkspace: (id, updates) =>
-    set((state) => {
-      if (!state.config) return {}
-      const updated = {
-        ...state.config,
-        workspaces: (state.config.workspaces || []).map((ws) =>
+    set((s) =>
+      saveConfig(s.config, {
+        workspaces: (s.config!.workspaces || []).map((ws) =>
           ws.id === id ? { ...ws, ...updates } : ws
         )
-      }
-      window.api.saveConfig(updated)
-      return { config: updated }
-    })
+      })
+    )
 })
