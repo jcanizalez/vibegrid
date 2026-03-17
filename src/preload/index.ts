@@ -15,7 +15,8 @@ import {
   HeadlessSession,
   WorkflowExecution,
   ScriptConfig,
-  AgentType
+  AgentType,
+  SSHKeyMeta
 } from '../shared/types'
 
 const api = {
@@ -270,6 +271,27 @@ const api = {
     sessionsLaunched: number
     source?: 'scheduler' | 'manual'
   }): Promise<void> => ipcRenderer.invoke(IPC.WORKFLOW_EXECUTION_COMPLETE, data),
+
+  // Credential vault
+  storeSSHKey: (params: {
+    label: string
+    privateKey: string
+    publicKey?: string
+    certificate?: string
+  }): Promise<{ id: string }> => ipcRenderer.invoke(IPC.CREDENTIAL_STORE_KEY, params),
+
+  importSSHKeyFile: (params: { filePath: string; label?: string }): Promise<{ id: string }> =>
+    ipcRenderer.invoke(IPC.CREDENTIAL_IMPORT_KEY_FILE, params),
+
+  deleteSSHKey: (id: string): Promise<void> => ipcRenderer.invoke(IPC.CREDENTIAL_DELETE_KEY, id),
+
+  listSSHKeys: (): Promise<SSHKeyMeta[]> => ipcRenderer.invoke(IPC.CREDENTIAL_LIST_KEYS),
+
+  encryptString: (plaintext: string): Promise<string> =>
+    ipcRenderer.invoke(IPC.CREDENTIAL_ENCRYPT, plaintext),
+
+  isSafeStorageAvailable: (): Promise<boolean> =>
+    ipcRenderer.invoke(IPC.CREDENTIAL_SAFE_STORAGE_AVAILABLE),
 
   // App info
   getAppVersion: (): string => ipcRenderer.sendSync('get-app-version'),
