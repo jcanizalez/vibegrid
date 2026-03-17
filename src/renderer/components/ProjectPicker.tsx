@@ -70,17 +70,19 @@ export function ProjectPicker({
   currentProject,
   projects,
   onChange,
-  variant = 'compact'
+  variant = 'compact',
+  allowNone = false
 }: {
   currentProject: string
   projects: ProjectConfig[]
   onChange: (projectName: string) => void
   variant?: 'compact' | 'form'
+  allowNone?: boolean
 }) {
   const [open, setOpen] = useState(false)
   const triggerRef = useRef<HTMLButtonElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
-  const [position, setPosition] = useState({ top: 0, left: 0 })
+  const [position, setPosition] = useState({ top: 0, left: 0, width: 0 })
 
   const current = projects.find((p) => p.name === currentProject)
 
@@ -92,7 +94,7 @@ export function ProjectPicker({
     }
     const rect = triggerRef.current?.getBoundingClientRect()
     if (rect) {
-      setPosition({ top: rect.bottom + 4, left: rect.left })
+      setPosition({ top: rect.bottom + 4, left: rect.left, width: rect.width })
     }
     setOpen(true)
   }
@@ -154,9 +156,22 @@ export function ProjectPicker({
                 top: position.top,
                 left: position.left,
                 background: '#1e1e22',
-                minWidth: 180
+                minWidth: Math.max(180, position.width)
               }}
             >
+              {allowNone && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleSelect('')
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs text-gray-500 hover:bg-white/[0.06] transition-colors"
+                >
+                  <Folder size={13} className="text-gray-600" />
+                  <span className="flex-1 text-left italic">None</span>
+                  {!currentProject && <Check size={13} className="text-gray-400" />}
+                </button>
+              )}
               {projects.map((p) => (
                 <button
                   key={p.name}

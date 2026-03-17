@@ -68,17 +68,23 @@ export function ScriptConfigForm({ config, onChange, triggerType, stepGroups = [
           currentProject={config.projectName || ''}
           projects={projects}
           onChange={(name) => {
-            const proj = projects.find((p) => p.name === name)
-            if (proj) {
-              onChange({
-                ...config,
-                projectName: proj.name,
-                projectPath: proj.path,
-                cwd: proj.path
-              })
+            if (!name) {
+              const { projectName: _pn, projectPath: _pp, cwd: _cwd, ...rest } = config
+              onChange(rest as ScriptConfig)
+            } else {
+              const proj = projects.find((p) => p.name === name)
+              if (proj) {
+                onChange({
+                  ...config,
+                  projectName: proj.name,
+                  projectPath: proj.path,
+                  cwd: proj.path
+                })
+              }
             }
           }}
           variant="form"
+          allowNone
         />
         <p className="text-[11px] text-gray-500 mt-1">Script runs in this project's directory</p>
       </div>

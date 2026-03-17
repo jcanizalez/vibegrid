@@ -48,7 +48,7 @@ export function LaunchAgentConfigForm({ config, onChange, triggerType, stepGroup
   const isTaskTrigger = triggerType === 'taskCreated' || triggerType === 'taskStatusChanged'
   const hasTemplateVars = stepGroups.length > 0 || isTaskTrigger
   const hasBranch = !!(config.branch && config.branch.trim())
-  const isHeadless = config.headless !== false
+  const isHeadless = !!config.headless
 
   const contextVars = isTaskTrigger
     ? TEMPLATE_VARIABLES.filter(
@@ -196,6 +196,8 @@ export function LaunchAgentConfigForm({ config, onChange, triggerType, stepGroup
 
         {/* Worktree toggle — mirrors NewAgentDialog:445-483 */}
         <button
+          role="switch"
+          aria-checked={!!config.useWorktree}
           onClick={() => {
             if (hasBranch) {
               onChange({ ...config, useWorktree: config.useWorktree ? undefined : true })
@@ -250,6 +252,8 @@ export function LaunchAgentConfigForm({ config, onChange, triggerType, stepGroup
 
         {/* Headless toggle — matches worktree toggle pattern */}
         <button
+          role="switch"
+          aria-checked={isHeadless}
           onClick={() => onChange({ ...config, headless: isHeadless ? false : true })}
           disabled={!!config.remoteHostId}
           className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-lg border transition-all ${
