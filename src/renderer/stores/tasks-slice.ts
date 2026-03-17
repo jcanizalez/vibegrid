@@ -1,4 +1,5 @@
 import { StateCreator } from 'zustand'
+import { TaskConfig, TaskStatus } from '../../shared/types'
 import { AppStore, TasksSlice } from './types'
 import { fireTaskCreatedTrigger, fireTaskStatusChangedTrigger } from '../lib/workflow-triggers'
 
@@ -50,8 +51,8 @@ export const createTasksSlice: StateCreator<AppStore, [], [], TasksSlice> = (set
     set((state) => {
       if (!state.config) return {}
       const now = new Date().toISOString()
-      let oldStatus: string | undefined
-      let newTask: (typeof updates & { updatedAt: string }) | undefined
+      let oldStatus: TaskStatus | undefined
+      let newTask: TaskConfig | undefined
       const updated = {
         ...state.config,
         tasks: (state.config.tasks || []).map((t) => {
@@ -101,7 +102,7 @@ export const createTasksSlice: StateCreator<AppStore, [], [], TasksSlice> = (set
     set((state) => {
       if (!state.config) return {}
       const now = new Date().toISOString()
-      let oldStatus: string | undefined
+      let oldStatus: TaskStatus | undefined
       let newTask: TaskConfig | undefined
       const updated = {
         ...state.config,
@@ -131,7 +132,7 @@ export const createTasksSlice: StateCreator<AppStore, [], [], TasksSlice> = (set
     set((state) => {
       if (!state.config) return {}
       const now = new Date().toISOString()
-      let oldStatus: string | undefined
+      let oldStatus: TaskStatus | undefined
       let newTask: TaskConfig | undefined
       const updated = {
         ...state.config,
@@ -160,7 +161,7 @@ export const createTasksSlice: StateCreator<AppStore, [], [], TasksSlice> = (set
     set((state) => {
       if (!state.config) return {}
       const now = new Date().toISOString()
-      let oldStatus: string | undefined
+      let oldStatus: TaskStatus | undefined
       let newTask: TaskConfig | undefined
       const updated = {
         ...state.config,
@@ -188,7 +189,7 @@ export const createTasksSlice: StateCreator<AppStore, [], [], TasksSlice> = (set
     set((state) => {
       if (!state.config) return {}
       const now = new Date().toISOString()
-      let oldStatus: string | undefined
+      let oldStatus: TaskStatus | undefined
       let newTask: TaskConfig | undefined
       const updated = {
         ...state.config,
@@ -217,7 +218,7 @@ export const createTasksSlice: StateCreator<AppStore, [], [], TasksSlice> = (set
     set((state) => {
       if (!state.config) return {}
       const now = new Date().toISOString()
-      let oldStatus: string | undefined
+      let oldStatus: TaskStatus | undefined
       let newTask: TaskConfig | undefined
       const updated = {
         ...state.config,

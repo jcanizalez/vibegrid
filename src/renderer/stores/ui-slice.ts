@@ -236,30 +236,35 @@ export const createUISlice: StateCreator<AppStore, [], [], UISlice> = (set, get)
   },
 
   archiveSession: async (id) => {
-    const state = get()
-    const term = state.terminals.get(id)
+    const term = get().terminals.get(id)
     if (!term) return
-    const [, sessions] = await Promise.all([
-      window.api.archiveSession({
-        id: term.id,
-        agentType: term.session.agentType,
-        projectName: term.session.projectName,
-        projectPath: term.session.projectPath,
-        displayName: term.session.displayName,
-        branch: term.session.branch,
-        agentSessionId: term.session.hookSessionId,
-        archivedAt: Date.now()
-      }),
-      window.api.listArchivedSessions()
-    ])
-    const terminals = new Map(get().terminals)
-    terminals.delete(id)
-    const terminalOrder = get().terminalOrder.filter((tid) => tid !== id)
-    const minimizedTerminals = new Set(get().minimizedTerminals)
-    minimizedTerminals.delete(id)
-    const gitDiffStats = new Map(get().gitDiffStats)
-    gitDiffStats.delete(id)
-    set({ terminals, terminalOrder, minimizedTerminals, gitDiffStats, archivedSessions: sessions })
+    await window.api.archiveSession({
+      id: term.id,
+      agentType: term.session.agentType,
+      projectName: term.session.projectName,
+      projectPath: term.session.projectPath,
+      displayName: term.session.displayName,
+      branch: term.session.branch,
+      agentSessionId: term.session.hookSessionId,
+      archivedAt: Date.now()
+    })
+    const sessions = await window.api.listArchivedSessions()
+    set((state) => {
+      const terminals = new Map(state.terminals)
+      terminals.delete(id)
+      const terminalOrder = state.terminalOrder.filter((tid) => tid !== id)
+      const minimizedTerminals = new Set(state.minimizedTerminals)
+      minimizedTerminals.delete(id)
+      const gitDiffStats = new Map(state.gitDiffStats)
+      gitDiffStats.delete(id)
+      return {
+        terminals,
+        terminalOrder,
+        minimizedTerminals,
+        gitDiffStats,
+        archivedSessions: sessions
+      }
+    })
     window.api.notifyWidgetStatus()
   },
 
