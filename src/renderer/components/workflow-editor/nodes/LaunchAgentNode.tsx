@@ -79,7 +79,7 @@ export function LaunchAgentNode({ label, config, selected, executionStatus, onCl
           <div className="text-[13px] font-medium text-white truncate">{label}</div>
           <div className="text-[11px] text-gray-500 truncate">
             {config.projectName || 'No project'}
-            {config.branch && ` · ${config.branch}`}
+            {!remoteHost && config.branch && ` · ${config.branch}`}
           </div>
           {remoteHost && (
             <div className="flex items-center gap-1 mt-0.5">

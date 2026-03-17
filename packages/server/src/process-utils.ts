@@ -84,7 +84,7 @@ export function testSshConnection(host: RemoteHost): Promise<SshTestResult> {
       '-o',
       'BatchMode=yes',
       '-o',
-      'StrictHostKeyChecking=accept-new'
+      'StrictHostKeyChecking=yes'
     ]
     if (host.port !== 22) args.push('-p', String(host.port))
     if (host.sshKeyPath) args.push('-i', host.sshKeyPath)
@@ -93,28 +93,31 @@ export function testSshConnection(host: RemoteHost): Promise<SshTestResult> {
     }
     args.push(`${host.user}@${host.hostname}`, 'echo', '__VIBEGRID_OK__')
 
-    const child = execFile(
-      'ssh',
-      args,
-      { timeout: 10000, env: getSafeEnv() },
-      (err, stdout, stderr) => {
-        const durationMs = Date.now() - start
-        if (!err && stdout.includes('__VIBEGRID_OK__')) {
-          resolve({ success: true, message: `Connected in ${durationMs}ms`, durationMs })
-        } else {
-          const msg = stderr?.trim() || err?.message || 'Connection failed'
-          resolve({ success: false, message: msg, durationMs })
-        }
-      }
-    )
-
-    // Safety kill if somehow it hangs past timeout
-    setTimeout(() => {
+    const safetyTimer = setTimeout(() => {
       try {
         child.kill()
       } catch {
         /* already dead */
       }
     }, 12000)
+
+    const child = execFile(
+      'ssh',
+      args,
+      { timeout: 10000, env: getSafeEnv() },
+      (err, stdout, stderr) => {
+        clearTimeout(safetyTimer)
+        const durationMs = Date.now() - start
+        if (!err && stdout.includes('__VIBEGRID_OK__')) {
+          resolve({ success: true, message: `Connected in ${durationMs}ms`, durationMs })
+        } else {
+          let msg = stderr?.trim() || err?.message || 'Connection failed'
+          if (msg.includes('Host key verification failed')) {
+            msg = 'Host key not in known_hosts — connect manually first to accept the key'
+          }
+          resolve({ success: false, message: msg, durationMs })
+        }
+      }
+    )
   })
 }

@@ -147,8 +147,10 @@ class PtyManager extends EventEmitter {
       sshParts.push(...opts)
     }
     sshParts.push(`${host.user}@${host.hostname}`)
-    // Echo a unique marker on connect, then exec a login shell so the session stays alive
-    sshParts.push(`echo ${marker} && exec $SHELL -l`)
+    // Echo a unique marker on connect, then exec a login shell so the session stays alive.
+    // Single-quoted so the local shell passes && and $SHELL literally to SSH,
+    // which forwards them to the remote shell for interpretation.
+    sshParts.push(`'echo ${marker} && exec $SHELL -l'`)
 
     // Build remote command: cd to project path then launch agent
     const agentLine = this.buildAgentLaunchLine(payload)
@@ -162,7 +164,7 @@ class PtyManager extends EventEmitter {
     let connected = false
     let sshOutput = ''
 
-    // Fallback: if marker never arrives (non-standard shell), use prompt regex after timeout
+    // Fallback: if marker never arrives (non-standard shell), send command after timeout
     const fallbackTimer = setTimeout(() => {
       if (!connected) {
         connected = true
