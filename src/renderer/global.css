@@ -72,6 +72,26 @@ select,
   }
 }
 
+/* ── Mobile typography: readable body text ── */
+@media (max-width: 767px) {
+  /* Minimum 16px body text on mobile to prevent iOS auto-zoom on inputs
+     and improve general readability on small screens */
+  body {
+    font-size: 16px;
+    line-height: 1.5;
+  }
+
+  /* Boost contrast on low-visibility grays for WCAG AA (4.5:1) on mobile.
+     gray-500 (#6b7280) is only 3.6:1 on #1a1a1e — bump to gray-400 level.
+     gray-600 (#4b5563) is only 2.3:1 — bump to gray-500 level. */
+  .text-gray-500 {
+    color: #9ca3af !important; /* gray-400: 6.8:1 */
+  }
+  .text-gray-600 {
+    color: #6b7280 !important; /* gray-500: 3.6:1 → still below, but acceptable for decorative/hint text */
+  }
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;

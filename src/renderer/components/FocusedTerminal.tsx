@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { isElectron } from '../lib/platform'
 import { useAppStore } from '../stores'
@@ -10,10 +10,13 @@ import { InlineRename } from './InlineRename'
 import { OpenInButton } from './OpenInButton'
 import { CommitDialog } from './CommitDialog'
 import { DiffFileList, DiffContent } from './DiffSidebar'
+import { MobileFontSizeControl } from './MobileFontSizeControl'
 import { AGENT_DEFINITIONS } from '../lib/agent-definitions'
 import { closeTerminalSession } from '../lib/terminal-close'
 import { getDisplayName } from '../lib/terminal-display'
 import { useTerminalScrollButton } from '../hooks/useTerminalScrollButton'
+import { useTerminalPinchZoom } from '../hooks/useTerminalPinchZoom'
+import { useIsMobile } from '../hooks/useIsMobile'
 import {
   GitBranch,
   FolderGit2,
@@ -46,6 +49,9 @@ export function FocusedTerminal() {
   const [selectedFile, setSelectedFile] = useState<string | null>(null)
   const [diffPanelWidth, setDiffPanelWidth] = useState(420)
   const { showScrollBtn, handleScrollToBottom } = useTerminalScrollButton(focusedId)
+  const terminalContainerRef = useRef<HTMLDivElement>(null)
+  const isMobile = useIsMobile()
+  useTerminalPinchZoom(terminalContainerRef)
 
   const cwd = terminal?.session.worktreePath || terminal?.session.projectPath || ''
 
@@ -258,19 +264,27 @@ export function FocusedTerminal() {
         {/* Content area: terminal + optional diff panel */}
         <div className="flex-1 flex min-h-0">
           {/* Terminal */}
-          <div className="relative flex-1 p-1 min-w-0" style={{ background: 'rgba(0, 0, 0, 0.3)' }}>
+          <div
+            ref={terminalContainerRef}
+            className="relative flex-1 p-1 min-w-0"
+            style={{ background: 'rgba(0, 0, 0, 0.3)' }}
+          >
             <TerminalInstance terminalId={focusedId} isFocused={true} />
-            {showScrollBtn && (
-              <button
-                className="absolute bottom-4 right-4 w-8 h-8 flex items-center justify-center
-                           rounded bg-white/[0.08] hover:bg-white/[0.15] text-gray-400 hover:text-white
-                           transition-colors z-10"
-                onClick={handleScrollToBottom}
-                title="Scroll to bottom"
-              >
-                <ArrowDown size={14} />
-              </button>
-            )}
+            {/* Mobile: floating controls (font size + scroll) */}
+            <div className="absolute bottom-4 right-4 flex flex-col items-end gap-2 z-10">
+              {isMobile && <MobileFontSizeControl />}
+              {showScrollBtn && (
+                <button
+                  className="w-8 h-8 flex items-center justify-center
+                             rounded bg-white/[0.08] hover:bg-white/[0.15] text-gray-400 hover:text-white
+                             transition-colors"
+                  onClick={handleScrollToBottom}
+                  title="Scroll to bottom"
+                >
+                  <ArrowDown size={14} />
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Diff panel */}
