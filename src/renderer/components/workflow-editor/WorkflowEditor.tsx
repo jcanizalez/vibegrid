@@ -436,7 +436,13 @@ export function WorkflowEditor() {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-50 flex flex-col titlebar-no-drag"
-      style={{ background: '#1a1a1e' }}
+      style={{
+        background: '#1a1a1e',
+        paddingTop: 'var(--safe-top, 0px)',
+        paddingRight: 'var(--safe-right, 0px)',
+        paddingBottom: 'var(--safe-bottom, 0px)',
+        paddingLeft: 'var(--safe-left, 0px)'
+      }}
     >
       {/* Top bar */}
       <div className="shrink-0 h-[52px] flex items-center justify-between px-4 border-b border-white/[0.08] titlebar-drag">

@@ -11,6 +11,54 @@ body {
   padding: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   background: #1a1a1e !important;
+  /* Prevent iOS rubber-band overscroll from pulling the whole page */
+  overscroll-behavior: contain;
+}
+
+/* ── Safe area inset helpers (iOS notch / Dynamic Island / home bar) ── */
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+}
+
+/* ── Mobile touch: kill 300ms tap delay ── */
+button,
+a,
+input,
+textarea,
+select,
+[role='button'],
+[role='tab'],
+[role='switch'],
+[role='menuitem'],
+[role='separator'],
+.drag-handle {
+  touch-action: manipulation;
+}
+
+/* ── Mobile touch: active feedback ── */
+@media (hover: none) {
+  button:active,
+  [role='button']:active,
+  [role='tab']:active,
+  [role='menuitem']:active {
+    opacity: 0.7;
+    transition: opacity 0.05s ease;
+  }
+
+  /* Show hover-revealed actions on touch devices (no hover available) */
+  .group-hover\/rename\:opacity-100,
+  .group-hover\/session\:opacity-100,
+  .group-hover\/task\:opacity-100,
+  .group-hover\/wt\:opacity-100,
+  .group-hover\/archived\:opacity-100,
+  .group-hover\/sessions\:opacity-100,
+  .group-hover\/worktrees\:opacity-100,
+  .group-hover\:opacity-100 {
+    opacity: 1 !important;
+  }
 }
 
 /* Custom scrollbar */

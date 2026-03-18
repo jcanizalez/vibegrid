@@ -137,9 +137,15 @@ export function FocusedTerminal() {
 
       {/* Focused panel */}
       <motion.div
-        className="fixed inset-3 z-50 rounded-xl border border-white/[0.08]
+        className="fixed z-50 rounded-xl border border-white/[0.08]
                    shadow-2xl flex flex-col overflow-hidden"
-        style={{ background: '#1a1a1e' }}
+        style={{
+          background: '#1a1a1e',
+          top: 'calc(0.75rem + var(--safe-top, 0px))',
+          right: 'calc(0.75rem + var(--safe-right, 0px))',
+          bottom: 'calc(0.75rem + var(--safe-bottom, 0px))',
+          left: 'calc(0.75rem + var(--safe-left, 0px))'
+        }}
         initial={{ opacity: 0, scale: 0.97 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ type: 'spring', stiffness: 400, damping: 30 }}

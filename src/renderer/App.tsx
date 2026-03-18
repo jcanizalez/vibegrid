@@ -275,7 +275,16 @@ export function App() {
   }, [])
 
   return (
-    <div className="flex h-screen text-gray-100" style={{ background: '#1a1a1e' }}>
+    <div
+      className="flex h-dvh text-gray-100"
+      style={{
+        background: '#1a1a1e',
+        paddingTop: 'var(--safe-top)',
+        paddingLeft: 'var(--safe-left)',
+        paddingRight: 'var(--safe-right)',
+        paddingBottom: 'var(--safe-bottom)'
+      }}
+    >
       <ProjectSidebar />
 
       <main className="flex-1 flex flex-col overflow-hidden">

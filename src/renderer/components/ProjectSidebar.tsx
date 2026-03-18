@@ -1558,6 +1558,11 @@ export function ProjectSidebar() {
     return (
       <div
         className="fixed inset-0 z-50 flex"
+        style={{
+          paddingTop: 'var(--safe-top, 0px)',
+          paddingBottom: 'var(--safe-bottom, 0px)',
+          paddingLeft: 'var(--safe-left, 0px)'
+        }}
         onClick={(e) => {
           // Close when clicking the backdrop (not the sidebar itself)
           if (e.target === e.currentTarget) toggleSidebar()

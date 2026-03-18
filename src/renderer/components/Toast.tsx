@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Check, X, AlertTriangle, Info } from 'lucide-react'
@@ -92,7 +93,13 @@ export function ToastContainer() {
   }, [])
 
   return (
-    <div className="fixed bottom-5 right-5 z-[200] flex flex-col gap-2 pointer-events-none">
+    <div
+      className="fixed z-[200] flex flex-col gap-2 pointer-events-none"
+      style={{
+        bottom: 'calc(1.25rem + var(--safe-bottom, 0px))',
+        right: 'calc(1.25rem + var(--safe-right, 0px))'
+      }}
+    >
       <AnimatePresence mode="popLayout">
         {items.map((t) => {
           const style = TOAST_STYLES[t.type]
