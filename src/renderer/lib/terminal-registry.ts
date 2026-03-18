@@ -106,14 +106,20 @@ const TERM_OPTIONS = {
 
 /** Allow overriding default font size from config */
 let configFontSize = 13
+
 export function setDefaultFontSize(size: number): void {
   configFontSize = size
+}
+
+/** Returns the effective font size (respects user config, no forced minimum). */
+export function getEffectiveFontSize(size?: number): number {
+  return size ?? configFontSize
 }
 
 const rendererIsMac = navigator.platform.toUpperCase().includes('MAC')
 
 function createTerminalEntry(terminalId: string): TerminalEntry {
-  const term = new Terminal({ ...TERM_OPTIONS, fontSize: configFontSize })
+  const term = new Terminal({ ...TERM_OPTIONS, fontSize: getEffectiveFontSize() })
   const fitAddon = new FitAddon()
   term.loadAddon(fitAddon)
 
@@ -363,10 +369,32 @@ export function destroyTerminal(terminalId: string): void {
 
 /**
  * Update font size on all terminals and re-fit them.
+ * Callers are responsible for clamping to MIN/MAX bounds.
  */
 export function setAllTerminalsFontSize(fontSize: number): void {
+  const effective = getEffectiveFontSize(fontSize)
   for (const [id, entry] of registry) {
-    entry.term.options.fontSize = fontSize
+    entry.term.options.fontSize = effective
     fitTerminal(id)
+  }
+}
+
+/**
+ * Get the current font size of the first mounted terminal (for UI display).
+ */
+export function getCurrentTerminalFontSize(): number {
+  for (const entry of registry.values()) {
+    return entry.term.options.fontSize
+  }
+  return getEffectiveFontSize()
+}
+
+/**
+ * Re-fit all terminals that have a current container (i.e. are mounted).
+ * Used when the virtual keyboard changes viewport geometry.
+ */
+export function fitAllTerminals(): void {
+  for (const [id, entry] of registry) {
+    if (entry.currentContainer) fitTerminal(id)
   }
 }

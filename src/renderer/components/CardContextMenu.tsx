@@ -6,6 +6,7 @@ import { useAppStore } from '../stores'
 import { closeTerminalSession } from '../lib/terminal-close'
 import { toast } from './Toast'
 import { getDisplayName } from '../lib/terminal-display'
+import { useIsMobile } from '../hooks/useIsMobile'
 
 interface Props {
   terminalId: string
@@ -25,6 +26,7 @@ export function CardContextMenu({ terminalId, position, onClose }: Props) {
   const menuRef = useRef<HTMLDivElement>(null)
   const terminal = useAppStore((s) => s.terminals.get(terminalId))
   const focusedId = useAppStore((s) => s.focusedTerminalId)
+  const isMobile = useIsMobile()
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -33,10 +35,10 @@ export function CardContextMenu({ terminalId, position, onClose }: Props) {
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
     }
-    document.addEventListener('mousedown', handleClick)
+    document.addEventListener('pointerdown', handleClick)
     document.addEventListener('keydown', handleKey)
     return () => {
-      document.removeEventListener('mousedown', handleClick)
+      document.removeEventListener('pointerdown', handleClick)
       document.removeEventListener('keydown', handleKey)
     }
   }, [onClose])
@@ -145,8 +147,16 @@ export function CardContextMenu({ terminalId, position, onClose }: Props) {
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: -4, scale: 0.96 }}
         transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-        className="fixed z-[150] rounded-lg border border-white/[0.1] shadow-2xl py-1"
-        style={{ top, left, background: '#1e1e22', minWidth: menuWidth }}
+        className={`fixed z-[150] rounded-lg border border-white/[0.1] py-1 ${isMobile ? '' : 'shadow-2xl'}`}
+        style={{
+          top,
+          left,
+          background: isMobile ? 'var(--glass-bg)' : '#1e1e22',
+          backdropFilter: isMobile ? 'var(--glass-blur)' : undefined,
+          WebkitBackdropFilter: isMobile ? 'var(--glass-blur)' : undefined,
+          boxShadow: isMobile ? 'var(--glass-shadow)' : undefined,
+          minWidth: menuWidth
+        }}
       >
         {items.map((item, i) => (
           <div key={i}>
@@ -156,7 +166,8 @@ export function CardContextMenu({ terminalId, position, onClose }: Props) {
                 e.stopPropagation()
                 item.onClick()
               }}
-              className="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs text-gray-300 hover:bg-white/[0.06] transition-colors"
+              className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs text-gray-300
+                         hover:bg-white/[0.06] active:bg-white/[0.1] transition-colors"
             >
               <item.icon size={14} className={item.className ?? 'text-gray-500'} />
               <span>{item.label}</span>

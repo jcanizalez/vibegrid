@@ -202,7 +202,13 @@ export function TaskDiffReview() {
 
           <motion.div
             className="fixed top-0 right-0 bottom-0 z-50 flex flex-col border-l border-white/[0.08] shadow-2xl"
-            style={{ width: sidebarWidth, background: '#141416' }}
+            style={{
+              width: sidebarWidth,
+              background: '#141416',
+              paddingTop: 'var(--safe-top, 0px)',
+              paddingRight: 'var(--safe-right, 0px)',
+              paddingBottom: 'var(--safe-bottom, 0px)'
+            }}
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}

@@ -4,6 +4,7 @@ import { AnimatePresence } from 'framer-motion'
 import { useAppStore } from './stores'
 import { GridView } from './components/GridView'
 import { TabView } from './components/TabView'
+import { MobileSinglePane } from './components/MobileSinglePane'
 import { FocusedTerminal } from './components/FocusedTerminal'
 import { ProjectSidebar } from './components/ProjectSidebar'
 import { PromptLauncher } from './components/PromptLauncher'
@@ -18,8 +19,10 @@ import { GridToolbar } from './components/GridToolbar'
 import { SettingsPage } from './components/SettingsPage'
 import { RecentSessionsPopover } from './components/RecentSessionsPopover'
 import { RotateCcw, Monitor, ListTodo, Plus, Menu } from 'lucide-react'
+import { MobileBottomTabs } from './components/MobileBottomTabs'
 import { TaskToolbar } from './components/TaskToolbar'
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
+import { useVirtualKeyboard } from './hooks/useVirtualKeyboard'
 import { useGitDiffPolling } from './hooks/useGitDiffPolling'
 import { consumePendingTerminalClose } from './lib/terminal-close'
 import {
@@ -138,6 +141,7 @@ export function App() {
   }, []) // Only on mount
 
   useKeyboardShortcuts()
+  const { keyboardHeight } = useVirtualKeyboard()
   useGitDiffPolling()
 
   // Load config and previous sessions on mount
@@ -275,10 +279,26 @@ export function App() {
   }, [])
 
   return (
-    <div className="flex h-screen text-gray-100" style={{ background: '#1a1a1e' }}>
+    <div
+      className="flex h-dvh text-gray-100"
+      style={{
+        background: '#1a1a1e',
+        paddingTop: 'var(--safe-top)',
+        paddingLeft: 'var(--safe-left)',
+        paddingRight: 'var(--safe-right)',
+        paddingBottom: 'calc(var(--safe-bottom) + var(--keyboard-height, 0px))'
+      }}
+    >
       <ProjectSidebar />
 
-      <main className="flex-1 flex flex-col overflow-hidden">
+      <main
+        className="flex-1 flex flex-col overflow-hidden"
+        style={
+          isMobile && keyboardHeight === 0
+            ? { paddingBottom: 'calc(64px + var(--safe-bottom, 0px))' }
+            : undefined
+        }
+      >
         {/* Top bar — single line, same height as traffic lights */}
         <div
           className={`titlebar-drag shrink-0 border-b border-white/[0.06]
@@ -290,7 +310,19 @@ export function App() {
             {(isMobile || !isSidebarOpen) && (
               <button
                 onClick={toggleSidebar}
-                className="text-gray-400 hover:text-white p-1.5 rounded-md transition-colors flex items-center gap-1.5"
+                className={`text-gray-400 hover:text-white active:text-white p-2 transition-colors flex items-center gap-1.5 ${
+                  isMobile ? 'rounded-full' : 'rounded-md'
+                }`}
+                style={
+                  isMobile
+                    ? {
+                        background: 'var(--glass-bg, transparent)',
+                        backdropFilter: 'var(--glass-blur, none)',
+                        WebkitBackdropFilter: 'var(--glass-blur, none)',
+                        boxShadow: 'var(--glass-shadow, none)'
+                      }
+                    : undefined
+                }
                 title="Show sidebar"
               >
                 {isMobile ? (
@@ -311,33 +343,35 @@ export function App() {
                 {!isMobile && <KbdHint shortcutId="toggle-sidebar" />}
               </button>
             )}
-            {/* Main view toggle: Sessions / Tasks */}
-            <div className="flex bg-white/[0.04] rounded-md p-0.5 gap-0.5">
-              <button
-                onClick={() => setMainViewMode('sessions')}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-colors ${
-                  mainViewMode === 'sessions'
-                    ? 'bg-white/[0.1] text-white'
-                    : 'text-gray-500 hover:text-gray-300'
-                }`}
-              >
-                <Monitor size={13} strokeWidth={2} />
-                {!isMobile && 'Sessions'}
-                {!isMobile && <KbdHint shortcutId="view-sessions" />}
-              </button>
-              <button
-                onClick={() => setMainViewMode('tasks')}
-                className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium transition-colors ${
-                  mainViewMode === 'tasks'
-                    ? 'bg-white/[0.1] text-white'
-                    : 'text-gray-500 hover:text-gray-300'
-                }`}
-              >
-                <ListTodo size={13} strokeWidth={2} />
-                {!isMobile && 'Tasks'}
-                {!isMobile && <KbdHint shortcutId="view-tasks" />}
-              </button>
-            </div>
+            {/* Main view toggle: Sessions / Tasks (hidden on mobile — bottom tabs handle it) */}
+            {!isMobile && (
+              <div className="flex bg-white/[0.04] rounded-md p-0.5 gap-0.5">
+                <button
+                  onClick={() => setMainViewMode('sessions')}
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-medium transition-colors ${
+                    mainViewMode === 'sessions'
+                      ? 'bg-white/[0.1] text-white'
+                      : 'text-gray-500 hover:text-gray-300 active:text-white'
+                  }`}
+                >
+                  <Monitor size={13} strokeWidth={2} />
+                  Sessions
+                  <KbdHint shortcutId="view-sessions" />
+                </button>
+                <button
+                  onClick={() => setMainViewMode('tasks')}
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-medium transition-colors ${
+                    mainViewMode === 'tasks'
+                      ? 'bg-white/[0.1] text-white'
+                      : 'text-gray-500 hover:text-gray-300 active:text-white'
+                  }`}
+                >
+                  <ListTodo size={13} strokeWidth={2} />
+                  Tasks
+                  <KbdHint shortcutId="view-tasks" />
+                </button>
+              </div>
+            )}
           </div>
           <div className={`flex items-center titlebar-no-drag ${isMobile ? 'gap-1.5' : 'gap-3'}`}>
             {mainViewMode === 'sessions' ? (
@@ -384,12 +418,24 @@ export function App() {
                 )}
                 <button
                   onClick={() => setDialogOpen(true)}
-                  className={`font-medium text-gray-200 hover:text-white bg-white/[0.06] hover:bg-white/[0.1]
-                             rounded-md transition-colors flex items-center gap-2 ${
-                               isMobile ? 'p-2 text-xs' : 'px-3 py-1.5 text-sm'
+                  className={`font-medium text-gray-200 hover:text-white
+                             active:bg-white/[0.15] transition-colors flex items-center gap-2 ${
+                               isMobile
+                                 ? 'p-2.5 text-xs rounded-full'
+                                 : 'px-3 py-1.5 text-sm rounded-md bg-white/[0.06] hover:bg-white/[0.1]'
                              }`}
+                  style={
+                    isMobile
+                      ? {
+                          background: 'var(--glass-bg, rgba(255,255,255,0.06))',
+                          backdropFilter: 'var(--glass-blur, none)',
+                          WebkitBackdropFilter: 'var(--glass-blur, none)',
+                          boxShadow: 'var(--glass-shadow, none)'
+                        }
+                      : undefined
+                  }
                 >
-                  {isMobile ? <Plus size={16} strokeWidth={2} /> : '+ New Session'}
+                  {isMobile ? <Plus size={18} strokeWidth={2} /> : '+ New Session'}
                   {!isMobile && <KbdHint shortcutId="new-session" />}
                 </button>
               </>
@@ -421,10 +467,22 @@ export function App() {
                 )}
                 <button
                   onClick={() => useAppStore.getState().setTaskDialogOpen(true)}
-                  className={`font-medium text-gray-200 hover:text-white bg-white/[0.06] hover:bg-white/[0.1]
-                             rounded-md transition-colors flex items-center gap-2 ${
-                               isMobile ? 'p-2 text-xs' : 'px-3 py-1.5 text-sm'
+                  className={`font-medium text-gray-200 hover:text-white
+                             active:bg-white/[0.15] transition-colors flex items-center gap-2 ${
+                               isMobile
+                                 ? 'p-2.5 text-xs rounded-full'
+                                 : 'px-3 py-1.5 text-sm rounded-md bg-white/[0.06] hover:bg-white/[0.1]'
                              }`}
+                  style={
+                    isMobile
+                      ? {
+                          background: 'var(--glass-bg, rgba(255,255,255,0.06))',
+                          backdropFilter: 'var(--glass-blur, none)',
+                          WebkitBackdropFilter: 'var(--glass-blur, none)',
+                          boxShadow: 'var(--glass-shadow, none)'
+                        }
+                      : undefined
+                  }
                 >
                   <Plus size={14} strokeWidth={2} />
                   {!isMobile && 'Add Task'}
@@ -441,6 +499,8 @@ export function App() {
           <div className="flex-1 min-w-0 h-full">
             {mainViewMode === 'tasks' ? (
               <TaskBoardView />
+            ) : isMobile ? (
+              <MobileSinglePane />
             ) : layoutMode === 'tabs' ? (
               <TabView />
             ) : (
@@ -450,6 +510,7 @@ export function App() {
           {mainViewMode === 'tasks' && selectedTaskId && <TaskDetailPanel />}
         </div>
         <TerminalPanel />
+        {isMobile && <MobileBottomTabs hidden={keyboardHeight > 0} />}
       </main>
 
       {/* Focus overlay — no AnimatePresence so terminal handoff is instant */}
