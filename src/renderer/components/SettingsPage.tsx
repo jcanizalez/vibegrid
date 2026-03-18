@@ -8,6 +8,7 @@ import { GeneralSettings } from './settings/GeneralSettings'
 import { NotificationSettings } from './settings/NotificationSettings'
 import { AgentSettings } from './settings/AgentSettings'
 import { HostSettings } from './settings/HostSettings'
+import { KeyVaultSettings } from './settings/KeyVaultSettings'
 import { McpSettings } from './settings/McpSettings'
 import { NetworkSettings } from './settings/NetworkSettings'
 import { AboutSettings } from './settings/AboutSettings'
@@ -110,6 +111,22 @@ const SIDEBAR_SECTIONS: SidebarSection[] = [
             <rect x="2" y="14" width="20" height="8" rx="2" />
             <circle cx="6" cy="6" r="1" fill="currentColor" />
             <circle cx="6" cy="18" r="1" fill="currentColor" />
+          </svg>
+        )
+      },
+      {
+        key: 'keys',
+        label: 'SSH Keys',
+        icon: (
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+          >
+            <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" />
           </svg>
         )
       },
@@ -253,6 +270,7 @@ export function SettingsPage() {
           {settingsCategory === 'notifications' && <NotificationSettings />}
           {settingsCategory === 'agents' && <AgentSettings />}
           {settingsCategory === 'hosts' && <HostSettings />}
+          {settingsCategory === 'keys' && <KeyVaultSettings />}
           {settingsCategory === 'mcp' && <McpSettings />}
           {settingsCategory === 'network' && <NetworkSettings />}
           {settingsCategory === 'about' && <AboutSettings />}

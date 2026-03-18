@@ -1,3 +1,4 @@
+import crypto from 'node:crypto'
 import { registerMethod, registerNotification } from './ws-handler'
 import { ptyManager } from './pty-manager'
 import { headlessManager } from './headless-manager'
@@ -33,10 +34,15 @@ import {
   saveWorkflowRun,
   listWorkflowRuns,
   listWorkflowRunsByTask,
-  updateWorkflowRunStatus
+  updateWorkflowRunStatus,
+  dbSaveSSHKey,
+  dbListSSHKeys,
+  dbGetSSHKey,
+  dbDeleteSSHKey
 } from './database'
 import { executeScript } from './script-runner'
 import { getTailscaleStatus, clearBinaryCache } from './tailscale'
+import { testSshConnection } from './process-utils'
 import log from './logger'
 
 const copilotInstallations = new Map<string, CopilotHookInstallation>()
@@ -136,6 +142,27 @@ export function registerAllMethods(): void {
     clearBinaryCache() // Always re-detect in case user just installed
     return getTailscaleStatus(serverPort)
   })
+
+  // Credential vault (storage — encryption handled by main process)
+  registerMethod('credential:storeKey', (params) => {
+    const id = crypto.randomUUID()
+    dbSaveSSHKey({
+      id,
+      label: params.label,
+      encryptedPrivateKey: params.encryptedPrivateKey,
+      publicKey: params.publicKey,
+      certificate: params.certificate,
+      keyType: params.keyType,
+      createdAt: new Date().toISOString()
+    })
+    return { id }
+  })
+  registerMethod('credential:listKeys', () => dbListSSHKeys())
+  registerMethod('credential:deleteKey', (id) => dbDeleteSSHKey(id))
+  registerMethod('credential:getEncryptedKey', (id) => dbGetSSHKey(id))
+
+  // SSH
+  registerMethod('ssh:testConnection', (host) => testSshConnection(host))
 
   // Fire-and-forget notifications
   registerNotification('terminal:write', ({ id, data }) => ptyManager.writeToPty(id, data))

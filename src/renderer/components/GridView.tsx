@@ -1,4 +1,5 @@
-import { useRef, useState, useCallback } from 'react'
+import { memo, useRef, useState, useCallback } from 'react'
+import { useShallow } from 'zustand/react/shallow'
 import { AnimatePresence, LayoutGroup } from 'framer-motion'
 import { useAppStore } from '../stores'
 import { AgentCard } from './AgentCard'
@@ -14,11 +15,16 @@ interface DragState {
   isDragging: boolean
 }
 
-export function GridView() {
-  const gridColumns = useAppStore((s) => s.gridColumns)
-  const sortMode = useAppStore((s) => s.sortMode)
-  const statusFilter = useAppStore((s) => s.statusFilter)
-  const reorderTerminals = useAppStore((s) => s.reorderTerminals)
+export const GridView = memo(function GridView() {
+  const { gridColumns, sortMode, statusFilter, reorderTerminals, rowHeight } = useAppStore(
+    useShallow((s) => ({
+      gridColumns: s.gridColumns,
+      sortMode: s.sortMode,
+      statusFilter: s.statusFilter,
+      reorderTerminals: s.reorderTerminals,
+      rowHeight: s.rowHeight
+    }))
+  )
 
   const [dragState, setDragState] = useState<DragState | null>(null)
   const [dropTargetIndex, setDropTargetIndex] = useState<number | null>(null)
@@ -27,7 +33,6 @@ export function GridView() {
 
   const orderedIds = useVisibleTerminals()
 
-  const rowHeight = useAppStore((s) => s.rowHeight)
   const isMobile = useIsMobile()
 
   const isFiltered = statusFilter !== 'all'
@@ -161,7 +166,7 @@ export function GridView() {
                   terminalId={id}
                   index={index}
                   isDragTarget={dragState?.isDragging === true && dropTargetIndex === index}
-                  onDragStart={sortMode === 'manual' ? (e) => handleDragStart(id, e) : undefined}
+                  onDragStart={sortMode === 'manual' ? handleDragStart : undefined}
                 />
               ))}
             </AnimatePresence>
@@ -173,7 +178,7 @@ export function GridView() {
       )}
     </div>
   )
-}
+})
 
 function getDropIndex(
   pointerX: number,

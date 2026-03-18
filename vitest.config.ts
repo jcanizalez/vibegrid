@@ -1,10 +1,40 @@
 import { defineConfig } from 'vitest/config'
+import react from '@vitejs/plugin-react'
 import path from 'path'
 
 export default defineConfig({
+  plugins: [react()],
+  define: {
+    'process.env.NODE_ENV': JSON.stringify('test')
+  },
   test: {
     globals: true,
-    include: ['tests/**/*.test.ts']
+    include: ['tests/**/*.test.ts', 'tests/**/*.test.tsx'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'text-summary', 'lcov'],
+      include: [
+        'packages/server/src/**/*.ts',
+        'packages/shared/src/**/*.ts',
+        'src/renderer/lib/**/*.ts',
+        'src/renderer/components/**/*.tsx'
+      ],
+      exclude: [
+        'packages/server/src/index.ts',
+        'packages/server/src/register-methods.ts',
+        'packages/server/src/pty-manager.ts',
+        'packages/server/src/logger.ts',
+        'packages/server/src/hook-server.ts',
+        'packages/server/src/hook-installer.ts',
+        'packages/server/src/copilot-hook-installer.ts',
+        'packages/server/src/task-images.ts',
+        'src/renderer/lib/terminal-registry.ts',
+        'src/renderer/lib/workflow-execution.ts',
+        'src/renderer/lib/workflow-triggers.ts',
+        'src/renderer/lib/terminal-close.ts',
+        '**/*.d.ts'
+      ]
+    }
   },
   resolve: {
     alias: {
