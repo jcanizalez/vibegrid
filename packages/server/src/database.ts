@@ -47,7 +47,7 @@ export function initDatabase(): void {
   } catch (err) {
     log.error('[database] Failed to open database:', err)
 
-    // Detect corruption: better-sqlite3 throws on open or pragma for corrupt files
+    // Detect corruption: libsql throws on open or pragma for corrupt files
     const message = err instanceof Error ? err.message : String(err)
     const isCorrupt = /corrupt|notadb|malformed|not a database|file is not a database/i.test(
       message
