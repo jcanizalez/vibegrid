@@ -7,6 +7,7 @@ const RichMarkdownEditor = lazy(() =>
 )
 import { TASK_TEMPLATE } from './MarkdownEditor'
 import { toast } from './Toast'
+import { isWeb } from '../lib/platform'
 import { StatusPicker } from './StatusPicker'
 import { ProjectPicker } from './ProjectPicker'
 import type { TaskStatus } from '../../shared/types'
@@ -269,7 +270,7 @@ export function AddTaskDialog() {
                       >
                         {absPath && (
                           <img
-                            src={`file://${absPath}`}
+                            src={isWeb ? absPath : `file://${absPath}`}
                             alt=""
                             className="w-full h-full object-cover"
                           />

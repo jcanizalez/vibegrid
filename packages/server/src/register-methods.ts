@@ -20,7 +20,13 @@ import {
 } from './copilot-hook-installer'
 import { IPC, WidgetAgentInfo, PermissionRequestInfo } from '@vibegrid/shared/types'
 import * as gitUtils from './git-utils'
-import { saveTaskImage, deleteTaskImage, getTaskImagePath, cleanupTaskImages } from './task-images'
+import {
+  saveTaskImage,
+  saveTaskImageFromBase64,
+  deleteTaskImage,
+  getTaskImagePath,
+  cleanupTaskImages
+} from './task-images'
 import {
   archiveSession,
   unarchiveSession,
@@ -35,10 +41,16 @@ import {
   dbDeleteSSHKey
 } from './database'
 import { executeScript } from './script-runner'
+import { getTailscaleStatus, clearBinaryCache } from './tailscale'
 import { testSshConnection } from './process-utils'
 import log from './logger'
 
 const copilotInstallations = new Map<string, CopilotHookInstallation>()
+
+let serverPort = 0
+export function setServerPort(port: number): void {
+  serverPort = port
+}
 
 export function registerAllMethods(): void {
   // Terminal
@@ -97,6 +109,9 @@ export function registerAllMethods(): void {
   registerMethod('task:imageDelete', ({ taskId, filename }) => deleteTaskImage(taskId, filename))
   registerMethod('task:imageGetPath', ({ taskId, filename }) => getTaskImagePath(taskId, filename))
   registerMethod('task:imageCleanup', (taskId) => cleanupTaskImages(taskId))
+  registerMethod('task:imageUpload', ({ taskId, base64, filename }) =>
+    saveTaskImageFromBase64(taskId, base64, filename)
+  )
 
   // Session archive
   registerMethod('session:archive', (session) => archiveSession(session))
@@ -121,6 +136,12 @@ export function registerAllMethods(): void {
   registerMethod('agent:detectInstalled', () => detectInstalledAgents())
   registerMethod('ide:detect', () => detectIDEs())
   registerMethod('ide:open', ({ ideId, projectPath }) => openInIDE(ideId, projectPath))
+
+  // Tailscale network access
+  registerMethod('tailscale:status', () => {
+    clearBinaryCache() // Always re-detect in case user just installed
+    return getTailscaleStatus(serverPort)
+  })
 
   // Credential vault (storage — encryption handled by main process)
   registerMethod('credential:storeKey', (params) => {

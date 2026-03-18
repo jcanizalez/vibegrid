@@ -6,6 +6,7 @@ import { AgentCard } from './AgentCard'
 import { PromptLauncher } from './PromptLauncher'
 import { GridContextMenu } from './GridContextMenu'
 import { useVisibleTerminals } from '../hooks/useVisibleTerminals'
+import { useIsMobile } from '../hooks/useIsMobile'
 
 interface DragState {
   draggingId: string
@@ -32,13 +33,17 @@ export const GridView = memo(function GridView() {
 
   const orderedIds = useVisibleTerminals()
 
+  const isMobile = useIsMobile()
+
   const isFiltered = statusFilter !== 'all'
 
   const gridStyle: React.CSSProperties = {
-    ...(gridColumns > 0
-      ? { gridTemplateColumns: `repeat(${gridColumns}, 1fr)` }
-      : { gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))' }),
-    gridAutoRows: `${rowHeight + 42}px`
+    ...(isMobile
+      ? { gridTemplateColumns: '1fr' }
+      : gridColumns > 0
+        ? { gridTemplateColumns: `repeat(${gridColumns}, 1fr)` }
+        : { gridTemplateColumns: 'repeat(auto-fill, minmax(min(320px, 100%), 1fr))' }),
+    gridAutoRows: isMobile ? 'auto' : `${rowHeight + 42}px`
   }
 
   const DRAG_THRESHOLD = 5

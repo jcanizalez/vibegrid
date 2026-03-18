@@ -71,6 +71,7 @@ export type SettingsCategory =
   | 'hosts'
   | 'keys'
   | 'mcp'
+  | 'network'
   | 'about'
 
 export interface UISlice {

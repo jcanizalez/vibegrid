@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import { isElectron } from '../lib/platform'
 import { useAppStore } from '../stores'
 import { SettingsCategory } from '../stores/types'
 import { SectionHeader } from './settings/SectionHeader'
@@ -9,6 +10,7 @@ import { AgentSettings } from './settings/AgentSettings'
 import { HostSettings } from './settings/HostSettings'
 import { KeyVaultSettings } from './settings/KeyVaultSettings'
 import { McpSettings } from './settings/McpSettings'
+import { NetworkSettings } from './settings/NetworkSettings'
 import { AboutSettings } from './settings/AboutSettings'
 
 interface SidebarSection {
@@ -144,6 +146,24 @@ const SIDEBAR_SECTIONS: SidebarSection[] = [
             <circle cx="12" cy="12" r="4" />
           </svg>
         )
+      },
+      {
+        key: 'network',
+        label: 'Network',
+        icon: (
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <line x1="2" y1="12" x2="22" y2="12" />
+            <path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z" />
+          </svg>
+        )
       }
     ]
   }
@@ -168,8 +188,10 @@ export function SettingsPage() {
         className="w-56 border-r border-white/[0.06] flex flex-col shrink-0"
         style={{ background: '#141416' }}
       >
-        {/* Header — pl-[78px] for macOS traffic light safe zone */}
-        <div className="titlebar-drag h-[52px] pl-[78px] pr-3 flex items-center border-b border-white/[0.06] shrink-0">
+        {/* Header — pl-[78px] for macOS traffic light safe zone (Electron only) */}
+        <div
+          className={`titlebar-drag h-[52px] pr-3 flex items-center border-b border-white/[0.06] shrink-0 ${isElectron ? 'pl-[78px]' : 'pl-3'}`}
+        >
           <button
             onClick={() => setSettingsOpen(false)}
             className="titlebar-no-drag flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors"
@@ -250,6 +272,7 @@ export function SettingsPage() {
           {settingsCategory === 'hosts' && <HostSettings />}
           {settingsCategory === 'keys' && <KeyVaultSettings />}
           {settingsCategory === 'mcp' && <McpSettings />}
+          {settingsCategory === 'network' && <NetworkSettings />}
           {settingsCategory === 'about' && <AboutSettings />}
         </div>
       </div>

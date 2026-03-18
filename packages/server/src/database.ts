@@ -434,6 +434,15 @@ function loadDefaults(d: Database.Database): AppConfig['defaults'] {
     }),
     ...(map.updateChannel !== undefined && {
       updateChannel: map.updateChannel as AppConfig['defaults']['updateChannel']
+    }),
+    ...(map.webAccessEnabled !== undefined && {
+      webAccessEnabled: map.webAccessEnabled as boolean
+    }),
+    ...(map.mobileAccessEnabled !== undefined && {
+      mobileAccessEnabled: map.mobileAccessEnabled as boolean
+    }),
+    ...(map.networkAccessEnabled !== undefined && {
+      networkAccessEnabled: map.networkAccessEnabled as boolean
     })
   }
 }

@@ -1,16 +1,21 @@
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import Fastify from 'fastify'
 import websocket from '@fastify/websocket'
+import fastifyStatic from '@fastify/static'
 import { handleConnection, registerMethod } from './ws-handler'
-import { registerAllMethods } from './register-methods'
+import { registerAllMethods, setServerPort } from './register-methods'
 import { configManager } from './config-manager'
 import { ptyManager } from './pty-manager'
 import { headlessManager } from './headless-manager'
 import { scheduler } from './scheduler'
-import { setDataDir } from './task-images'
+import { setDataDir, getTaskImagePath as resolveTaskImagePath } from './task-images'
+import { getTailscaleStatus } from './tailscale'
 import log from './logger'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 export async function startServer(
   options: { host?: string; port?: number; dataDir?: string } = {}
@@ -51,6 +56,51 @@ export async function startServer(
 
   app.get('/health', async () => ({ status: 'ok' }))
 
+  // Serve task images via HTTP (used by web app instead of file:// protocol)
+  app.get('/api/task-images/:taskId/:filename', async (req, reply) => {
+    const { taskId, filename } = req.params as { taskId: string; filename: string }
+    try {
+      const filePath = resolveTaskImagePath(taskId, filename)
+      if (!fs.existsSync(filePath)) {
+        return reply.code(404).send({ error: 'Image not found' })
+      }
+      const ext = path.extname(filename).toLowerCase()
+      const mimeTypes: Record<string, string> = {
+        '.png': 'image/png',
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.gif': 'image/gif',
+        '.webp': 'image/webp',
+        '.svg': 'image/svg+xml',
+        '.bmp': 'image/bmp'
+      }
+      reply.header('Content-Type', mimeTypes[ext] || 'application/octet-stream')
+      reply.header('Cache-Control', 'public, max-age=86400')
+      reply.header('X-Content-Type-Options', 'nosniff')
+      const stream = fs.createReadStream(filePath)
+      return reply.send(stream)
+    } catch {
+      return reply.code(400).send({ error: 'Invalid request' })
+    }
+  })
+
+  // Serve web app static files at /app/ if the dist directory exists
+  const webDistDir = path.resolve(__dirname, '../../web/dist')
+  if (fs.existsSync(webDistDir)) {
+    await app.register(fastifyStatic, {
+      root: webDistDir,
+      prefix: '/app/'
+    })
+    // SPA fallback: serve index.html for any /app/* route not matching a file
+    app.setNotFoundHandler((req, reply) => {
+      if (req.url.startsWith('/app')) {
+        return reply.sendFile('index.html', webDistDir)
+      }
+      reply.code(404).send({ error: 'Not found' })
+    })
+    log.info(`[server] serving web app from ${webDistDir}`)
+  }
+
   // Register all RPC methods
   registerAllMethods()
 
@@ -62,12 +112,31 @@ export async function startServer(
     }, 100)
   })
 
-  const host = options.host ?? '127.0.0.1'
+  // Determine bind address: if networkAccessEnabled AND Tailscale is running,
+  // bind to Tailscale IP so other devices on the tailnet can reach us.
+  // Otherwise, localhost only.
+  let host = options.host ?? '127.0.0.1'
+  if (!options.host && config.defaults.networkAccessEnabled) {
+    try {
+      const tsStatus = await getTailscaleStatus()
+      if (tsStatus.running && tsStatus.selfIP) {
+        host = '0.0.0.0' // Bind all interfaces so localhost (Electron) + Tailscale IP both work
+        log.info(
+          `[server] network access enabled, binding to 0.0.0.0 (tailscale IP: ${tsStatus.selfIP})`
+        )
+      }
+    } catch (err) {
+      log.warn({ err }, '[server] failed to check tailscale status, falling back to localhost')
+    }
+  }
   const port = options.port ?? 0 // 0 = OS-assigned
 
   await app.listen({ host, port })
   const address = app.server.address()
   const actualPort = typeof address === 'object' && address ? address.port : port
+
+  // Store port for RPC methods (e.g. tailscale:status needs it)
+  setServerPort(actualPort)
 
   // Write port to stdout for parent process (Electron) to read
   process.stdout.write(JSON.stringify({ port: actualPort }) + '\n')
@@ -129,10 +198,13 @@ if (isDirectRun) {
   const portArg = process.argv.find((a) => a.startsWith('--port='))
   const port = portArg ? parseInt(portArg.split('=')[1], 10) : 0
 
+  const hostArg = process.argv.find((a) => a.startsWith('--host='))
+  const host = hostArg ? hostArg.split('=')[1] : undefined
+
   const dataDirArg = process.argv.find((a) => a.startsWith('--data-dir='))
   const dataDir = dataDirArg ? dataDirArg.split('=')[1] : undefined
 
-  startServer({ port, dataDir }).catch((err) => {
+  startServer({ port, host, dataDir }).catch((err) => {
     log.error({ err }, '[server] failed to start')
     const msg =
       '[server] failed to start: ' + (err instanceof Error ? err.stack || err.message : String(err))

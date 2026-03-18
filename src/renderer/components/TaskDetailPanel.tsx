@@ -12,6 +12,7 @@ import { CommitDialog } from './CommitDialog'
 import { StatusPicker } from './StatusPicker'
 import { ProjectPicker } from './ProjectPicker'
 import { toast } from './Toast'
+import { isWeb } from '../lib/platform'
 import {
   X,
   Play,
@@ -691,7 +692,11 @@ export function TaskDetailPanel() {
                   className="relative group/img w-16 h-16 rounded-lg border border-white/[0.08] overflow-hidden bg-white/[0.03]"
                 >
                   {absPath && (
-                    <img src={`file://${absPath}`} alt="" className="w-full h-full object-cover" />
+                    <img
+                      src={isWeb ? absPath : `file://${absPath}`}
+                      alt=""
+                      className="w-full h-full object-cover"
+                    />
                   )}
                   <button
                     onClick={() => handleRemoveImage(filename)}

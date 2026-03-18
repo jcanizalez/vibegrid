@@ -276,6 +276,27 @@ export interface WorkflowExecution {
   triggerTaskId?: string
 }
 
+// ─── Tailscale Network Access ────────────────────────────────────
+
+export interface TailscalePeer {
+  ip: string
+  hostname: string
+  dnsName: string
+  os: string
+  online: boolean
+}
+
+export interface TailscaleStatus {
+  installed: boolean
+  running: boolean
+  backendState: string
+  selfIP: string
+  selfDNSName: string
+  selfOS?: string
+  peers: TailscalePeer[]
+  appUrl?: string
+}
+
 export interface NotificationConfig {
   enabled: boolean
   onWaiting: boolean
@@ -302,6 +323,9 @@ export interface AppConfig {
     mainViewMode?: MainViewMode
     activeWorkspace?: string
     updateChannel?: 'stable' | 'beta'
+    webAccessEnabled?: boolean
+    mobileAccessEnabled?: boolean
+    networkAccessEnabled?: boolean
   }
   projects: ProjectConfig[]
   agentCommands?: Partial<Record<AgentType, AgentCommandConfig>>
@@ -461,6 +485,7 @@ export const IPC = {
   WORKFLOW_RUN_LIST: 'workflowRun:list',
   WORKFLOW_RUN_LIST_BY_TASK: 'workflowRun:listByTask',
   AGENT_DETECT_INSTALLED: 'agent:detectInstalled',
+  TAILSCALE_STATUS: 'tailscale:status',
   CREDENTIAL_STORE_KEY: 'credential:storeKey',
   CREDENTIAL_IMPORT_KEY_FILE: 'credential:importKeyFile',
   CREDENTIAL_DELETE_KEY: 'credential:deleteKey',
