@@ -3301,12 +3301,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@tiptap/extension-task-list@npm:^3.20.1":
-  version: 3.20.1
-  resolution: "@tiptap/extension-task-list@npm:3.20.1"
+"@tiptap/extension-task-list@npm:^3.20.4":
+  version: 3.20.4
+  resolution: "@tiptap/extension-task-list@npm:3.20.4"
   peerDependencies:
-    "@tiptap/extension-list": ^3.20.1
-  checksum: 10c0/a733bd5fc6bc0ce10b2d88d8aff2e6277628dc05f12c0f3dd7ecdc9edc9c3054aa975c7a76636c01db33c4b5cb74a6b57a44d6a8298f688feb00d729d506cc52
+    "@tiptap/extension-list": ^3.20.4
+  checksum: 10c0/9b5f1ddddfb28520995a0b971b50e778772097c2d1cea848d11df554ac7db4076fc638b42e850497eb38cbf766382408ecc57ed0d2f2db2bbda97d0a370fd4d8
   languageName: node
   linkType: hard
 
@@ -11901,7 +11901,7 @@ __metadata:
     "@tiptap/extension-list": "npm:^3.20.1"
     "@tiptap/extension-placeholder": "npm:^3.20.1"
     "@tiptap/extension-task-item": "npm:^3.20.1"
-    "@tiptap/extension-task-list": "npm:^3.20.1"
+    "@tiptap/extension-task-list": "npm:^3.20.4"
     "@tiptap/extensions": "npm:^3.20.1"
     "@tiptap/pm": "npm:^3.20.1"
     "@tiptap/react": "npm:^3.20.1"
