@@ -17,7 +17,8 @@ import {
   ScriptConfig,
   AgentType,
   SSHKeyMeta,
-  RemoteHost
+  RemoteHost,
+  TailscaleStatus
 } from '../shared/types'
 
 const api = {
@@ -295,6 +296,9 @@ const api = {
 
   isSafeStorageAvailable: (): Promise<boolean> =>
     ipcRenderer.invoke(IPC.CREDENTIAL_SAFE_STORAGE_AVAILABLE),
+
+  // Tailscale
+  getTailscaleStatus: (): Promise<TailscaleStatus> => ipcRenderer.invoke(IPC.TAILSCALE_STATUS),
 
   // SSH
   testSshConnection: (
