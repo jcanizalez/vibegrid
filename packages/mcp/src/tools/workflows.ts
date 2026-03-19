@@ -16,7 +16,8 @@ import {
   dbUpdateWorkflow,
   dbDeleteWorkflow,
   listWorkflowRuns,
-  listWorkflowRunsByTask
+  listWorkflowRunsByTask,
+  dbSignalChange
 } from '@vibegrid/server/database'
 import { rpcCall } from '../ws-client'
 
@@ -182,7 +183,7 @@ export function registerWorkflowTools(server: McpServer): void {
       }
 
       dbInsertWorkflow(workflow)
-      // The running VibeGrid app watches the DB and will pick up changes automatically
+      dbSignalChange()
 
       return { content: [{ type: 'text', text: JSON.stringify(workflow, null, 2) }] }
     }
@@ -221,6 +222,7 @@ export function registerWorkflowTools(server: McpServer): void {
       if (args.stagger_delay_ms !== undefined) updates.staggerDelayMs = args.stagger_delay_ms
 
       dbUpdateWorkflow(args.id, updates)
+      dbSignalChange()
 
       return {
         content: [{ type: 'text', text: JSON.stringify({ ...workflow, ...updates }, null, 2) }]
@@ -243,6 +245,7 @@ export function registerWorkflowTools(server: McpServer): void {
       }
 
       dbDeleteWorkflow(args.id)
+      dbSignalChange()
 
       return { content: [{ type: 'text', text: `Deleted workflow: ${workflow.name}` }] }
     }

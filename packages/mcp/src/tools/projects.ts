@@ -7,7 +7,8 @@ import {
   dbGetProject,
   dbInsertProject,
   dbUpdateProject,
-  dbDeleteProject
+  dbDeleteProject,
+  dbSignalChange
 } from '@vibegrid/server/database'
 
 const AGENT_TYPES: [AgentType, ...AgentType[]] = [
@@ -61,6 +62,7 @@ export function registerProjectTools(server: McpServer): void {
       }
 
       dbInsertProject(project)
+      dbSignalChange()
 
       return { content: [{ type: 'text', text: JSON.stringify(project, null, 2) }] }
     }
@@ -92,6 +94,7 @@ export function registerProjectTools(server: McpServer): void {
       if (args.icon_color !== undefined) updates.iconColor = args.icon_color
 
       dbUpdateProject(args.name, updates)
+      dbSignalChange()
 
       const updated = dbGetProject(args.name)
       return { content: [{ type: 'text', text: JSON.stringify(updated, null, 2) }] }
@@ -111,6 +114,7 @@ export function registerProjectTools(server: McpServer): void {
       }
 
       dbDeleteProject(args.name)
+      dbSignalChange()
 
       return { content: [{ type: 'text', text: `Deleted project: ${args.name}` }] }
     }

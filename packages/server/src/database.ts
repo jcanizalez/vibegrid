@@ -107,6 +107,19 @@ function recoverCorruptDatabase(): void {
   log.warn(`[database] Database was corrupted and has been reset. Backup saved to: ${backupPath}`)
 }
 
+/**
+ * Touch a signal file so the config-manager watcher detects external DB mutations
+ * (e.g. from MCP stdio process). The server's own mutations use notifyChanged() directly.
+ */
+export function dbSignalChange(): void {
+  try {
+    const signalPath = path.join(CONFIG_DIR, '.db-signal')
+    fs.writeFileSync(signalPath, Date.now().toString())
+  } catch {
+    // Best-effort — watcher fallback will catch it
+  }
+}
+
 export function closeDatabase(): void {
   if (db) {
     db.close()
