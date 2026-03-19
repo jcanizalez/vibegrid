@@ -7,7 +7,8 @@ import {
   dbListWorkspaces,
   dbInsertWorkspace,
   dbUpdateWorkspace,
-  dbDeleteWorkspace
+  dbDeleteWorkspace,
+  dbSignalChange
 } from '@vibegrid/server/database'
 
 export function registerWorkspaceTools(server: McpServer): void {
@@ -37,6 +38,7 @@ export function registerWorkspaceTools(server: McpServer): void {
       }
 
       dbInsertWorkspace(workspace)
+      dbSignalChange()
 
       return { content: [{ type: 'text', text: JSON.stringify(workspace, null, 2) }] }
     }
@@ -68,6 +70,7 @@ export function registerWorkspaceTools(server: McpServer): void {
       if (args.order !== undefined) updates.order = args.order
 
       dbUpdateWorkspace(args.id, updates)
+      dbSignalChange()
 
       const updated = dbListWorkspaces().find((w) => w.id === args.id)
       return { content: [{ type: 'text', text: JSON.stringify(updated, null, 2) }] }
@@ -94,6 +97,7 @@ export function registerWorkspaceTools(server: McpServer): void {
         }
       }
       dbDeleteWorkspace(args.id)
+      dbSignalChange()
       return { content: [{ type: 'text', text: `Deleted workspace: ${workspace.name}` }] }
     }
   )

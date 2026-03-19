@@ -75,21 +75,22 @@ class ConfigManager {
   }
 
   /**
-   * Watch the SQLite WAL file for external writes (e.g. MCP stdio process).
-   * On change, debounce and notify callbacks so the GUI picks up fresh data.
+   * Watch for external DB writes (e.g. MCP stdio process).
+   * Detects: .db-signal (explicit), .db-wal changes, and .db changes (post-checkpoint).
    */
   watchDb(): void {
     if (this.dbWatcher) return
 
-    // Watch the directory for WAL file changes (WAL may not exist yet)
+    const WATCH_SUFFIXES = ['.db-signal', '.db-wal', '.db']
+
     try {
       this.dbWatcher = fs.watch(DB_DIR, (eventType, filename) => {
-        if (!filename || !filename.endsWith('.db-wal')) return
+        if (!filename || !WATCH_SUFFIXES.some((s) => filename.endsWith(s))) return
         // Debounce -- multiple writes can fire rapidly
         if (this.debounceTimer) clearTimeout(this.debounceTimer)
         this.debounceTimer = setTimeout(() => {
           this.notifyChanged()
-        }, 1000)
+        }, 300)
       })
     } catch {
       // Directory may not exist yet; ignore

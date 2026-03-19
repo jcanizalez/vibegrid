@@ -12,7 +12,8 @@ import {
   dbDeleteTask,
   dbGetMaxTaskOrder,
   dbGetProject,
-  dbListProjects
+  dbListProjects,
+  dbSignalChange
 } from '@vibegrid/server/database'
 import type { ProjectConfig } from '@vibegrid/shared/types'
 
@@ -105,6 +106,7 @@ export function registerTaskTools(server: McpServer): void {
       }
 
       dbInsertTask(task)
+      dbSignalChange()
 
       return { content: [{ type: 'text', text: JSON.stringify(task, null, 2) }] }
     }
@@ -165,6 +167,7 @@ export function registerTaskTools(server: McpServer): void {
       }
 
       dbUpdateTask(args.id, updates)
+      dbSignalChange()
 
       const updated = dbGetTask(args.id)
       return { content: [{ type: 'text', text: JSON.stringify(updated, null, 2) }] }
@@ -184,6 +187,7 @@ export function registerTaskTools(server: McpServer): void {
         }
       }
       dbDeleteTask(args.id)
+      dbSignalChange()
 
       return { content: [{ type: 'text', text: `Deleted task: ${task.title}` }] }
     }
