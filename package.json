@@ -12,7 +12,7 @@
     "dev": "electron-vite dev",
     "build:server": "cd packages/server && npx tsup src/index.ts --format cjs --target node22 --external node-pty --external libsql --clean",
     "build:web": "cd packages/web && npx vite build",
-    "build": "yarn build:server && electron-vite build",
+    "build": "yarn build:server && yarn build:web && electron-vite build",
     "preview": "electron-vite preview",
     "postinstall": "electron-builder install-app-deps",
     "pack": "electron-builder --dir",
