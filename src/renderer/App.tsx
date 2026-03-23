@@ -188,8 +188,10 @@ export function App() {
           if (config.defaults.reopenSessions) {
             // Auto-restore sessions — prefer hook-correlated session ID (exact),
             // fall back to scanning agent history when hooks weren't active.
+            const claimed = new Set<string>()
             for (const s of prev) {
-              const resumeSessionId = await resolveResumeSessionId(s)
+              const resumeSessionId = await resolveResumeSessionId(s, claimed)
+              if (resumeSessionId) claimed.add(resumeSessionId)
               const session = await window.api.createTerminal({
                 agentType: s.agentType,
                 projectName: s.projectName,

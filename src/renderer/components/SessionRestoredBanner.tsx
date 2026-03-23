@@ -16,8 +16,10 @@ export function SessionRestoredBanner() {
 
   const handleRestore = async (): Promise<void> => {
     setRestoring(true)
+    const claimed = new Set<string>()
     for (const prev of previousSessions) {
-      const resumeSessionId = await resolveResumeSessionId(prev)
+      const resumeSessionId = await resolveResumeSessionId(prev, claimed)
+      if (resumeSessionId) claimed.add(resumeSessionId)
       const session = await window.api.createTerminal({
         agentType: prev.agentType,
         projectName: prev.projectName,

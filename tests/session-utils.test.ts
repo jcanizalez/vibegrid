@@ -116,6 +116,34 @@ describe('resolveResumeSessionId', () => {
     expect(mockGetRecentSessions).toHaveBeenNthCalledWith(1, session.projectPath)
     expect(mockGetRecentSessions).toHaveBeenNthCalledWith(2)
   })
+
+  it('skips already-claimed session IDs', async () => {
+    mockGetRecentSessions.mockResolvedValue([
+      makeRecent({ sessionId: 'sess-1', projectPath: '/home/user/my-app' }),
+      makeRecent({ sessionId: 'sess-2', projectPath: '/home/user/my-app' })
+    ])
+    const session = makeSession({ projectPath: '/home/user/my-app' })
+
+    // First call claims sess-1
+    const claimed = new Set<string>()
+    const first = await resolveResumeSessionId(session, claimed)
+    expect(first).toBe('sess-1')
+    claimed.add(first!)
+
+    // Second call with same session skips sess-1, returns sess-2
+    const second = await resolveResumeSessionId(session, claimed)
+    expect(second).toBe('sess-2')
+  })
+
+  it('skips claimed hookSessionId', async () => {
+    const claimed = new Set(['hook-abc'])
+    const session = makeSession({ hookSessionId: 'hook-abc' })
+    mockGetRecentSessions.mockResolvedValue([
+      makeRecent({ sessionId: 'sess-fallback', projectPath: '/home/user/my-app' })
+    ])
+    const result = await resolveResumeSessionId(session, claimed)
+    expect(result).toBe('sess-fallback')
+  })
 })
 
 describe('resolveProjectName', () => {
