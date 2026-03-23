@@ -49,8 +49,18 @@ const claudeProvider: AgentHistoryProvider = {
       const raw = fs.readFileSync(historyPath, 'utf-8')
       const lines = raw.trim().split('\n').filter(Boolean)
 
-      // Normalize once outside the loop to avoid per-line realpathSync syscalls
+      // Normalize filter once; cache per-entry results so repeated project
+      // paths (common in history) only hit realpathSync once.
       const normalizedFilter = projectPath ? normalizePath(projectPath) : undefined
+      const normalizedCache = new Map<string, string>()
+      const normalizeEntry = (p: string): string => {
+        let cached = normalizedCache.get(p)
+        if (cached === undefined) {
+          cached = normalizePath(p)
+          normalizedCache.set(p, cached)
+        }
+        return cached
+      }
 
       const sessionMap = new Map<
         string,
@@ -68,7 +78,7 @@ const claudeProvider: AgentHistoryProvider = {
           const entry: ClaudeHistoryEntry = JSON.parse(line)
           if (!entry.sessionId || !entry.project) continue
 
-          if (normalizedFilter && normalizePath(entry.project) !== normalizedFilter) continue
+          if (normalizedFilter && normalizeEntry(entry.project) !== normalizedFilter) continue
 
           const existing = sessionMap.get(entry.sessionId)
           if (existing) {

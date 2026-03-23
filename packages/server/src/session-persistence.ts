@@ -23,6 +23,7 @@ class SessionManager {
    * and on a periodic interval (safety net for force-quit / crash).
    */
   startAutoSave(getActiveSessions: () => TerminalSession[]): void {
+    this.stopAutoSave()
     this.getActiveSessions = getActiveSessions
 
     this.intervalTimer = setInterval(() => {
@@ -53,6 +54,11 @@ class SessionManager {
 
   persistNow(): void {
     if (!this.getActiveSessions) return
+    // Clear pending debounce to avoid a redundant write after this one
+    if (this.debounceTimer) {
+      clearTimeout(this.debounceTimer)
+      this.debounceTimer = null
+    }
     this.dirty = false
     const sessions = this.getActiveSessions()
     this.saveSessions(sessions)

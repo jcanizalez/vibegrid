@@ -227,8 +227,9 @@ export function registerAllMethods(): void {
   })
 
   // ─── Persistent session auto-save ──────────────────────────────
-  // Save sessions on every state change so we don't rely solely on the
-  // shutdown path (which has a race with bridge.close and doesn't cover
+  // Combined with explicit saves on key lifecycle events (session-created,
+  // session-exit, SessionStart hook), this reduces reliance on the shutdown
+  // path (which has a race with bridge.close and doesn't cover
   // force-quit / crash).
   sessionManager.startAutoSave(() => ptyManager.getActiveSessions())
 

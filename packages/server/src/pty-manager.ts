@@ -22,6 +22,7 @@ import { shellEscape, getSafeEnv, getDefaultShell, normalizePath } from './proce
 class PtyManager extends EventEmitter {
   private ptys = new Map<string, pty.IPty>()
   private sessions = new Map<string, TerminalSession>()
+  private normalizedPaths = new Map<string, string>()
   private agentCommands: Record<AgentType, AgentCommandConfig> = { ...DEFAULT_AGENT_COMMANDS }
   private remoteHosts: RemoteHost[] = []
   private dataBuffers = new Map<string, string>()
@@ -164,6 +165,7 @@ class PtyManager extends EventEmitter {
       ...(worktreePath ? { worktreePath, isWorktree: true } : {})
     }
     this.sessions.set(id, session)
+    this.normalizedPaths.set(id, normalizePath(worktreePath || payload.projectPath))
     return session
   }
 
@@ -325,6 +327,7 @@ class PtyManager extends EventEmitter {
       ...(payload.displayName ? { displayName: payload.displayName } : {})
     }
     this.sessions.set(id, session)
+    this.normalizedPaths.set(id, normalizePath(payload.projectPath))
     return session
   }
 
@@ -429,6 +432,7 @@ class PtyManager extends EventEmitter {
     // Delete-then-check pattern: single removal point prevents races.
     const session = this.sessions.get(id)
     this.sessions.delete(id)
+    this.normalizedPaths.delete(id)
     this.ptys.delete(id)
 
     if (session) {
@@ -505,7 +509,9 @@ class PtyManager extends EventEmitter {
     for (const session of this.sessions.values()) {
       if (session.hookSessionId) continue // already linked
       if (excludeIds.has(session.id)) continue
-      const sessionPath = normalizePath(session.worktreePath || session.projectPath)
+      const sessionPath =
+        this.normalizedPaths.get(session.id) ??
+        normalizePath(session.worktreePath || session.projectPath)
       if (sessionPath === normalizedCwd && session.createdAt > bestTime) {
         best = session
         bestTime = session.createdAt

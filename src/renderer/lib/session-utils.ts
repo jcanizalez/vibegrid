@@ -7,8 +7,17 @@ import type { TerminalSession, RecentSession } from '../../shared/types'
 export async function resolveResumeSessionId(s: TerminalSession): Promise<string | undefined> {
   if (s.hookSessionId) return s.hookSessionId
 
-  // Single unscoped fetch — the scoped call is a strict subset, so one
-  // round-trip covers all matching tiers.
+  // Scoped fetch first — the global unscoped list has a default limit of 20,
+  // so a project's sessions may not appear in the global results.
+  try {
+    const scopedRecent = await window.api.getRecentSessions(s.projectPath)
+    const scopedMatch = scopedRecent.find((r) => r.agentType === s.agentType)
+    if (scopedMatch) return scopedMatch.sessionId
+  } catch {
+    // Scoped fetch failed — fall through to unscoped lookup
+  }
+
+  // Unscoped fallback for looser matching (path normalization mismatches)
   const allRecent = await window.api.getRecentSessions()
 
   // Exact project path match
@@ -17,14 +26,14 @@ export async function resolveResumeSessionId(s: TerminalSession): Promise<string
   )
   if (exact) return exact.sessionId
 
-  // Basename match (handles symlinks, trailing-slash diffs, case variations)
-  const basename = s.projectPath.replace(/\/+$/, '').split('/').pop()
+  // Case-insensitive basename match (handles symlinks, trailing-slash diffs)
+  const basename = s.projectPath.replace(/\/+$/, '').split('/').pop()?.toLowerCase()
   if (basename) {
-    const fuzzy = allRecent.find(
-      (r) =>
-        r.agentType === s.agentType &&
-        r.projectPath.replace(/\/+$/, '').split('/').pop() === basename
-    )
+    const fuzzy = allRecent.find((r) => {
+      if (r.agentType !== s.agentType) return false
+      const candidateBase = r.projectPath.replace(/\/+$/, '').split('/').pop()?.toLowerCase()
+      return candidateBase === basename
+    })
     if (fuzzy) return fuzzy.sessionId
   }
 
@@ -39,12 +48,12 @@ export function resolveProjectName(
   session: RecentSession,
   projects: { name: string; path: string }[] | undefined
 ): string {
-  if (!projects) return session.projectPath.split('/').pop() || 'untitled'
-
   const normalized = session.projectPath.replace(/\/+$/, '')
+  if (!projects) return normalized.split('/').pop() || 'untitled'
+
   const project = projects.find((p) => {
     if (p.path === session.projectPath) return true
     return p.path.replace(/\/+$/, '') === normalized
   })
-  return project?.name || session.projectPath.split('/').pop() || 'untitled'
+  return project?.name || normalized.split('/').pop() || 'untitled'
 }
