@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { Copy, ClipboardPaste } from 'lucide-react'
 import {
   getTerminalSelection,
@@ -60,36 +60,36 @@ export function TerminalContextMenu({ terminalId, position, onClose }: Props) {
   const top = Math.max(8, Math.min(position.y, window.innerHeight - menuHeight - 8))
 
   return createPortal(
-    <AnimatePresence>
-      <motion.div
-        ref={menuRef}
-        initial={{ opacity: 0, y: -4, scale: 0.96 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{ opacity: 0, y: -4, scale: 0.96 }}
-        transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-        className="fixed z-[150] rounded-lg border border-white/[0.1] py-1 shadow-2xl"
-        style={{ top, left, background: '#1e1e22', minWidth: menuWidth }}
+    <motion.div
+      ref={menuRef}
+      role="menu"
+      initial={{ opacity: 0, y: -4, scale: 0.96 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+      className="fixed z-[150] rounded-lg border border-white/[0.1] py-1 shadow-2xl"
+      style={{ top, left, background: '#1e1e22', minWidth: menuWidth }}
+    >
+      <button
+        role="menuitem"
+        onClick={handleCopy}
+        disabled={!selection}
+        className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs text-gray-300
+                   hover:bg-white/[0.06] active:bg-white/[0.1] transition-colors
+                   disabled:opacity-40 disabled:pointer-events-none"
       >
-        <button
-          onClick={handleCopy}
-          disabled={!selection}
-          className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs text-gray-300
-                     hover:bg-white/[0.06] active:bg-white/[0.1] transition-colors
-                     disabled:opacity-40 disabled:pointer-events-none"
-        >
-          <Copy size={14} className="text-gray-500" />
-          <span>Copy</span>
-        </button>
-        <button
-          onClick={handlePaste}
-          className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs text-gray-300
-                     hover:bg-white/[0.06] active:bg-white/[0.1] transition-colors"
-        >
-          <ClipboardPaste size={14} className="text-gray-500" />
-          <span>Paste</span>
-        </button>
-      </motion.div>
-    </AnimatePresence>,
+        <Copy size={14} className="text-gray-500" />
+        <span>Copy</span>
+      </button>
+      <button
+        role="menuitem"
+        onClick={handlePaste}
+        className="w-full flex items-center gap-2.5 px-3 py-2.5 text-xs text-gray-300
+                   hover:bg-white/[0.06] active:bg-white/[0.1] transition-colors"
+      >
+        <ClipboardPaste size={14} className="text-gray-500" />
+        <span>Paste</span>
+      </button>
+    </motion.div>,
     document.body
   )
 }

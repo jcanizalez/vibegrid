@@ -174,10 +174,18 @@ export function registerIpcHandlers(): void {
   })
 
   // Open external URL in default browser (only http/https)
-  safeHandle(IPC.OPEN_EXTERNAL, (_, url: string) => {
-    if (typeof url === 'string' && /^https?:\/\//i.test(url)) {
-      return shell.openExternal(url)
+  safeHandle(IPC.OPEN_EXTERNAL, (_, rawUrl: string) => {
+    if (typeof rawUrl !== 'string') throw new Error('Invalid URL: expected string')
+    let parsed: URL
+    try {
+      parsed = new URL(rawUrl.trim())
+    } catch {
+      throw new Error('Invalid URL: parse failure')
     }
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      throw new Error('Invalid URL protocol')
+    }
+    return shell.openExternal(parsed.toString())
   })
 
   // ─── Fire-and-forget → bridge notifications ────────────────────
