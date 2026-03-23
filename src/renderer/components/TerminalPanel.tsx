@@ -8,6 +8,7 @@ import {
   destroyTerminal
 } from '../lib/terminal-registry'
 import { InlineRename } from './InlineRename'
+import { TerminalContextMenu } from './TerminalContextMenu'
 
 const MIN_HEIGHT = 120
 const MAX_HEIGHT_RATIO = 0.7
@@ -15,16 +16,25 @@ const MAX_HEIGHT_RATIO = 0.7
 function ShellTerminal({ terminalId }: { terminalId: string }) {
   const containerRef = useRef<HTMLDivElement>(null)
   const panelHeight = useAppStore((s) => s.terminalPanelHeight)
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null)
 
   useEffect(() => {
     const el = containerRef.current
     if (!el) return
     attachTerminal(terminalId, el)
+
+    const handleContextMenu = (e: MouseEvent) => {
+      e.preventDefault()
+      setContextMenu({ x: e.clientX, y: e.clientY })
+    }
+    el.addEventListener('contextmenu', handleContextMenu)
+
     requestAnimationFrame(() => {
       fitTerminal(terminalId)
       focusTerminal(terminalId)
     })
     return () => {
+      el.removeEventListener('contextmenu', handleContextMenu)
       if (el) detachTerminal(terminalId, el)
     }
   }, [terminalId])
@@ -40,7 +50,18 @@ function ShellTerminal({ terminalId }: { terminalId: string }) {
     return () => window.removeEventListener('resize', onResize)
   }, [terminalId])
 
-  return <div ref={containerRef} className="w-full h-full" />
+  return (
+    <>
+      <div ref={containerRef} className="w-full h-full" />
+      {contextMenu && (
+        <TerminalContextMenu
+          terminalId={terminalId}
+          position={contextMenu}
+          onClose={() => setContextMenu(null)}
+        />
+      )}
+    </>
+  )
 }
 
 export function TerminalPanel() {

@@ -1,5 +1,6 @@
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
+import { WebLinksAddon } from '@xterm/addon-web-links'
 import '@xterm/xterm/css/xterm.css'
 
 interface TerminalEntry {
@@ -123,19 +124,45 @@ function createTerminalEntry(terminalId: string): TerminalEntry {
   const fitAddon = new FitAddon()
   term.loadAddon(fitAddon)
 
+  // Clickable links — Cmd+click (Mac) / Ctrl+click (Windows/Linux) opens in browser
+  term.loadAddon(
+    new WebLinksAddon((event, uri) => {
+      const mod = rendererIsMac ? event.metaKey : event.ctrlKey
+      if (mod) window.api.openExternal(uri)
+    })
+  )
+
   // Let app-level shortcuts pass through instead of being consumed by xterm
   term.attachCustomKeyEventHandler((e) => {
     const mod = rendererIsMac ? e.metaKey : e.ctrlKey
     if (!mod) return true
 
-    // Handle paste on Windows/Linux — Ctrl+V is intercepted by xterm as a
-    // control character (\x16) instead of triggering the browser paste event.
-    // Read clipboard manually and use term.paste() for bracketed-paste support.
-    if (!rendererIsMac && e.key.toLowerCase() === 'v' && e.type === 'keydown') {
-      navigator.clipboard.readText().then((text) => {
-        if (text) term.paste(text)
-      })
-      return false
+    if (!rendererIsMac && e.type === 'keydown') {
+      const key = e.key.toLowerCase()
+
+      // Copy on Windows/Linux — Ctrl+C copies when text is selected,
+      // otherwise falls through so xterm sends SIGINT. Ctrl+Shift+C always copies.
+      if (key === 'c' && (e.shiftKey || term.hasSelection())) {
+        if (term.hasSelection()) {
+          navigator.clipboard.writeText(term.getSelection())
+          term.clearSelection()
+        }
+        e.preventDefault()
+        return false
+      }
+
+      // Paste on Windows/Linux — Ctrl+V / Ctrl+Shift+V: xterm intercepts Ctrl+V
+      // as a control character (\x16) instead of triggering the browser paste event.
+      // Read clipboard manually and use term.paste() for bracketed-paste support.
+      // preventDefault() is critical to stop the browser from also firing a native
+      // paste event, which would cause xterm to paste the text a second time.
+      if (key === 'v') {
+        e.preventDefault()
+        navigator.clipboard.readText().then((text) => {
+          if (text) term.paste(text)
+        })
+        return false
+      }
     }
 
     const passthrough = ['w', '[', ']', 'k', 'n', 'o', 'b', ',', '/']
@@ -270,6 +297,20 @@ export function fitTerminal(terminalId: string, preState?: TerminalViewportState
  */
 export function focusTerminal(terminalId: string): void {
   registry.get(terminalId)?.term.focus()
+}
+
+export function getTerminalSelection(terminalId: string): string {
+  const entry = registry.get(terminalId)
+  if (!entry || !entry.term.hasSelection()) return ''
+  return entry.term.getSelection()
+}
+
+export function clearTerminalSelection(terminalId: string): void {
+  registry.get(terminalId)?.term.clearSelection()
+}
+
+export function pasteToTerminal(terminalId: string, text: string): void {
+  registry.get(terminalId)?.term.paste(text)
 }
 
 export function getViewportState(terminalId: string): TerminalViewportState | null {

@@ -1,4 +1,4 @@
-import { app, dialog, BrowserWindow } from 'electron'
+import { app, dialog, BrowserWindow, shell } from 'electron'
 import { ipcMain } from 'electron'
 import { safeHandle } from './ipc-safe-handle'
 import { IPC, ResizePayload } from '../shared/types'
@@ -171,6 +171,13 @@ export function registerIpcHandlers(): void {
   // App version (sync)
   ipcMain.on('get-app-version', (event) => {
     event.returnValue = app.getVersion()
+  })
+
+  // Open external URL in default browser (only http/https)
+  safeHandle(IPC.OPEN_EXTERNAL, (_, url: string) => {
+    if (typeof url === 'string' && /^https?:\/\//i.test(url)) {
+      return shell.openExternal(url)
+    }
   })
 
   // ─── Fire-and-forget → bridge notifications ────────────────────
