@@ -34,7 +34,6 @@ nsis:
   perMachine: false
   createDesktopShortcut: true
   createStartMenuShortcut: true
-  shortcutName: VibeGrid
   artifactName: '${productName}-Setup-${version}.${ext}'
 
 portable:
