@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useState } from 'react'
 import {
   attachTerminal,
   detachTerminal,
@@ -9,6 +9,7 @@ import {
 } from '../lib/terminal-registry'
 import { useStatusDetection } from '../hooks/useStatusDetection'
 import { useAppStore } from '../stores'
+import { TerminalContextMenu } from './TerminalContextMenu'
 
 interface Props {
   terminalId: string
@@ -17,6 +18,7 @@ interface Props {
 
 export function TerminalInstance({ terminalId, isFocused }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null)
 
   useStatusDetection(terminalId)
 
@@ -30,12 +32,19 @@ export function TerminalInstance({ terminalId, isFocused }: Props) {
     const savedViewport = getViewportState(terminalId)
     attachTerminal(terminalId, el)
 
+    const handleContextMenu = (e: MouseEvent) => {
+      e.preventDefault()
+      setContextMenu({ x: e.clientX, y: e.clientY })
+    }
+    el.addEventListener('contextmenu', handleContextMenu)
+
     requestAnimationFrame(() => {
       fitTerminal(terminalId, savedViewport)
       if (!savedViewport) scrollToBottom(terminalId)
     })
 
     return () => {
+      el.removeEventListener('contextmenu', handleContextMenu)
       if (el) detachTerminal(terminalId, el)
     }
   }, [terminalId])
@@ -72,5 +81,16 @@ export function TerminalInstance({ terminalId, isFocused }: Props) {
     return () => clearTimeout(timer)
   }, [rowHeight, terminalId])
 
-  return <div ref={containerRef} className="w-full h-full" />
+  return (
+    <>
+      <div ref={containerRef} className="w-full h-full" />
+      {contextMenu && (
+        <TerminalContextMenu
+          terminalId={terminalId}
+          position={contextMenu}
+          onClose={() => setContextMenu(null)}
+        />
+      )}
+    </>
+  )
 }

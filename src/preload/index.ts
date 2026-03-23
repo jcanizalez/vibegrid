@@ -306,6 +306,9 @@ const api = {
   ): Promise<{ success: boolean; message: string; durationMs: number }> =>
     ipcRenderer.invoke(IPC.SSH_TEST_CONNECTION, host),
 
+  // Shell
+  openExternal: (url: string): Promise<void> => ipcRenderer.invoke(IPC.OPEN_EXTERNAL, url),
+
   // App info
   getAppVersion: (): string => ipcRenderer.sendSync('get-app-version'),
   // Auto-update

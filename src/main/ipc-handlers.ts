@@ -1,4 +1,4 @@
-import { app, dialog, BrowserWindow } from 'electron'
+import { app, dialog, BrowserWindow, shell } from 'electron'
 import { ipcMain } from 'electron'
 import { safeHandle } from './ipc-safe-handle'
 import { IPC, ResizePayload } from '../shared/types'
@@ -171,6 +171,21 @@ export function registerIpcHandlers(): void {
   // App version (sync)
   ipcMain.on('get-app-version', (event) => {
     event.returnValue = app.getVersion()
+  })
+
+  // Open external URL in default browser (only http/https)
+  safeHandle(IPC.OPEN_EXTERNAL, (_, rawUrl: string) => {
+    if (typeof rawUrl !== 'string') throw new Error('Invalid URL: expected string')
+    let parsed: URL
+    try {
+      parsed = new URL(rawUrl.trim())
+    } catch {
+      throw new Error('Invalid URL: parse failure')
+    }
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      throw new Error('Invalid URL protocol')
+    }
+    return shell.openExternal(parsed.toString())
   })
 
   // ─── Fire-and-forget → bridge notifications ────────────────────
