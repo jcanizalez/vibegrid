@@ -4129,6 +4129,7 @@ __metadata:
     ws: "npm:^8.18.0"
     zod: "npm:^4.3.6"
   bin:
+    mcp: dist/index.js
     vibegrid-mcp: dist/index.js
   languageName: unknown
   linkType: soft
