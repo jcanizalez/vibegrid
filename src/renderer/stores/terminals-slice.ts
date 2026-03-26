@@ -62,13 +62,13 @@ export const createTerminalsSlice: StateCreator<AppStore, [], [], TerminalsSlice
 
   updateSessionBranch: (id, branch) =>
     set((state) => {
-      const next = new Map(state.terminals)
-      const term = next.get(id)
-      if (term && term.session.branch !== branch) {
-        next.set(id, { ...term, session: { ...term.session, branch } })
-        return { terminals: next }
+      const term = state.terminals.get(id)
+      if (!term || term.session.branch === branch) {
+        return state
       }
-      return state
+      const next = new Map(state.terminals)
+      next.set(id, { ...term, session: { ...term.session, branch } })
+      return { terminals: next }
     }),
 
   togglePinned: (id) =>
