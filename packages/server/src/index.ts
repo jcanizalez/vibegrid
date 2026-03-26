@@ -17,6 +17,7 @@ import { headlessManager } from './headless-manager'
 import { scheduler } from './scheduler'
 import { setDataDir, getTaskImagePath as resolveTaskImagePath } from './task-images'
 import { getTailscaleStatus } from './tailscale'
+import { initRebind, checkAndRebind } from './server-rebind'
 import log from './logger'
 
 export async function startServer(
@@ -46,6 +47,8 @@ export async function startServer(
     headlessManager.setAgentCommands(cfg.agentCommands)
     scheduler.syncSchedules(cfg.workflows ?? [])
     clientRegistry.broadcast(IPC.CONFIG_CHANGED, cfg)
+    // Auto-rebind when networkAccessEnabled changes
+    checkAndRebind().catch((err) => log.warn({ err }, '[server] rebind check failed'))
   })
 
   // Set up Fastify + WebSocket
@@ -143,6 +146,9 @@ export async function startServer(
 
   // Store port for RPC methods (e.g. tailscale:status needs it)
   setServerPort(actualPort)
+
+  // Enable hot-rebind when network access / Tailscale state changes
+  initRebind(app.server, host, actualPort)
 
   // Write port to stdout for parent process (Electron) to read
   process.stdout.write(JSON.stringify({ port: actualPort }) + '\n')

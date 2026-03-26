@@ -42,6 +42,7 @@ import {
 } from './database'
 import { executeScript } from './script-runner'
 import { getTailscaleStatus, clearBinaryCache } from './tailscale'
+import { checkAndRebind } from './server-rebind'
 import { testSshConnection } from './process-utils'
 import log from './logger'
 
@@ -139,8 +140,9 @@ export function registerAllMethods(): void {
   registerMethod('ide:open', ({ ideId, projectPath }) => openInIDE(ideId, projectPath))
 
   // Tailscale network access
-  registerMethod('tailscale:status', () => {
+  registerMethod('tailscale:status', async () => {
     clearBinaryCache() // Always re-detect in case user just installed
+    await checkAndRebind() // Rebind if Tailscale state changed since startup
     return getTailscaleStatus(serverPort)
   })
 
