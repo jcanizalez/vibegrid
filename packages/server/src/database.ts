@@ -21,7 +21,8 @@ import {
   WorkspaceConfig,
   DEFAULT_WORKSPACE,
   SessionLog,
-  SessionEvent
+  SessionEvent,
+  SessionEventType
 } from '@vibegrid/shared/types'
 import { DEFAULT_AGENT_COMMANDS } from '@vibegrid/shared/agent-defaults'
 
@@ -325,8 +326,8 @@ function createSchema(): void {
       metadata TEXT
     );
 
-    CREATE INDEX IF NOT EXISTS idx_session_events_session ON session_events(session_id);
-    CREATE INDEX IF NOT EXISTS idx_session_events_type ON session_events(event_type);
+    CREATE INDEX IF NOT EXISTS idx_session_events_session ON session_events(session_id, timestamp DESC);
+    CREATE INDEX IF NOT EXISTS idx_session_events_type ON session_events(event_type, timestamp DESC);
   `)
 
   migrateSchema(d)
@@ -1823,7 +1824,7 @@ export function insertSessionEvent(event: SessionEvent): void {
   ).run(event.sessionId, event.sessionId, MAX_SESSION_EVENTS_PER_SESSION)
 }
 
-export function listSessionEvents(eventType?: string, limit = 100): SessionEvent[] {
+export function listSessionEvents(eventType?: SessionEventType, limit = 100): SessionEvent[] {
   const d = getDb()
   let rows: Array<Record<string, unknown>>
   if (eventType) {

@@ -17,7 +17,8 @@ import type {
   SSHKey,
   SSHKeyMeta,
   SessionLog,
-  SessionEvent
+  SessionEvent,
+  SessionEventType
 } from './types'
 
 // ─── JSON-RPC 2.0 Envelope Types ────────────────────────────────
@@ -134,7 +135,7 @@ export interface RequestMethods {
     result: void
   }
   'sessionEvent:list': {
-    params: { eventType?: string; limit?: number }
+    params: { eventType?: SessionEventType; limit?: number }
     result: SessionEvent[]
   }
   'sessionEvent:listBySession': {
