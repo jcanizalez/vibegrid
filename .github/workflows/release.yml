@@ -10,7 +10,46 @@ permissions:
   contents: write
 
 jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Determine tag
+        id: tag
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            tag="${GITHUB_REF_NAME}"
+          else
+            tag="v$(jq -r .version package.json)"
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Create release if not exists
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="${{ steps.tag.outputs.tag }}"
+
+          is_prerelease=false
+          if [[ "$tag" == *"-beta"* ]] || [[ "$tag" == *"-alpha"* ]] || [[ "$tag" == *"-rc"* ]]; then
+            is_prerelease=true
+          fi
+
+          # Check if release already exists
+          if gh release view "$tag" &>/dev/null; then
+            echo "Release $tag already exists, skipping creation"
+          else
+            echo "Creating release $tag (prerelease=$is_prerelease)"
+            flags="--draft --title $tag --generate-notes"
+            if [ "$is_prerelease" = true ]; then
+              flags="$flags --prerelease"
+            fi
+            gh release create "$tag" $flags
+          fi
+
   build-macos:
+    needs: create-release
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v6
@@ -88,6 +127,7 @@ jobs:
         run: security delete-keychain build.keychain || true
 
   build-windows:
+    needs: create-release
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v6
@@ -140,6 +180,7 @@ jobs:
           }
 
   build-linux:
+    needs: create-release
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
