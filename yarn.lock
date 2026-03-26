@@ -3430,6 +3430,18 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@tiptap/extension-link@npm:^3.20.5":
+  version: 3.20.5
+  resolution: "@tiptap/extension-link@npm:3.20.5"
+  dependencies:
+    linkifyjs: "npm:^4.3.2"
+  peerDependencies:
+    "@tiptap/core": ^3.20.5
+    "@tiptap/pm": ^3.20.5
+  checksum: 10c0/d58131f121e2fd53f3b5f5578b94c6a563db94490ae8b4139bd3d03f3384cf836e4b70a80fbc4f02f6f52f11f2e64b3103542ef9c202d7cde9b40dfb375708f0
+  languageName: node
+  linkType: hard
+
 "@tiptap/extension-list-item@npm:^3.20.1":
   version: 3.20.1
   resolution: "@tiptap/extension-list-item@npm:3.20.1"
@@ -12333,7 +12345,7 @@ __metadata:
     "@tiptap/core": "npm:3.20.4"
     "@tiptap/extension-code-block": "npm:^3.20.1"
     "@tiptap/extension-code-block-lowlight": "npm:^3.20.1"
-    "@tiptap/extension-link": "npm:^3.20.1"
+    "@tiptap/extension-link": "npm:^3.20.5"
     "@tiptap/extension-list": "npm:3.20.4"
     "@tiptap/extension-placeholder": "npm:^3.20.1"
     "@tiptap/extension-task-item": "npm:^3.20.1"
