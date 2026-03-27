@@ -1,7 +1,6 @@
 {
   "name": "@vibegrid/server",
   "version": "0.0.1",
-  "private": false,
   "type": "module",
   "main": "./src/index.ts",
   "bin": {
