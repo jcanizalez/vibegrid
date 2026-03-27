@@ -18,7 +18,7 @@ import { scheduler } from './scheduler'
 import { setDataDir, getTaskImagePath as resolveTaskImagePath } from './task-images'
 import { getTailscaleStatus } from './tailscale'
 import { initRebind, checkAndRebind } from './server-rebind'
-import { getOrCreateToken, validateToken } from './auth'
+import { getOrCreateToken, getActiveToken, validateToken } from './auth'
 import { getServerInfo } from './server-identity'
 import log from './logger'
 
@@ -53,19 +53,19 @@ export async function startServer(
     checkAndRebind().catch((err) => log.warn({ err }, '[server] rebind check failed'))
   })
 
-  // Auth state — computed after host is determined, but closures capture by reference
+  // Auth is enabled after host determination; closures read getActiveToken() dynamically
   let authEnabled = false
-  let serverToken: string | null = null
 
   // Set up Fastify + WebSocket
   const app = Fastify({ logger: false })
   await app.register(websocket)
 
   app.get('/ws', { websocket: true }, (socket, req) => {
-    if (authEnabled && serverToken) {
+    const storedToken = getActiveToken()
+    if (authEnabled && storedToken) {
       const url = new URL(req.url || '', `http://${req.headers.host}`)
       const token = url.searchParams.get('token')
-      if (!token || !validateToken(token, serverToken)) {
+      if (!token || !validateToken(token, storedToken)) {
         socket.close(4001, 'Unauthorized')
         return
       }
@@ -73,24 +73,24 @@ export async function startServer(
     handleConnection(socket)
   })
 
-  const getServerIdentity = () => getServerInfo(dataDir)
   app.get('/health', async () => {
-    const identity = getServerIdentity()
-    return { status: 'ok', ...identity }
+    return { status: 'ok', ...getServerInfo(dataDir) }
   })
 
-  // Auth middleware for HTTP routes when non-localhost
-  // Uses closure over authEnabled/serverToken which are set after host determination
+  // Auth middleware for HTTP routes when non-localhost.
+  // Reads getActiveToken() dynamically so regenerateToken takes effect immediately.
   app.addHook('onRequest', async (req, reply) => {
-    if (!authEnabled || !serverToken) return
-    // Skip auth for health endpoint (used for connection testing)
+    const storedToken = getActiveToken()
+    if (!authEnabled || !storedToken) return
     if (req.url === '/health') return
-    // Skip auth for WebSocket (handled at connection level)
     if (req.headers.upgrade === 'websocket') return
 
     const url = new URL(req.url || '', `http://${req.headers.host}`)
-    const token = url.searchParams.get('token') || req.headers.authorization?.replace('Bearer ', '')
-    if (!token || !validateToken(token, serverToken)) {
+    const authHeader = req.headers.authorization
+    const bearerToken =
+      authHeader && /^bearer\s+/i.test(authHeader) ? authHeader.replace(/^bearer\s+/i, '') : null
+    const token = url.searchParams.get('token') || bearerToken
+    if (!token || !validateToken(token, storedToken)) {
       reply.code(401).send({ error: 'Unauthorized' })
     }
   })
@@ -177,10 +177,9 @@ export async function startServer(
     }
   }
 
-  // Enable auth when binding to non-localhost (remote access)
   authEnabled = host !== '127.0.0.1'
-  serverToken = authEnabled ? getOrCreateToken(dataDir) : null
   if (authEnabled) {
+    getOrCreateToken(dataDir)
     log.info('[server] authentication enabled for non-localhost binding')
   }
 
@@ -243,7 +242,7 @@ export async function startServer(
   process.on('SIGTERM', shutdown)
   process.on('SIGINT', shutdown)
 
-  return { app, port: actualPort, token: serverToken }
+  return { app, port: actualPort, token: getActiveToken() }
 }
 
 // Run directly

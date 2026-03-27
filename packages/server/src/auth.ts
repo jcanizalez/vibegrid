@@ -6,6 +6,11 @@ import log from './logger'
 
 const TOKEN_FILENAME = 'server-token'
 
+// In-memory active token — updated by getOrCreateToken and regenerateToken
+// so that regeneration takes effect immediately without server restart.
+let activeToken: string | null = null
+let activeDataDir: string | undefined
+
 function resolveTokenPath(dataDir?: string): string {
   const dir = dataDir ?? path.join(os.homedir(), '.vibegrid')
   return path.join(dir, TOKEN_FILENAME)
@@ -22,7 +27,11 @@ export function getOrCreateToken(dataDir?: string): string {
   const tokenPath = resolveTokenPath(dataDir)
   try {
     const existing = fs.readFileSync(tokenPath, 'utf-8').trim()
-    if (existing) return existing
+    if (existing) {
+      activeToken = existing
+      activeDataDir = dataDir
+      return existing
+    }
   } catch (err: unknown) {
     const code = (err as NodeJS.ErrnoException).code
     if (code !== 'ENOENT') {
@@ -31,15 +40,23 @@ export function getOrCreateToken(dataDir?: string): string {
   }
 
   const token = writeToken(tokenPath)
+  activeToken = token
+  activeDataDir = dataDir
   log.info('[auth] generated new server token')
   return token
 }
 
 export function regenerateToken(dataDir?: string): string {
-  const tokenPath = resolveTokenPath(dataDir)
+  const dir = dataDir ?? activeDataDir
+  const tokenPath = resolveTokenPath(dir)
   const token = writeToken(tokenPath)
+  activeToken = token
   log.info('[auth] regenerated server token')
   return token
+}
+
+export function getActiveToken(): string | null {
+  return activeToken
 }
 
 export function validateToken(provided: string, stored: string): boolean {

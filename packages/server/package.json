@@ -19,6 +19,12 @@
     "./database": "./src/database.ts",
     "./git-utils": "./src/git-utils.ts"
   },
+  "publishConfig": {
+    "main": "./dist/index.cjs",
+    "exports": {
+      ".": "./dist/index.cjs"
+    }
+  },
   "scripts": {
     "build": "tsup --config tsup.config.ts",
     "dev": "tsx src/index.ts"

@@ -3,6 +3,9 @@ import path from 'node:path'
 import os from 'node:os'
 import crypto from 'node:crypto'
 
+// Safe __dirname for both CJS (prod bundle) and ESM (dev/tsx)
+const _dirname = typeof __dirname !== 'undefined' ? __dirname : path.dirname(process.argv[1])
+
 const SERVER_ID_FILENAME = 'server-id'
 
 export interface ServerInfo {
@@ -44,9 +47,9 @@ export function getOrCreateServerId(dataDir?: string): string {
 export function getVersion(): string {
   try {
     const candidates = [
-      path.resolve(__dirname, '../package.json'),
-      path.resolve(__dirname, '../../package.json'),
-      path.resolve(__dirname, '../../../package.json')
+      path.resolve(_dirname, '../package.json'),
+      path.resolve(_dirname, '../../package.json'),
+      path.resolve(_dirname, '../../../package.json')
     ]
     for (const candidate of candidates) {
       try {

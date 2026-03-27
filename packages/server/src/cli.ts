@@ -69,10 +69,10 @@ async function main() {
   const { startServer } = await import('./index')
   const result = await startServer({ host, port, dataDir })
 
-  const displayHost =
-    host === '0.0.0.0' || result.app.server.address()?.toString().includes('0.0.0.0')
-      ? os.hostname()
-      : 'localhost'
+  const addr = result.app.server.address()
+  const boundToWildcard =
+    host === '0.0.0.0' || (typeof addr === 'object' && addr?.address === '0.0.0.0')
+  const displayHost = boundToWildcard ? os.hostname() : 'localhost'
   const displayPort = result.port
 
   console.log(`
