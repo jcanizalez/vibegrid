@@ -18,7 +18,8 @@ import type {
   SSHKeyMeta,
   SessionLog,
   SessionEvent,
-  SessionEventType
+  SessionEventType,
+  RemoteServerConfig
 } from './types'
 
 // ─── JSON-RPC 2.0 Envelope Types ────────────────────────────────
@@ -175,6 +176,24 @@ export interface RequestMethods {
   'server:regenerateToken': {
     params: void
     result: { token: string }
+  }
+
+  // Remote server registry
+  'remoteServer:add': {
+    params: { label: string; url: string; token: string }
+    result: RemoteServerConfig
+  }
+  'remoteServer:list': {
+    params: void
+    result: RemoteServerConfig[]
+  }
+  'remoteServer:remove': {
+    params: string
+    result: void
+  }
+  'remoteServer:test': {
+    params: { url: string; token: string }
+    result: { ok: boolean; serverId?: string; label?: string; version?: string; error?: string }
   }
 
   // Credential vault (server-side storage)

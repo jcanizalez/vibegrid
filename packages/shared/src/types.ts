@@ -166,6 +166,19 @@ export interface SessionEvent {
   metadata?: Record<string, unknown>
 }
 
+// Remote server types
+export type RemoteServerStatus = 'online' | 'connecting' | 'offline'
+
+export interface RemoteServerConfig {
+  id: string
+  label: string
+  url: string
+  token: string
+  serverId?: string
+  lastConnectedAt?: string
+  lastError?: string
+}
+
 // Session activity log types
 export type SessionLogStatus = 'running' | 'success' | 'error'
 
@@ -561,7 +574,11 @@ export const IPC = {
   SSH_TEST_CONNECTION: 'ssh:testConnection',
   OPEN_EXTERNAL: 'shell:openExternal',
   SERVER_INFO: 'server:info',
-  SERVER_REGENERATE_TOKEN: 'server:regenerateToken'
+  SERVER_REGENERATE_TOKEN: 'server:regenerateToken',
+  REMOTE_SERVER_ADD: 'remoteServer:add',
+  REMOTE_SERVER_LIST: 'remoteServer:list',
+  REMOTE_SERVER_REMOVE: 'remoteServer:remove',
+  REMOTE_SERVER_TEST: 'remoteServer:test'
 } as const
 
 export interface PermissionSuggestion {

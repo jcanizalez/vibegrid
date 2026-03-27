@@ -328,6 +328,16 @@ function createSchema(): void {
 
     CREATE INDEX IF NOT EXISTS idx_session_events_session ON session_events(session_id, timestamp DESC);
     CREATE INDEX IF NOT EXISTS idx_session_events_type ON session_events(event_type, timestamp DESC);
+
+    CREATE TABLE IF NOT EXISTS remote_servers (
+      id TEXT PRIMARY KEY,
+      label TEXT NOT NULL,
+      url TEXT NOT NULL,
+      token TEXT NOT NULL,
+      server_id TEXT,
+      last_connected_at TEXT,
+      last_error TEXT
+    );
   `)
 
   migrateSchema(d)
@@ -1856,4 +1866,73 @@ function mapSessionEventRow(r: Record<string, unknown>): SessionEvent {
     timestamp: r.timestamp as string,
     ...(meta != null && { metadata: JSON.parse(meta) })
   }
+}
+
+// ─── Remote Servers ───────────────────────────────────────────────
+
+export interface RemoteServerRow {
+  id: string
+  label: string
+  url: string
+  token: string
+  server_id: string | null
+  last_connected_at: string | null
+  last_error: string | null
+}
+
+export function saveRemoteServer(server: {
+  id: string
+  label: string
+  url: string
+  token: string
+  serverId?: string
+}): void {
+  const d = getDb()
+  d.prepare(
+    `INSERT OR REPLACE INTO remote_servers (id, label, url, token, server_id, last_connected_at)
+     VALUES (?, ?, ?, ?, ?, ?)`
+  ).run(
+    server.id,
+    server.label,
+    server.url,
+    server.token,
+    server.serverId ?? null,
+    new Date().toISOString()
+  )
+}
+
+export function listRemoteServers(): RemoteServerRow[] {
+  const d = getDb()
+  return d.prepare('SELECT * FROM remote_servers ORDER BY label').all() as RemoteServerRow[]
+}
+
+export function deleteRemoteServer(id: string): void {
+  const d = getDb()
+  d.prepare('DELETE FROM remote_servers WHERE id = ?').run(id)
+}
+
+export function updateRemoteServerStatus(
+  id: string,
+  updates: { lastConnectedAt?: string; lastError?: string; serverId?: string }
+): void {
+  const d = getDb()
+  const sets: string[] = []
+  const vals: unknown[] = []
+
+  if (updates.lastConnectedAt !== undefined) {
+    sets.push('last_connected_at = ?')
+    vals.push(updates.lastConnectedAt)
+  }
+  if (updates.lastError !== undefined) {
+    sets.push('last_error = ?')
+    vals.push(updates.lastError)
+  }
+  if (updates.serverId !== undefined) {
+    sets.push('server_id = ?')
+    vals.push(updates.serverId)
+  }
+
+  if (sets.length === 0) return
+  vals.push(id)
+  d.prepare(`UPDATE remote_servers SET ${sets.join(', ')} WHERE id = ?`).run(...vals)
 }

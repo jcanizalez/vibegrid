@@ -50,7 +50,10 @@ import {
   listSessionLogs,
   insertSessionEvent,
   listSessionEvents,
-  listSessionEventsBySession
+  listSessionEventsBySession,
+  saveRemoteServer,
+  listRemoteServers,
+  deleteRemoteServer
 } from './database'
 import { stripAnsi } from './ansi-strip'
 import { executeScript } from './script-runner'
@@ -313,6 +316,50 @@ export function registerAllMethods(): void {
   registerMethod('server:regenerateToken', () => {
     const newToken = regenerateToken()
     return { token: newToken }
+  })
+
+  // Remote server registry
+  registerMethod('remoteServer:add', ({ label, url, token }) => {
+    const id = crypto.randomUUID()
+    saveRemoteServer({ id, label, url, token })
+    return { id, label, url, token }
+  })
+  registerMethod('remoteServer:list', () => {
+    const rows = listRemoteServers()
+    return rows.map((r) => ({
+      id: r.id,
+      label: r.label,
+      url: r.url,
+      token: r.token,
+      ...(r.server_id != null && { serverId: r.server_id }),
+      ...(r.last_connected_at != null && { lastConnectedAt: r.last_connected_at }),
+      ...(r.last_error != null && { lastError: r.last_error })
+    }))
+  })
+  registerMethod('remoteServer:remove', (id) => {
+    deleteRemoteServer(id)
+  })
+  registerMethod('remoteServer:test', async ({ url, token }) => {
+    try {
+      // url is a WebSocket URL like wss://host:port/ws — convert to HTTP for health check
+      const httpUrl = url.replace(/^ws(s?):/, 'http$1:').replace(/\/ws$/, '/health')
+      const res = await fetch(httpUrl, {
+        headers: { Authorization: `Bearer ${token}` },
+        signal: AbortSignal.timeout(10_000)
+      })
+      if (!res.ok) {
+        return { ok: false, error: `HTTP ${res.status}` }
+      }
+      const data = (await res.json()) as Record<string, unknown>
+      return {
+        ok: true,
+        serverId: data.serverId as string | undefined,
+        label: data.label as string | undefined,
+        version: data.version as string | undefined
+      }
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) }
+    }
   })
 
   // Fire-and-forget notifications
