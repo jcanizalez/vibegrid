@@ -324,18 +324,7 @@ export function registerAllMethods(): void {
     saveRemoteServer({ id, label, url, token })
     return { id, label, url, token }
   })
-  registerMethod('remoteServer:list', () => {
-    const rows = listRemoteServers()
-    return rows.map((r) => ({
-      id: r.id,
-      label: r.label,
-      url: r.url,
-      token: r.token,
-      ...(r.server_id != null && { serverId: r.server_id }),
-      ...(r.last_connected_at != null && { lastConnectedAt: r.last_connected_at }),
-      ...(r.last_error != null && { lastError: r.last_error })
-    }))
-  })
+  registerMethod('remoteServer:list', () => listRemoteServers())
   registerMethod('remoteServer:remove', (id) => {
     deleteRemoteServer(id)
   })

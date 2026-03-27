@@ -22,7 +22,8 @@ import {
   DEFAULT_WORKSPACE,
   SessionLog,
   SessionEvent,
-  SessionEventType
+  SessionEventType,
+  RemoteServerConfig
 } from '@vibegrid/shared/types'
 import { DEFAULT_AGENT_COMMANDS } from '@vibegrid/shared/agent-defaults'
 
@@ -1870,7 +1871,7 @@ function mapSessionEventRow(r: Record<string, unknown>): SessionEvent {
 
 // ─── Remote Servers ───────────────────────────────────────────────
 
-export interface RemoteServerRow {
+interface RemoteServerRow {
   id: string
   label: string
   url: string
@@ -1878,6 +1879,18 @@ export interface RemoteServerRow {
   server_id: string | null
   last_connected_at: string | null
   last_error: string | null
+}
+
+function mapRemoteServerRow(r: RemoteServerRow): RemoteServerConfig {
+  return {
+    id: r.id,
+    label: r.label,
+    url: r.url,
+    token: r.token,
+    ...(r.server_id != null && { serverId: r.server_id }),
+    ...(r.last_connected_at != null && { lastConnectedAt: r.last_connected_at }),
+    ...(r.last_error != null && { lastError: r.last_error })
+  }
 }
 
 export function saveRemoteServer(server: {
@@ -1901,38 +1914,13 @@ export function saveRemoteServer(server: {
   )
 }
 
-export function listRemoteServers(): RemoteServerRow[] {
+export function listRemoteServers(): RemoteServerConfig[] {
   const d = getDb()
-  return d.prepare('SELECT * FROM remote_servers ORDER BY label').all() as RemoteServerRow[]
+  const rows = d.prepare('SELECT * FROM remote_servers ORDER BY label').all() as RemoteServerRow[]
+  return rows.map(mapRemoteServerRow)
 }
 
 export function deleteRemoteServer(id: string): void {
   const d = getDb()
   d.prepare('DELETE FROM remote_servers WHERE id = ?').run(id)
-}
-
-export function updateRemoteServerStatus(
-  id: string,
-  updates: { lastConnectedAt?: string; lastError?: string; serverId?: string }
-): void {
-  const d = getDb()
-  const sets: string[] = []
-  const vals: unknown[] = []
-
-  if (updates.lastConnectedAt !== undefined) {
-    sets.push('last_connected_at = ?')
-    vals.push(updates.lastConnectedAt)
-  }
-  if (updates.lastError !== undefined) {
-    sets.push('last_error = ?')
-    vals.push(updates.lastError)
-  }
-  if (updates.serverId !== undefined) {
-    sets.push('server_id = ?')
-    vals.push(updates.serverId)
-  }
-
-  if (sets.length === 0) return
-  vals.push(id)
-  d.prepare(`UPDATE remote_servers SET ${sets.join(', ')} WHERE id = ?`).run(...vals)
 }

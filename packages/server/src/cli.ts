@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 import os from 'node:os'
 import path from 'node:path'
-import fs from 'node:fs'
 import { getOrCreateToken, regenerateToken } from './auth'
+import { getVersion } from './server-identity'
 
 const DEFAULT_DATA_DIR = path.join(os.homedir(), '.vibegrid')
 
@@ -22,25 +22,6 @@ function parseArgs() {
     }
   }
   return opts
-}
-
-function getVersion(): string {
-  const candidates = [
-    path.resolve(__dirname, '../package.json'),
-    path.resolve(__dirname, '../../package.json'),
-    path.resolve(__dirname, '../../../package.json')
-  ]
-  for (const candidate of candidates) {
-    try {
-      if (fs.existsSync(candidate)) {
-        const pkg = JSON.parse(fs.readFileSync(candidate, 'utf-8'))
-        if (pkg.version) return pkg.version
-      }
-    } catch {
-      // ignore
-    }
-  }
-  return 'unknown'
 }
 
 function printUsage() {

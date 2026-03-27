@@ -133,7 +133,7 @@ export async function startServer(
     path.resolve(_dirname, '../web-dist')
   ]
   const webDistDir = webDistCandidates.find((d) => fs.existsSync(d))
-  if (fs.existsSync(webDistDir)) {
+  if (webDistDir) {
     await app.register(fastifyStatic, {
       root: webDistDir,
       prefix: '/app/'
