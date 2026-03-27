@@ -232,6 +232,61 @@ jobs:
           fi
           [ -f dist/latest-linux.yml ] && gh release upload "$tag" dist/latest-linux.yml --clobber
 
+  publish-server:
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install Python setuptools
+        run: pip install setuptools
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install dependencies
+        run: yarn install
+
+      - name: Sync server version from tag
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          cd packages/server && npm pkg set version="$VERSION"
+
+      - name: Build web UI + server
+        run: |
+          yarn workspace @vibegrid/web build
+          cp -r packages/web/dist packages/server/web-dist
+          yarn workspace @vibegrid/server build
+
+      - name: Publish to npm
+        working-directory: packages/server
+        run: |
+          VERSION=$(node -p 'require("./package.json").version')
+          TAG="${GITHUB_REF_NAME}"
+
+          NPM_TAG="latest"
+          if [[ "$TAG" == *"-beta"* ]] || [[ "$TAG" == *"-alpha"* ]] || [[ "$TAG" == *"-rc"* ]]; then
+            NPM_TAG="beta"
+          fi
+
+          PUBLISHED=$(npm view @vibegrid/server version 2>/dev/null || echo "none")
+          if [ "$VERSION" = "$PUBLISHED" ]; then
+            echo "Version $VERSION already published, skipping"
+          else
+            yarn npm publish --access public --tag "$NPM_TAG"
+            echo "Published @vibegrid/server@$VERSION with dist-tag '$NPM_TAG'"
+          fi
+        env:
+          YARN_NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
   publish-mcp:
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest

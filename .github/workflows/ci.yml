@@ -47,6 +47,11 @@ jobs:
             echo "ERROR: import_meta found in CJS bundle — will crash at runtime"
             exit 1
           fi
+          # Verify CLI entry point was built
+          if [ ! -f packages/server/dist/cli.cjs ]; then
+            echo "ERROR: cli.cjs not built — standalone server won't work"
+            exit 1
+          fi
           # Smoke-test: require the bundle — fails immediately if module-level code crashes
           node -e "
             process.on('uncaughtException', (e) => {
