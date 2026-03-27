@@ -4199,6 +4199,8 @@ __metadata:
     tsx: "npm:^4.19.4"
     typescript: "npm:^5.6.0"
     zod: "npm:^4.3.6"
+  bin:
+    vibegrid-server: ./dist/cli.cjs
   languageName: unknown
   linkType: soft
 
