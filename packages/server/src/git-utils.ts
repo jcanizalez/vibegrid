@@ -132,6 +132,19 @@ export function isWorktreeDirty(worktreePath: string): boolean {
   }
 }
 
+export function renameWorktreeBranch(worktreePath: string, newBranch: string): boolean {
+  try {
+    execFileSync('git', ['branch', '-m', newBranch], {
+      cwd: worktreePath,
+      ...EXEC_OPTS,
+      timeout: 10000
+    })
+    return true
+  } catch {
+    return false
+  }
+}
+
 export function removeWorktree(projectPath: string, worktreePath: string, force = false): boolean {
   try {
     const args = ['worktree', 'remove', worktreePath]

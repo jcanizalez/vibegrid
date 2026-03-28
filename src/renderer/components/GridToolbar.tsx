@@ -1,7 +1,10 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { useAppStore } from '../stores'
 import { SortMode, StatusFilter } from '../stores/types'
 import { SlidersHorizontal } from 'lucide-react'
+import { Tooltip } from './Tooltip'
+
+const isMac = navigator.platform.toUpperCase().includes('MAC')
 
 /* ── Options ─────────────────────────────────────────────────── */
 
@@ -117,33 +120,45 @@ export function GridToolbar() {
   const hasActiveFilters =
     statusFilter !== 'all' || sortMode !== 'manual' || gridColumns !== 0 || layoutMode !== 'grid'
 
+  const toggle = useCallback(() => setOpen((o) => !o), [])
+
   useEffect(() => {
     if (!open) return
     const handleClick = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
     }
-    document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
+    // Use timeout to avoid the opening click from immediately closing
+    const id = setTimeout(() => document.addEventListener('mousedown', handleClick), 0)
+    return () => {
+      clearTimeout(id)
+      document.removeEventListener('mousedown', handleClick)
+    }
   }, [open])
 
+  useEffect(() => {
+    window.addEventListener('toggle-view-options', toggle)
+    return () => window.removeEventListener('toggle-view-options', toggle)
+  }, [toggle])
+
   return (
-    <div className="relative" ref={ref}>
-      <button
-        onClick={() => setOpen(!open)}
-        className={`relative p-1 rounded-md transition-colors ${
-          open
-            ? 'text-white bg-white/[0.1]'
-            : hasActiveFilters
-              ? 'text-white bg-white/[0.08] hover:bg-white/[0.12]'
-              : 'text-gray-400 hover:text-white hover:bg-white/[0.06]'
-        }`}
-        title="View options"
-      >
-        <SlidersHorizontal size={16} strokeWidth={1.5} />
-        {hasActiveFilters && !open && (
-          <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-blue-500" />
-        )}
-      </button>
+    <div className="relative flex items-center" ref={ref}>
+      <Tooltip label="View options" shortcut={`${isMac ? '⌘' : 'Ctrl+'}J`} position="bottom">
+        <button
+          onClick={toggle}
+          className={`relative p-1 rounded-md transition-colors ${
+            open
+              ? 'text-white bg-white/[0.1]'
+              : hasActiveFilters
+                ? 'text-white bg-white/[0.08] hover:bg-white/[0.12]'
+                : 'text-gray-400 hover:text-white hover:bg-white/[0.06]'
+          }`}
+        >
+          <SlidersHorizontal size={16} strokeWidth={1.5} />
+          {hasActiveFilters && !open && (
+            <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-blue-500" />
+          )}
+        </button>
+      </Tooltip>
 
       {open && (
         <div

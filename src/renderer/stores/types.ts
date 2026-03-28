@@ -60,8 +60,10 @@ export interface TerminalsSlice {
 export interface ProjectsSlice {
   config: AppConfig | null
   activeProject: string | null
+  activeWorktreePath: string | null
   setConfig: (config: AppConfig) => void
   setActiveProject: (name: string | null) => void
+  setActiveWorktreePath: (path: string | null) => void
   addProject: (project: ProjectConfig) => void
   removeProject: (name: string) => void
   updateProject: (originalName: string, project: ProjectConfig) => void

@@ -291,6 +291,8 @@ export function createApiShim(wsUrl: string) {
       rpc.invoke('git:createWorktree', { projectPath, branch }),
     removeWorktree: (projectPath: string, worktreePath: string, force?: boolean) =>
       rpc.invoke('git:removeWorktree', { projectPath, worktreePath, force }),
+    renameWorktreeBranch: (worktreePath: string, newBranch: string) =>
+      rpc.invoke('git:renameWorktreeBranch', { worktreePath, newBranch }),
     isWorktreeDirty: (worktreePath: string) => rpc.invoke('git:worktreeDirty', worktreePath),
     listWorktrees: (projectPath: string) => rpc.invoke('git:listWorktrees', projectPath),
     getGitDiffStat: (cwd: string) => rpc.invoke('git:diffStat', cwd),

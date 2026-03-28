@@ -2,24 +2,14 @@ import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { isElectron } from '../lib/platform'
 import { useAppStore } from '../stores'
 import { useIsMobile } from '../hooks/useIsMobile'
-import {
-  WorkflowDefinition,
-  ProjectConfig,
-  AgentStatus,
-  AgentType,
-  TaskConfig,
-  supportsExactSessionResume
-} from '../../shared/types'
+import { WorkflowDefinition, ProjectConfig, AgentStatus, AgentType } from '../../shared/types'
 import type { WorktreeInfo } from '../stores/types'
-import { buildTaskPrompt } from '../../shared/prompt-builder'
-import { closeTerminalSession } from '../lib/terminal-close'
 import { getDisplayName } from '../lib/terminal-display'
 import { getActionCount, isScheduledWorkflow, getTriggerLabel } from '../lib/workflow-helpers'
 import { executeWorkflow } from '../lib/workflow-execution'
-import { KbdHint } from './KbdHint'
 import { Tooltip } from './Tooltip'
 import { toast } from './Toast'
-import { AgentIcon } from './AgentIcon'
+import { generateWorktreeName } from '../lib/worktree-names'
 import { WorkspaceSwitcher } from './WorkspaceSwitcher'
 import {
   Folder,
@@ -46,26 +36,14 @@ import {
   MoreHorizontal,
   Pencil,
   Trash2,
-  GitFork,
   ChevronRight,
   Clock,
   Calendar,
   Power,
-  X,
-  ListTodo,
   Plus,
-  Circle,
-  LayoutList,
-  Eye,
-  RotateCcw
+  RotateCcw,
+  FolderPlus
 } from 'lucide-react'
-
-const STATUS_DOT_COLOR: Record<AgentStatus, string> = {
-  running: 'bg-green-400',
-  waiting: 'bg-amber-400',
-  idle: 'bg-gray-500',
-  error: 'bg-red-400'
-}
 
 const EMPTY_WORKTREES: WorktreeInfo[] = []
 
@@ -310,6 +288,8 @@ export function ProjectSidebar() {
   const config = useAppStore((s) => s.config)
   const activeProject = useAppStore((s) => s.activeProject)
   const setActiveProject = useAppStore((s) => s.setActiveProject)
+  const activeWorktreePath = useAppStore((s) => s.activeWorktreePath)
+  const setActiveWorktreePath = useAppStore((s) => s.setActiveWorktreePath)
   const isSidebarOpen = useAppStore((s) => s.isSidebarOpen)
   const toggleSidebar = useAppStore((s) => s.toggleSidebar)
   const removeProject = useAppStore((s) => s.removeProject)
@@ -323,9 +303,6 @@ export function ProjectSidebar() {
   const setEditingProject = useAppStore((s) => s.setEditingProject)
 
   const setFocusedTerminal = useAppStore((s) => s.setFocusedTerminal)
-  const setMainViewMode = useAppStore((s) => s.setMainViewMode)
-  const setSelectedTaskId = useAppStore((s) => s.setSelectedTaskId)
-  const setTaskDialogOpen = useAppStore((s) => s.setTaskDialogOpen)
   const archivedSessions = useAppStore((s) => s.archivedSessions)
   const showArchivedSessions = useAppStore((s) => s.showArchivedSessions)
   const setShowArchivedSessions = useAppStore((s) => s.setShowArchivedSessions)
@@ -338,11 +315,10 @@ export function ProjectSidebar() {
 
   const [sidebarWidth, setSidebarWidth] = useState(256)
   const [openMenuProject, setOpenMenuProject] = useState<string | null>(null)
+  const [renamingWorktree, setRenamingWorktree] = useState<string | null>(null)
+  const [worktreeRenameValue, setWorktreeRenameValue] = useState('')
   const [openMenuShortcut, setOpenMenuShortcut] = useState<string | null>(null)
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set())
-  const [collapsedSessions, setCollapsedSessions] = useState<Set<string>>(new Set())
-  const [collapsedTasks, setCollapsedTasks] = useState<Set<string>>(new Set())
-  const [expandedWorktrees, setExpandedWorktrees] = useState<Set<string>>(new Set())
   const [projectsSectionCollapsed, setProjectsSectionCollapsed] = useState(false)
   const [workflowsSectionCollapsed, setWorkflowsSectionCollapsed] = useState(false)
   const isResizing = useRef(false)
@@ -473,6 +449,17 @@ export function ProjectSidebar() {
     })
   }
 
+  // Pre-compute worktree session counts
+  const worktreeSessionCounts = new Map<string, number>()
+  for (const [, t] of terminals) {
+    if (t.session.worktreePath) {
+      worktreeSessionCounts.set(
+        t.session.worktreePath,
+        (worktreeSessionCounts.get(t.session.worktreePath) || 0) + 1
+      )
+    }
+  }
+
   // Count terminals in active workspace only
   let workspaceTerminalCount = 0
   for (const [, t] of terminals) {
@@ -482,41 +469,15 @@ export function ProjectSidebar() {
   }
 
   const toggleProjectExpanded = (name: string): void => {
+    const isExpanding = !expandedProjects.has(name)
+    if (isExpanding) {
+      const project = (config?.projects ?? []).find((p) => p.name === name)
+      if (project) loadWorktrees(project.path)
+    }
     setExpandedProjects((prev) => {
       const next = new Set(prev)
       if (next.has(name)) next.delete(name)
       else next.add(name)
-      return next
-    })
-  }
-
-  const toggleSessionsCollapsed = (name: string): void => {
-    setCollapsedSessions((prev) => {
-      const next = new Set(prev)
-      if (next.has(name)) next.delete(name)
-      else next.add(name)
-      return next
-    })
-  }
-
-  const toggleTasksCollapsed = (name: string): void => {
-    setCollapsedTasks((prev) => {
-      const next = new Set(prev)
-      if (next.has(name)) next.delete(name)
-      else next.add(name)
-      return next
-    })
-  }
-
-  const toggleWorktreesExpanded = (project: ProjectConfig): void => {
-    setExpandedWorktrees((prev) => {
-      const next = new Set(prev)
-      if (next.has(project.name)) {
-        next.delete(project.name)
-      } else {
-        next.add(project.name)
-        loadWorktrees(project.path)
-      }
       return next
     })
   }
@@ -571,7 +532,7 @@ export function ProjectSidebar() {
 
       {/* Section label */}
       {!isCollapsed && (
-        <div className="px-3 pt-3 pb-1.5 flex items-center justify-between">
+        <div className="group/section px-3 pt-3 pb-1.5 flex items-center justify-between">
           <button
             onClick={() => setProjectsSectionCollapsed(!projectsSectionCollapsed)}
             className="flex items-center gap-1.5 hover:text-gray-300 transition-colors"
@@ -585,6 +546,14 @@ export function ProjectSidebar() {
               Projects
             </span>
           </button>
+          <Tooltip label="Add project" position="bottom">
+            <button
+              onClick={() => setAddProjectDialogOpen(true)}
+              className="p-0.5 rounded text-gray-600 hover:text-white hover:bg-white/[0.08] transition-colors"
+            >
+              <FolderPlus size={13} strokeWidth={1.5} />
+            </button>
+          </Tooltip>
         </div>
       )}
       {isCollapsed && <div className="pt-4" />}
@@ -632,19 +601,6 @@ export function ProjectSidebar() {
             return (
               <div key={project.name}>
                 <div className="group relative flex items-center">
-                  {/* Chevron toggle */}
-                  {!isCollapsed && (
-                    <button
-                      onClick={() => toggleProjectExpanded(project.name)}
-                      className="text-gray-600 hover:text-gray-400 p-0.5 shrink-0 transition-colors"
-                    >
-                      <ChevronRight
-                        size={12}
-                        strokeWidth={2}
-                        className={`transition-transform ${isExpanded ? 'rotate-90' : ''}`}
-                      />
-                    </button>
-                  )}
                   <button
                     onClick={() => setActiveProject(project.name)}
                     className={`flex-1 text-left px-2 py-1.5 rounded-md text-[13px] transition-colors flex items-center gap-2 ${
@@ -654,567 +610,258 @@ export function ProjectSidebar() {
                     } ${isCollapsed ? 'justify-center px-0' : ''}`}
                     title={isCollapsed ? project.name : undefined}
                   >
-                    <ProjectIcon icon={project.icon} color={project.iconColor} size={iconSize} />
+                    {isCollapsed ? (
+                      <ProjectIcon icon={project.icon} color={project.iconColor} size={iconSize} />
+                    ) : (
+                      <div
+                        className="relative w-[14px] h-[14px] shrink-0"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          toggleProjectExpanded(project.name)
+                        }}
+                      >
+                        <span className="group-hover:hidden flex items-center justify-center w-full h-full">
+                          <ProjectIcon icon={project.icon} color={project.iconColor} size={14} />
+                        </span>
+                        <ChevronRight
+                          size={12}
+                          strokeWidth={2.5}
+                          className={`hidden group-hover:block text-gray-500 transition-transform absolute top-[1px] left-[1px] ${isExpanded ? 'rotate-90' : ''}`}
+                        />
+                      </div>
+                    )}
                     {!isCollapsed && (
                       <>
                         <span className="truncate">{project.name}</span>
                         {sessions.length > 0 && (
-                          <span className="text-gray-600 text-xs ml-auto">{sessions.length}</span>
+                          <span className="text-gray-600 text-xs ml-auto group-hover:hidden">
+                            {sessions.length}
+                          </span>
                         )}
+                        {/* Hover actions — inline, replacing count */}
+                        <div className="hidden group-hover:flex items-center gap-0.5 ml-auto">
+                          <Tooltip label="New worktree" position="right">
+                            <span
+                              role="button"
+                              onClick={async (e) => {
+                                e.stopPropagation()
+                                const name = generateWorktreeName()
+                                await window.api.createWorktree(project.path, name)
+                                if (!expandedProjects.has(project.name)) {
+                                  toggleProjectExpanded(project.name)
+                                } else {
+                                  loadWorktrees(project.path)
+                                }
+                              }}
+                              className="text-gray-500 hover:text-white p-0.5 rounded hover:bg-white/[0.08] transition-colors"
+                            >
+                              <Plus size={14} strokeWidth={2} />
+                            </span>
+                          </Tooltip>
+                          <Tooltip label="More" position="right">
+                            <span
+                              role="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setOpenMenuProject(
+                                  openMenuProject === project.name ? null : project.name
+                                )
+                              }}
+                              className="text-gray-500 hover:text-white p-0.5 rounded hover:bg-white/[0.08] transition-colors"
+                            >
+                              <MoreHorizontal size={14} strokeWidth={2} />
+                            </span>
+                          </Tooltip>
+                        </div>
                       </>
                     )}
                   </button>
-                  {!isCollapsed && (
-                    <div className="flex items-center gap-0.5 shrink-0">
-                      <Tooltip label="Quick launch session" position="right">
-                        <button
-                          onClick={async (e) => {
-                            e.stopPropagation()
-                            const agentType = config?.defaults.defaultAgent || 'claude'
-                            const session = await window.api.createTerminal({
-                              agentType,
-                              projectName: project.name,
-                              projectPath: project.path
-                            })
-                            addTerminal(session)
-                          }}
-                          className="opacity-0 group-hover:opacity-100 text-gray-600 hover:text-green-400
-                                   p-1 rounded-md hover:bg-white/[0.06] transition-all"
-                        >
-                          <Play size={11} strokeWidth={2} />
-                        </button>
-                      </Tooltip>
-                      <Tooltip label="Add task" position="right">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setActiveProject(project.name)
-                            setMainViewMode('tasks')
-                            setTaskDialogOpen(true)
-                          }}
-                          className="opacity-0 group-hover:opacity-100 text-gray-600 hover:text-blue-400
-                                   p-1 rounded-md hover:bg-white/[0.06] transition-all"
-                        >
-                          <ListTodo size={11} strokeWidth={2} />
-                        </button>
-                      </Tooltip>
-                      <div className="relative">
-                        <button
-                          onClick={() =>
-                            setOpenMenuProject(
-                              openMenuProject === project.name ? null : project.name
-                            )
-                          }
-                          className="opacity-0 group-hover:opacity-100 text-gray-600 hover:text-white
-                                   p-1 transition-all"
-                        >
-                          <MoreHorizontal size={12} strokeWidth={2} />
-                        </button>
-                        {openMenuProject === project.name && (
-                          <ProjectContextMenu
-                            project={project}
-                            onEdit={() => handleEditProject(project)}
-                            onDelete={() => removeProject(project.name)}
-                            onClose={() => setOpenMenuProject(null)}
-                          />
-                        )}
-                      </div>
+                  {!isCollapsed && openMenuProject === project.name && (
+                    <div className="relative">
+                      <ProjectContextMenu
+                        project={project}
+                        onEdit={() => handleEditProject(project)}
+                        onDelete={() => removeProject(project.name)}
+                        onClose={() => setOpenMenuProject(null)}
+                      />
                     </div>
                   )}
                 </div>
 
                 {/* Expanded sub-groups under project */}
                 {!isCollapsed && isExpanded && (
-                  <div className="ml-4 pl-2 border-l border-white/[0.04] mt-0.5 mb-1 space-y-1">
-                    {/* Sessions sub-group */}
-                    <div>
-                      <div className="group/sessions flex items-center gap-1.5 px-2 py-1">
-                        <button
-                          onClick={() => toggleSessionsCollapsed(project.name)}
-                          className="flex items-center gap-1.5 flex-1 min-w-0"
-                        >
-                          <ChevronRight
-                            size={10}
-                            strokeWidth={2}
-                            className={`text-gray-600 transition-transform shrink-0 ${collapsedSessions.has(project.name) ? '' : 'rotate-90'}`}
-                          />
-                          <Terminal size={11} strokeWidth={2} className="text-gray-600 shrink-0" />
-                          <span className="text-[11px] font-medium text-gray-500 uppercase tracking-wider">
-                            Sessions
-                          </span>
-                          {sessions.length > 0 && (
-                            <span className="text-[10px] text-gray-600 bg-white/[0.06] px-1.5 py-0.5 rounded-full">
-                              {sessions.length}
-                            </span>
-                          )}
-                        </button>
-                        <Tooltip label="Quick launch session" position="right">
-                          <button
-                            onClick={async () => {
-                              const agentType = config?.defaults.defaultAgent || 'claude'
-                              const session = await window.api.createTerminal({
-                                agentType,
-                                projectName: project.name,
-                                projectPath: project.path
-                              })
-                              addTerminal(session)
-                            }}
-                            className="opacity-0 group-hover/sessions:opacity-100 text-gray-600 hover:text-green-400
-                                     p-0.5 rounded-md hover:bg-white/[0.06] transition-all shrink-0"
-                          >
-                            <Play size={12} strokeWidth={2} />
-                          </button>
-                        </Tooltip>
-                      </div>
-                      {!collapsedSessions.has(project.name) && (
-                        <div className="space-y-0.5">
-                          {sessions.length === 0 ? (
-                            <p className="text-[11px] text-gray-600 py-0.5 pl-2">No sessions</p>
-                          ) : (
-                            sessions.map((s) => (
-                              <div key={s.id} className="group/session flex items-center">
-                                <button
-                                  onClick={() => {
-                                    setFocusedTerminal(s.id)
-                                    closeSidebarOnMobile()
-                                  }}
-                                  className="flex-1 text-left px-2 py-1 rounded-md text-[12px] text-gray-400
-                                           hover:text-white hover:bg-white/[0.04] transition-colors
-                                           flex items-center gap-2 min-w-0"
-                                >
-                                  <span className="relative shrink-0">
-                                    <AgentIcon agentType={s.agentType} size={14} />
-                                    <span
-                                      className={`absolute -bottom-0.5 -right-0.5 w-1.5 h-1.5 rounded-full ${STATUS_DOT_COLOR[s.status]}`}
-                                    />
-                                  </span>
-                                  <span className="truncate">{s.name}</span>
-                                  {s.isWorktree && (
-                                    <FolderGit2
-                                      size={10}
-                                      className="text-amber-500 shrink-0 ml-auto"
-                                      strokeWidth={1.5}
-                                    />
-                                  )}
-                                </button>
-                                <Tooltip label="Close session" position="right">
-                                  <button
-                                    onClick={async (e) => {
-                                      e.stopPropagation()
-                                      await closeTerminalSession(s.id)
-                                    }}
-                                    className="opacity-0 group-hover/session:opacity-100 text-gray-600 hover:text-red-400
-                                             p-1 rounded-md hover:bg-white/[0.06] transition-all shrink-0"
-                                  >
-                                    <X size={12} strokeWidth={2} />
-                                  </button>
-                                </Tooltip>
-                              </div>
-                            ))
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Worktrees sub-group */}
+                  <div className="ml-4 mt-0.5 mb-1 space-y-0.5">
+                    {/* Worktrees — flat list */}
                     {(() => {
                       const worktrees = worktreeCache.get(project.path) ?? EMPTY_WORKTREES
-                      const isWorktreesExpanded = expandedWorktrees.has(project.name)
-                      return (
-                        <div>
-                          <div className="group/worktrees flex items-center gap-1.5 px-2 py-1">
+                      return worktrees.map((wt) => {
+                        const wtSessionCount = worktreeSessionCounts.get(wt.path) || 0
+                        return (
+                          <div key={wt.path} className="group/wt flex items-center">
                             <button
-                              onClick={() => toggleWorktreesExpanded(project)}
-                              className="flex items-center gap-1.5 flex-1 min-w-0"
+                              onClick={() => {
+                                setActiveProject(project.name)
+                                setActiveWorktreePath(
+                                  activeWorktreePath === wt.path ? null : wt.path
+                                )
+                              }}
+                              className={`flex-1 text-left px-2 py-1.5 rounded-md text-[13px] flex items-center gap-2 min-w-0 transition-colors ${
+                                activeWorktreePath === wt.path
+                                  ? 'bg-white/[0.08] text-white'
+                                  : 'text-gray-400 hover:text-white hover:bg-white/[0.04]'
+                              }`}
                             >
-                              <ChevronRight
-                                size={10}
-                                strokeWidth={2}
-                                className={`text-gray-600 transition-transform shrink-0 ${isWorktreesExpanded ? 'rotate-90' : ''}`}
-                              />
                               <FolderGit2
-                                size={11}
-                                strokeWidth={2}
-                                className="text-amber-500/60 shrink-0"
+                                size={14}
+                                className="text-gray-500 shrink-0"
+                                strokeWidth={1.5}
                               />
-                              <span className="text-[11px] font-medium text-gray-500 uppercase tracking-wider">
-                                Worktrees
-                              </span>
-                              {worktrees.length > 0 && (
-                                <span className="text-[10px] text-gray-600 bg-white/[0.06] px-1.5 py-0.5 rounded-full">
-                                  {worktrees.length}
-                                </span>
-                              )}
-                            </button>
-                            <Tooltip label="Launch in worktree (current branch)" position="right">
-                              <button
-                                onClick={async () => {
-                                  const agentType = config?.defaults.defaultAgent || 'claude'
-                                  const branchResult = await window.api.listBranches(project.path)
-                                  const branch = branchResult.current || 'main'
-                                  const session = await window.api.createTerminal({
-                                    agentType,
-                                    projectName: project.name,
-                                    projectPath: project.path,
-                                    branch,
-                                    useWorktree: true
-                                  })
-                                  addTerminal(session)
-                                }}
-                                className="opacity-0 group-hover/worktrees:opacity-100 text-gray-600 hover:text-amber-400
-                                         p-0.5 rounded-md hover:bg-white/[0.06] transition-all shrink-0"
-                              >
-                                <GitFork size={12} strokeWidth={2} />
-                              </button>
-                            </Tooltip>
-                          </div>
-                          {isWorktreesExpanded && (
-                            <div className="space-y-0.5">
-                              {worktrees.length === 0 ? (
-                                <p className="text-[11px] text-gray-600 py-0.5 pl-2">
-                                  No worktrees
-                                </p>
-                              ) : (
-                                worktrees.map((wt) => (
-                                  <div key={wt.path} className="group/wt flex items-center">
-                                    <div className="flex-1 px-2 py-1 rounded-md text-[12px] flex items-center gap-2 min-w-0">
-                                      <FolderGit2
-                                        size={11}
-                                        className="text-amber-500 shrink-0"
-                                        strokeWidth={1.5}
-                                      />
-                                      <span className="text-amber-400 font-mono text-[11px] truncate">
-                                        {wt.branch}
-                                      </span>
-                                      {wt.isDirty && (
-                                        <span
-                                          className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0"
-                                          title={
-                                            wt.diffStat
-                                              ? `+${wt.diffStat.insertions} -${wt.diffStat.deletions} in ${wt.diffStat.filesChanged} file${wt.diffStat.filesChanged !== 1 ? 's' : ''}`
-                                              : 'Has uncommitted changes'
-                                          }
-                                        />
-                                      )}
-                                      {wt.linkedSessionId && (
-                                        <span
-                                          className="w-1.5 h-1.5 rounded-full bg-green-400 shrink-0"
-                                          title="Active session"
-                                        />
-                                      )}
-                                    </div>
-                                    <div className="flex items-center gap-0.5">
-                                      {wt.linkedSessionId ? (
-                                        <Tooltip label="Focus session" position="right">
-                                          <button
-                                            onClick={() => setFocusedTerminal(wt.linkedSessionId!)}
-                                            className="opacity-0 group-hover/wt:opacity-100 text-gray-600 hover:text-green-400
-                                                     p-1 rounded-md hover:bg-white/[0.06] transition-all shrink-0"
-                                          >
-                                            <Terminal size={12} strokeWidth={2} />
-                                          </button>
-                                        </Tooltip>
-                                      ) : (
-                                        <Tooltip label="Open terminal here" position="right">
-                                          <button
-                                            onClick={async () => {
-                                              const agentType =
-                                                config?.defaults.defaultAgent || 'claude'
-                                              const session = await window.api.createTerminal({
-                                                agentType,
-                                                projectName: project.name,
-                                                projectPath: project.path,
-                                                branch: wt.branch,
-                                                existingWorktreePath: wt.path
-                                              })
-                                              addTerminal(session)
-                                            }}
-                                            className="opacity-0 group-hover/wt:opacity-100 text-gray-600 hover:text-green-400
-                                                     p-1 rounded-md hover:bg-white/[0.06] transition-all shrink-0"
-                                          >
-                                            <Play size={12} strokeWidth={2} />
-                                          </button>
-                                        </Tooltip>
-                                      )}
-                                      {!wt.linkedSessionId && (
-                                        <Tooltip label="Remove worktree" position="right">
-                                          <button
-                                            onClick={async () => {
-                                              if (wt.isDirty) {
-                                                const ok = confirm(
-                                                  'This worktree has uncommitted changes that will be permanently lost. Remove anyway?'
-                                                )
-                                                if (!ok) return
-                                              }
-                                              const removed = await window.api.removeWorktree(
-                                                project.path,
-                                                wt.path,
-                                                wt.isDirty
-                                              )
-                                              if (removed) {
-                                                toast.success('Worktree removed')
-                                                loadWorktrees(project.path)
-                                              } else {
-                                                toast.error('Failed to remove worktree')
-                                              }
-                                            }}
-                                            className="opacity-0 group-hover/wt:opacity-100 text-gray-600 hover:text-red-400
-                                                     p-1 rounded-md hover:bg-white/[0.06] transition-all shrink-0"
-                                          >
-                                            <Trash2 size={12} strokeWidth={2} />
-                                          </button>
-                                        </Tooltip>
-                                      )}
-                                    </div>
-                                  </div>
-                                ))
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      )
-                    })()}
-
-                    {/* Tasks sub-group */}
-                    {(() => {
-                      const todoTasks = (config?.tasks || []).filter(
-                        (t: TaskConfig) => t.projectName === project.name && t.status === 'todo'
-                      )
-                      const inProgressTasks = (config?.tasks || []).filter(
-                        (t: TaskConfig) =>
-                          t.projectName === project.name && t.status === 'in_progress'
-                      )
-                      const inReviewTasks = (config?.tasks || []).filter(
-                        (t: TaskConfig) =>
-                          t.projectName === project.name && t.status === 'in_review'
-                      )
-                      const taskCount =
-                        todoTasks.length + inProgressTasks.length + inReviewTasks.length
-                      const isTasksCollapsed = collapsedTasks.has(project.name)
-                      return (
-                        <div>
-                          <div className="flex items-center justify-between px-2 py-1">
-                            <button
-                              onClick={() => toggleTasksCollapsed(project.name)}
-                              className="flex items-center gap-1.5 text-[11px] font-medium text-gray-500 uppercase tracking-wider hover:text-gray-300 transition-colors"
-                            >
-                              <ChevronRight
-                                size={10}
-                                strokeWidth={2}
-                                className={`text-gray-600 transition-transform shrink-0 ${isTasksCollapsed ? '' : 'rotate-90'}`}
-                              />
-                              <ListTodo
-                                size={11}
-                                strokeWidth={2}
-                                className="text-gray-600 normal-case"
-                              />
-                              Tasks
-                              {taskCount > 0 && (
-                                <span className="text-[10px] font-normal text-gray-600 bg-white/[0.06] px-1.5 py-0.5 rounded-full normal-case">
-                                  {taskCount}
-                                </span>
-                              )}
-                            </button>
-                            <div className="flex items-center gap-0.5">
-                              <Tooltip label="View all tasks" position="right">
-                                <button
-                                  onClick={() => {
-                                    setActiveProject(project.name)
-                                    setMainViewMode('tasks')
+                              {renamingWorktree === wt.path ? (
+                                <form
+                                  className="flex-1 flex items-center gap-1 min-w-0"
+                                  onClick={(e) => e.stopPropagation()}
+                                  onSubmit={async (e) => {
+                                    e.preventDefault()
+                                    const trimmed = worktreeRenameValue.trim()
+                                    if (trimmed && trimmed !== wt.branch) {
+                                      const ok = await window.api.renameWorktreeBranch(
+                                        wt.path,
+                                        trimmed
+                                      )
+                                      if (ok) {
+                                        toast.success('Branch renamed')
+                                        loadWorktrees(project.path)
+                                      } else {
+                                        toast.error('Failed to rename branch')
+                                      }
+                                    }
+                                    setRenamingWorktree(null)
                                   }}
-                                  className="text-gray-600 hover:text-gray-300 p-0.5 transition-colors"
                                 >
-                                  <LayoutList size={11} strokeWidth={2} />
-                                </button>
-                              </Tooltip>
-                              <Tooltip label="Add task" position="right">
-                                <button
-                                  onClick={() => {
-                                    setActiveProject(project.name)
-                                    setMainViewMode('tasks')
-                                    setTaskDialogOpen(true)
-                                  }}
-                                  className="text-gray-600 hover:text-gray-300 p-0.5 transition-colors"
-                                >
-                                  <Plus size={11} strokeWidth={2} />
-                                </button>
-                              </Tooltip>
-                            </div>
-                          </div>
-                          {!isTasksCollapsed && (
-                            <div className="space-y-0.5">
-                              {taskCount === 0 ? (
-                                <p className="text-[11px] text-gray-600 py-0.5 pl-2">No tasks</p>
+                                  <input
+                                    autoFocus
+                                    value={worktreeRenameValue}
+                                    onChange={(e) => setWorktreeRenameValue(e.target.value)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Escape') setRenamingWorktree(null)
+                                    }}
+                                    className="flex-1 min-w-0 bg-white/[0.06] border border-white/[0.1] rounded px-1.5 py-0.5 text-[12px] text-white outline-none focus:border-blue-500"
+                                  />
+                                  <button
+                                    type="submit"
+                                    className="text-gray-400 hover:text-green-400 p-0.5 rounded hover:bg-white/[0.08] transition-colors shrink-0"
+                                  >
+                                    <svg
+                                      width="14"
+                                      height="14"
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      strokeWidth="2.5"
+                                    >
+                                      <polyline points="20 6 9 17 4 12" />
+                                    </svg>
+                                  </button>
+                                  <span
+                                    role="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      setRenamingWorktree(null)
+                                    }}
+                                    className="text-gray-400 hover:text-red-400 p-0.5 rounded hover:bg-white/[0.08] transition-colors shrink-0 cursor-pointer"
+                                  >
+                                    <svg
+                                      width="14"
+                                      height="14"
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      strokeWidth="2.5"
+                                    >
+                                      <line x1="18" y1="6" x2="6" y2="18" />
+                                      <line x1="6" y1="6" x2="18" y2="18" />
+                                    </svg>
+                                  </span>
+                                </form>
                               ) : (
                                 <>
-                                  {inProgressTasks.map((task: TaskConfig) => {
-                                    const sessionLive = !!(
-                                      task.assignedSessionId &&
-                                      terminals.has(task.assignedSessionId)
-                                    )
-                                    const canResume =
-                                      !sessionLive &&
-                                      !!task.agentSessionId &&
-                                      !!task.assignedAgent &&
-                                      supportsExactSessionResume(task.assignedAgent)
-                                    return (
-                                      <div key={task.id} className="group/task flex items-center">
-                                        <button
-                                          onClick={() => {
-                                            setActiveProject(project.name)
-                                            setMainViewMode('tasks')
-                                            setSelectedTaskId(task.id)
-                                          }}
-                                          className="flex-1 text-left px-2 py-1 rounded-md text-[12px] text-blue-400/80
-                                                 hover:text-blue-300 hover:bg-white/[0.04] transition-colors
-                                                 flex items-center gap-2 min-w-0"
-                                        >
-                                          <Clock size={11} strokeWidth={2} className="shrink-0" />
-                                          <span className="truncate">{task.title}</span>
-                                        </button>
-                                        {sessionLive && (
-                                          <Tooltip label="Focus session" position="right">
-                                            <button
-                                              onClick={(e) => {
-                                                e.stopPropagation()
-                                                setFocusedTerminal(task.assignedSessionId!)
-                                              }}
-                                              className="opacity-0 group-hover/task:opacity-100 text-gray-600 hover:text-violet-400
-                                                     p-1 rounded-md hover:bg-white/[0.06] transition-all shrink-0"
-                                            >
-                                              <Terminal size={12} strokeWidth={2} />
-                                            </button>
-                                          </Tooltip>
-                                        )}
-                                        {canResume && (
-                                          <Tooltip label="Resume session" position="right">
-                                            <button
-                                              onClick={async (e) => {
-                                                e.stopPropagation()
-                                                const agentType = task.assignedAgent!
-                                                const session = await window.api.createTerminal({
-                                                  agentType,
-                                                  projectName: project.name,
-                                                  projectPath: project.path,
-                                                  branch: task.branch,
-                                                  useWorktree: task.useWorktree,
-                                                  resumeSessionId: task.agentSessionId
-                                                })
-                                                addTerminal(session)
-                                                useAppStore
-                                                  .getState()
-                                                  .startTask(
-                                                    task.id,
-                                                    session.id,
-                                                    agentType as AgentType
-                                                  )
-                                                setFocusedTerminal(session.id)
-                                              }}
-                                              className="opacity-0 group-hover/task:opacity-100 text-gray-600 hover:text-amber-400
-                                                     p-1 rounded-md hover:bg-white/[0.06] transition-all shrink-0"
-                                            >
-                                              <Play size={12} strokeWidth={2} />
-                                            </button>
-                                          </Tooltip>
-                                        )}
-                                      </div>
-                                    )
-                                  })}
-                                  {inReviewTasks.map((task: TaskConfig) => (
-                                    <div key={task.id} className="group/task flex items-center">
-                                      <button
-                                        onClick={() => {
-                                          setActiveProject(project.name)
-                                          setMainViewMode('tasks')
-                                          setSelectedTaskId(task.id)
-                                        }}
-                                        className="flex-1 text-left px-2 py-1 rounded-md text-[12px] text-purple-400/80
-                                                 hover:text-purple-300 hover:bg-white/[0.04] transition-colors
-                                                 flex items-center gap-2 min-w-0"
-                                      >
-                                        <Eye size={11} strokeWidth={2} className="shrink-0" />
-                                        <span className="truncate">{task.title}</span>
-                                      </button>
-                                    </div>
-                                  ))}
-                                  {todoTasks
-                                    .sort((a: TaskConfig, b: TaskConfig) => a.order - b.order)
-                                    .slice(0, 3)
-                                    .map((task: TaskConfig) => (
-                                      <div key={task.id} className="group/task flex items-center">
-                                        <button
-                                          onClick={() => {
-                                            setActiveProject(project.name)
-                                            setMainViewMode('tasks')
-                                            setSelectedTaskId(task.id)
-                                          }}
-                                          className="flex-1 text-left px-2 py-1 rounded-md text-[12px] text-gray-500
-                                                 hover:text-gray-300 hover:bg-white/[0.04] transition-colors
-                                                 flex items-center gap-2 min-w-0"
-                                        >
-                                          <Circle
-                                            size={11}
-                                            strokeWidth={2}
-                                            className="shrink-0 text-gray-600"
-                                          />
-                                          <span className="truncate">{task.title}</span>
-                                        </button>
-                                        <Tooltip label="Launch task" position="right">
-                                          <button
-                                            onClick={async (e) => {
-                                              e.stopPropagation()
-                                              const agentType =
-                                                config?.defaults.defaultAgent || 'claude'
-                                              const allTasks = (config?.tasks || []).filter(
-                                                (t) => t.projectName === project.name
-                                              )
-                                              const session = await window.api.createTerminal({
-                                                agentType,
-                                                projectName: project.name,
-                                                projectPath: project.path,
-                                                branch: task.branch,
-                                                useWorktree: task.useWorktree,
-                                                initialPrompt: buildTaskPrompt({
-                                                  task,
-                                                  project,
-                                                  siblingTasks: allTasks
-                                                }),
-                                                taskId: task.id
-                                              })
-                                              addTerminal(session)
-                                              useAppStore
-                                                .getState()
-                                                .startTask(
-                                                  task.id,
-                                                  session.id,
-                                                  agentType as AgentType
-                                                )
-                                            }}
-                                            className="opacity-0 group-hover/task:opacity-100 text-gray-600 hover:text-green-400
-                                                   p-1 rounded-md hover:bg-white/[0.06] transition-all shrink-0"
-                                          >
-                                            <Play size={12} strokeWidth={2} />
-                                          </button>
-                                        </Tooltip>
-                                      </div>
-                                    ))}
-                                  {todoTasks.length > 3 && (
-                                    <button
-                                      onClick={() => {
-                                        setActiveProject(project.name)
-                                        setMainViewMode('tasks')
-                                      }}
-                                      className="px-2 py-0.5 text-[10px] text-gray-600 hover:text-gray-400 transition-colors"
-                                    >
-                                      +{todoTasks.length - 3} more...
-                                    </button>
+                                  <span className="truncate">{wt.branch}</span>
+                                  {wtSessionCount > 0 && (
+                                    <span className="text-gray-600 text-xs ml-auto group-hover/wt:hidden">
+                                      {wtSessionCount}
+                                    </span>
                                   )}
+                                  {/* Hover actions */}
+                                  <div className="hidden group-hover/wt:flex items-center gap-0.5 ml-auto">
+                                    <Tooltip label="New session" position="right">
+                                      <span
+                                        role="button"
+                                        onClick={async (e) => {
+                                          e.stopPropagation()
+                                          const agentType =
+                                            config?.defaults.defaultAgent || 'claude'
+                                          const session = await window.api.createTerminal({
+                                            agentType,
+                                            projectName: project.name,
+                                            projectPath: project.path,
+                                            branch: wt.branch,
+                                            existingWorktreePath: wt.path
+                                          })
+                                          addTerminal(session)
+                                        }}
+                                        className="text-gray-500 hover:text-white p-0.5 rounded hover:bg-white/[0.08] transition-colors"
+                                      >
+                                        <Plus size={14} strokeWidth={2} />
+                                      </span>
+                                    </Tooltip>
+                                    <Tooltip label="Rename worktree" position="right">
+                                      <span
+                                        role="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          setRenamingWorktree(wt.path)
+                                          setWorktreeRenameValue(wt.branch)
+                                        }}
+                                        className="text-gray-500 hover:text-white p-0.5 rounded hover:bg-white/[0.08] transition-colors"
+                                      >
+                                        <Pencil size={14} strokeWidth={2} />
+                                      </span>
+                                    </Tooltip>
+                                    <Tooltip label="Remove worktree" position="right">
+                                      <span
+                                        role="button"
+                                        onClick={async (e) => {
+                                          e.stopPropagation()
+                                          if (wt.isDirty) {
+                                            const ok = confirm(
+                                              'This worktree has uncommitted changes that will be permanently lost. Remove anyway?'
+                                            )
+                                            if (!ok) return
+                                          }
+                                          const removed = await window.api.removeWorktree(
+                                            project.path,
+                                            wt.path,
+                                            wt.isDirty
+                                          )
+                                          if (removed) {
+                                            toast.success('Worktree removed')
+                                            loadWorktrees(project.path)
+                                          } else {
+                                            toast.error('Failed to remove worktree')
+                                          }
+                                        }}
+                                        className="text-gray-500 hover:text-red-400 p-0.5 rounded hover:bg-white/[0.08] transition-colors"
+                                      >
+                                        <Trash2 size={14} strokeWidth={2} />
+                                      </span>
+                                    </Tooltip>
+                                  </div>
                                 </>
                               )}
-                            </div>
-                          )}
-                        </div>
-                      )
+                            </button>
+                          </div>
+                        )
+                      })
                     })()}
                   </div>
                 )}
@@ -1222,32 +869,9 @@ export function ProjectSidebar() {
             )
           })}
 
-        {/* Add project */}
-        <button
-          onClick={() => setAddProjectDialogOpen(true)}
-          className={`w-full px-2.5 py-1.5 text-[13px] text-gray-500 hover:text-white
-                     hover:bg-white/[0.04] rounded-md transition-colors text-left flex items-center gap-2 mt-1
-                     ${isCollapsed ? 'justify-center px-0' : ''}`}
-          title={isCollapsed ? 'Add Project' : undefined}
-        >
-          <svg
-            width={iconSize}
-            height={iconSize}
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            className="shrink-0"
-          >
-            <path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-            <path d="M12 11v6M9 14h6" />
-          </svg>
-          {!isCollapsed && 'Add Project'}
-        </button>
-
         {/* Workflows section */}
         {!isCollapsed && (
-          <div className="pt-5 pb-1.5 flex items-center justify-between">
+          <div className="group/section pt-5 pb-1.5 flex items-center justify-between">
             <button
               onClick={() => setWorkflowsSectionCollapsed(!workflowsSectionCollapsed)}
               className="flex items-center gap-1.5 hover:text-gray-300 transition-colors"
@@ -1261,6 +885,14 @@ export function ProjectSidebar() {
                 Workflows
               </span>
             </button>
+            <Tooltip label="Add workflow" position="bottom">
+              <button
+                onClick={() => setWorkflowEditorOpen(true)}
+                className="p-0.5 rounded text-gray-600 hover:text-white hover:bg-white/[0.08] transition-colors"
+              >
+                <Zap size={13} strokeWidth={1.5} />
+              </button>
+            </Tooltip>
           </div>
         )}
         {isCollapsed && <div className="pt-4" />}
@@ -1389,17 +1021,6 @@ export function ProjectSidebar() {
             </>
           )
         })()}
-
-        <button
-          onClick={() => setWorkflowEditorOpen(true)}
-          className={`w-full px-2.5 py-1.5 text-[13px] text-gray-500 hover:text-white
-                     hover:bg-white/[0.04] rounded-md transition-colors text-left flex items-center gap-2 mt-1
-                     ${isCollapsed ? 'justify-center px-0' : ''}`}
-          title={isCollapsed ? 'Add Workflow' : undefined}
-        >
-          <Zap size={iconSize} strokeWidth={1.5} className="shrink-0" />
-          {!isCollapsed && 'Add Workflow'}
-        </button>
 
         {/* Archived sessions section */}
         {(() => {

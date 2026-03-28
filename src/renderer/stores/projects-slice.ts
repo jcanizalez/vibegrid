@@ -16,6 +16,7 @@ function patchConfig(
 export const createProjectsSlice: StateCreator<AppStore, [], [], ProjectsSlice> = (set) => ({
   config: null,
   activeProject: null,
+  activeWorktreePath: null,
 
   setConfig: (config) =>
     set({
@@ -24,7 +25,8 @@ export const createProjectsSlice: StateCreator<AppStore, [], [], ProjectsSlice> 
       activeWorkspace: config.defaults.activeWorkspace ?? 'personal'
     }),
 
-  setActiveProject: (name) => set({ activeProject: name }),
+  setActiveProject: (name) => set({ activeProject: name, activeWorktreePath: null }),
+  setActiveWorktreePath: (path) => set({ activeWorktreePath: path }),
 
   addProject: (project) =>
     set((s) => patchConfig(s.config, (c) => ({ projects: [...c.projects, project] }))),

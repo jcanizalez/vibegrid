@@ -6,6 +6,7 @@ export function useVisibleTerminals(): string[] {
   const {
     terminals,
     activeProject,
+    activeWorktreePath,
     activeWorkspace,
     projects,
     sortMode,
@@ -16,6 +17,7 @@ export function useVisibleTerminals(): string[] {
     useShallow((s) => ({
       terminals: s.terminals,
       activeProject: s.activeProject,
+      activeWorktreePath: s.activeWorktreePath,
       activeWorkspace: s.activeWorkspace,
       projects: s.config?.projects,
       sortMode: s.sortMode,
@@ -39,6 +41,7 @@ export function useVisibleTerminals(): string[] {
           if (activeProject && t.session.projectName !== activeProject) return false
           if (!activeProject && workspaceProjects && !workspaceProjects.has(t.session.projectName))
             return false
+          if (activeWorktreePath && t.session.worktreePath !== activeWorktreePath) return false
           if (statusFilter !== 'all' && t.status !== statusFilter) return false
           return true
         })
@@ -57,7 +60,15 @@ export function useVisibleTerminals(): string[] {
           }
         })
         .map(([id]) => id),
-    [terminals, activeProject, workspaceProjects, statusFilter, sortMode, terminalOrder]
+    [
+      terminals,
+      activeProject,
+      activeWorktreePath,
+      workspaceProjects,
+      statusFilter,
+      sortMode,
+      terminalOrder
+    ]
   )
 
   useEffect(() => {

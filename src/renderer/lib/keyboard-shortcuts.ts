@@ -108,6 +108,14 @@ export const SHORTCUTS: ShortcutDef[] = [
     category: 'view',
     description: 'Tasks view'
   },
+  {
+    id: 'view-options',
+    key: 'j',
+    meta: true,
+    display: `${MOD}J`,
+    category: 'view',
+    description: 'View options'
+  },
 
   // Navigation — card jump
   {
