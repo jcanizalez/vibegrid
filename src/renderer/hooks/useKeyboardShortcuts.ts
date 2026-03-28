@@ -181,7 +181,7 @@ export function useKeyboardShortcuts() {
       }
 
       // Cmd+J — view options
-      if (modKey(e) && !e.shiftKey && e.key.toLowerCase() === 'j') {
+      if (modKey(e) && !e.shiftKey && e.key.toLowerCase() === 'j' && !_isInputFocused()) {
         e.preventDefault()
         window.dispatchEvent(new CustomEvent('toggle-view-options'))
         return

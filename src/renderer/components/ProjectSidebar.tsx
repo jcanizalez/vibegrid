@@ -42,7 +42,9 @@ import {
   Power,
   Plus,
   RotateCcw,
-  FolderPlus
+  FolderPlus,
+  Check,
+  X
 } from 'lucide-react'
 
 const EMPTY_WORKTREES: WorktreeInfo[] = []
@@ -646,11 +648,15 @@ export function ProjectSidebar() {
                               onClick={async (e) => {
                                 e.stopPropagation()
                                 const name = generateWorktreeName()
-                                await window.api.createWorktree(project.path, name)
-                                if (!expandedProjects.has(project.name)) {
-                                  toggleProjectExpanded(project.name)
-                                } else {
-                                  loadWorktrees(project.path)
+                                try {
+                                  await window.api.createWorktree(project.path, name)
+                                  if (!expandedProjects.has(project.name)) {
+                                    toggleProjectExpanded(project.name)
+                                  } else {
+                                    loadWorktrees(project.path)
+                                  }
+                                } catch {
+                                  toast.error('Failed to create worktree')
                                 }
                               }}
                               className="text-gray-500 hover:text-white p-0.5 rounded hover:bg-white/[0.08] transition-colors"
@@ -698,167 +704,145 @@ export function ProjectSidebar() {
                         const wtSessionCount = worktreeSessionCounts.get(wt.path) || 0
                         return (
                           <div key={wt.path} className="group/wt flex items-center">
-                            <button
-                              onClick={() => {
-                                setActiveProject(project.name)
-                                setActiveWorktreePath(
-                                  activeWorktreePath === wt.path ? null : wt.path
-                                )
-                              }}
-                              className={`flex-1 text-left px-2 py-1.5 rounded-md text-[13px] flex items-center gap-2 min-w-0 transition-colors ${
-                                activeWorktreePath === wt.path
-                                  ? 'bg-white/[0.08] text-white'
-                                  : 'text-gray-400 hover:text-white hover:bg-white/[0.04]'
-                              }`}
-                            >
-                              <FolderGit2
-                                size={14}
-                                className="text-gray-500 shrink-0"
-                                strokeWidth={1.5}
-                              />
-                              {renamingWorktree === wt.path ? (
-                                <form
-                                  className="flex-1 flex items-center gap-1 min-w-0"
-                                  onClick={(e) => e.stopPropagation()}
-                                  onSubmit={async (e) => {
-                                    e.preventDefault()
-                                    const trimmed = worktreeRenameValue.trim()
-                                    if (trimmed && trimmed !== wt.branch) {
-                                      const ok = await window.api.renameWorktreeBranch(
-                                        wt.path,
-                                        trimmed
-                                      )
-                                      if (ok) {
-                                        toast.success('Branch renamed')
-                                        loadWorktrees(project.path)
-                                      } else {
-                                        toast.error('Failed to rename branch')
-                                      }
+                            {renamingWorktree === wt.path ? (
+                              <form
+                                className="flex-1 flex items-center gap-2 px-2 py-1.5 min-w-0"
+                                onSubmit={async (e) => {
+                                  e.preventDefault()
+                                  const trimmed = worktreeRenameValue.trim()
+                                  if (trimmed && trimmed !== wt.branch) {
+                                    const ok = await window.api.renameWorktreeBranch(
+                                      wt.path,
+                                      trimmed
+                                    )
+                                    if (ok) {
+                                      toast.success('Worktree renamed')
+                                      loadWorktrees(project.path)
+                                    } else {
+                                      toast.error('Failed to rename worktree')
                                     }
-                                    setRenamingWorktree(null)
+                                  }
+                                  setRenamingWorktree(null)
+                                }}
+                              >
+                                <FolderGit2
+                                  size={14}
+                                  className="text-gray-500 shrink-0"
+                                  strokeWidth={1.5}
+                                />
+                                <input
+                                  autoFocus
+                                  value={worktreeRenameValue}
+                                  onChange={(e) => setWorktreeRenameValue(e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Escape') setRenamingWorktree(null)
                                   }}
+                                  className="flex-1 min-w-0 bg-white/[0.06] border border-white/[0.1] rounded px-1.5 py-0.5 text-[12px] text-white outline-none focus:border-blue-500"
+                                />
+                                <button
+                                  type="submit"
+                                  className="text-gray-400 hover:text-green-400 p-0.5 rounded hover:bg-white/[0.08] transition-colors shrink-0"
                                 >
-                                  <input
-                                    autoFocus
-                                    value={worktreeRenameValue}
-                                    onChange={(e) => setWorktreeRenameValue(e.target.value)}
-                                    onKeyDown={(e) => {
-                                      if (e.key === 'Escape') setRenamingWorktree(null)
-                                    }}
-                                    className="flex-1 min-w-0 bg-white/[0.06] border border-white/[0.1] rounded px-1.5 py-0.5 text-[12px] text-white outline-none focus:border-blue-500"
-                                  />
-                                  <button
-                                    type="submit"
-                                    className="text-gray-400 hover:text-green-400 p-0.5 rounded hover:bg-white/[0.08] transition-colors shrink-0"
-                                  >
-                                    <svg
-                                      width="14"
-                                      height="14"
-                                      viewBox="0 0 24 24"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      strokeWidth="2.5"
-                                    >
-                                      <polyline points="20 6 9 17 4 12" />
-                                    </svg>
-                                  </button>
-                                  <span
-                                    role="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      setRenamingWorktree(null)
-                                    }}
-                                    className="text-gray-400 hover:text-red-400 p-0.5 rounded hover:bg-white/[0.08] transition-colors shrink-0 cursor-pointer"
-                                  >
-                                    <svg
-                                      width="14"
-                                      height="14"
-                                      viewBox="0 0 24 24"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      strokeWidth="2.5"
-                                    >
-                                      <line x1="18" y1="6" x2="6" y2="18" />
-                                      <line x1="6" y1="6" x2="18" y2="18" />
-                                    </svg>
+                                  <Check size={14} strokeWidth={2.5} />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setRenamingWorktree(null)}
+                                  className="text-gray-400 hover:text-red-400 p-0.5 rounded hover:bg-white/[0.08] transition-colors shrink-0"
+                                >
+                                  <X size={14} strokeWidth={2.5} />
+                                </button>
+                              </form>
+                            ) : (
+                              <button
+                                onClick={() => {
+                                  setActiveProject(project.name)
+                                  setActiveWorktreePath(
+                                    activeWorktreePath === wt.path ? null : wt.path
+                                  )
+                                }}
+                                className={`flex-1 text-left px-2 py-1.5 rounded-md text-[13px] flex items-center gap-2 min-w-0 transition-colors ${
+                                  activeWorktreePath === wt.path
+                                    ? 'bg-white/[0.08] text-white'
+                                    : 'text-gray-400 hover:text-white hover:bg-white/[0.04]'
+                                }`}
+                              >
+                                <FolderGit2
+                                  size={14}
+                                  className="text-gray-500 shrink-0"
+                                  strokeWidth={1.5}
+                                />
+                                <span className="truncate">{wt.branch}</span>
+                                {wtSessionCount > 0 && (
+                                  <span className="text-gray-600 text-xs ml-auto group-hover/wt:hidden">
+                                    {wtSessionCount}
                                   </span>
-                                </form>
-                              ) : (
-                                <>
-                                  <span className="truncate">{wt.branch}</span>
-                                  {wtSessionCount > 0 && (
-                                    <span className="text-gray-600 text-xs ml-auto group-hover/wt:hidden">
-                                      {wtSessionCount}
-                                    </span>
-                                  )}
-                                  {/* Hover actions */}
-                                  <div className="hidden group-hover/wt:flex items-center gap-0.5 ml-auto">
-                                    <Tooltip label="New session" position="right">
-                                      <span
-                                        role="button"
-                                        onClick={async (e) => {
-                                          e.stopPropagation()
-                                          const agentType =
-                                            config?.defaults.defaultAgent || 'claude'
-                                          const session = await window.api.createTerminal({
-                                            agentType,
-                                            projectName: project.name,
-                                            projectPath: project.path,
-                                            branch: wt.branch,
-                                            existingWorktreePath: wt.path
-                                          })
-                                          addTerminal(session)
-                                        }}
-                                        className="text-gray-500 hover:text-white p-0.5 rounded hover:bg-white/[0.08] transition-colors"
-                                      >
-                                        <Plus size={14} strokeWidth={2} />
-                                      </span>
-                                    </Tooltip>
-                                    <Tooltip label="Rename worktree" position="right">
-                                      <span
-                                        role="button"
-                                        onClick={(e) => {
-                                          e.stopPropagation()
-                                          setRenamingWorktree(wt.path)
-                                          setWorktreeRenameValue(wt.branch)
-                                        }}
-                                        className="text-gray-500 hover:text-white p-0.5 rounded hover:bg-white/[0.08] transition-colors"
-                                      >
-                                        <Pencil size={14} strokeWidth={2} />
-                                      </span>
-                                    </Tooltip>
-                                    <Tooltip label="Remove worktree" position="right">
-                                      <span
-                                        role="button"
-                                        onClick={async (e) => {
-                                          e.stopPropagation()
-                                          if (wt.isDirty) {
-                                            const ok = confirm(
-                                              'This worktree has uncommitted changes that will be permanently lost. Remove anyway?'
-                                            )
-                                            if (!ok) return
-                                          }
-                                          const removed = await window.api.removeWorktree(
-                                            project.path,
-                                            wt.path,
-                                            wt.isDirty
+                                )}
+                                <div className="hidden group-hover/wt:flex items-center gap-0.5 ml-auto">
+                                  <Tooltip label="New session" position="right">
+                                    <button
+                                      type="button"
+                                      onClick={async (e) => {
+                                        e.stopPropagation()
+                                        const agentType = config?.defaults.defaultAgent || 'claude'
+                                        const session = await window.api.createTerminal({
+                                          agentType,
+                                          projectName: project.name,
+                                          projectPath: project.path,
+                                          branch: wt.branch,
+                                          existingWorktreePath: wt.path
+                                        })
+                                        addTerminal(session)
+                                      }}
+                                      className="text-gray-500 hover:text-white p-0.5 rounded hover:bg-white/[0.08] transition-colors"
+                                    >
+                                      <Plus size={14} strokeWidth={2} />
+                                    </button>
+                                  </Tooltip>
+                                  <Tooltip label="Rename worktree" position="right">
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        setRenamingWorktree(wt.path)
+                                        setWorktreeRenameValue(wt.branch)
+                                      }}
+                                      className="text-gray-500 hover:text-white p-0.5 rounded hover:bg-white/[0.08] transition-colors"
+                                    >
+                                      <Pencil size={14} strokeWidth={2} />
+                                    </button>
+                                  </Tooltip>
+                                  <Tooltip label="Remove worktree" position="right">
+                                    <button
+                                      type="button"
+                                      onClick={async (e) => {
+                                        e.stopPropagation()
+                                        if (wt.isDirty) {
+                                          const ok = confirm(
+                                            'This worktree has uncommitted changes that will be permanently lost. Remove anyway?'
                                           )
-                                          if (removed) {
-                                            toast.success('Worktree removed')
-                                            loadWorktrees(project.path)
-                                          } else {
-                                            toast.error('Failed to remove worktree')
-                                          }
-                                        }}
-                                        className="text-gray-500 hover:text-red-400 p-0.5 rounded hover:bg-white/[0.08] transition-colors"
-                                      >
-                                        <Trash2 size={14} strokeWidth={2} />
-                                      </span>
-                                    </Tooltip>
-                                  </div>
-                                </>
-                              )}
-                            </button>
+                                          if (!ok) return
+                                        }
+                                        const removed = await window.api.removeWorktree(
+                                          project.path,
+                                          wt.path,
+                                          wt.isDirty
+                                        )
+                                        if (removed) {
+                                          toast.success('Worktree removed')
+                                          loadWorktrees(project.path)
+                                        } else {
+                                          toast.error('Failed to remove worktree')
+                                        }
+                                      }}
+                                      className="text-gray-500 hover:text-red-400 p-0.5 rounded hover:bg-white/[0.08] transition-colors"
+                                    >
+                                      <Trash2 size={14} strokeWidth={2} />
+                                    </button>
+                                  </Tooltip>
+                                </div>
+                              </button>
+                            )}
                           </div>
                         )
                       })
