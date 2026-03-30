@@ -37,7 +37,11 @@ export function ConfirmPopover({
   destructive = true
 }: ConfirmPopoverProps) {
   const [open, setOpen] = useState(false)
-  const [position, setPosition] = useState({ top: 0, left: 0, placement: 'bottom' as const })
+  const [position, setPosition] = useState({
+    top: 0,
+    left: 0,
+    placement: 'bottom' as 'top' | 'bottom'
+  })
   const anchorRef = useRef<HTMLSpanElement | null>(null)
   const popoverRef = useRef<HTMLDivElement>(null)
   const isMobile = useIsMobile()

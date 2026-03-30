@@ -117,9 +117,10 @@ const api = {
 
   createWorktree: (
     projectPath: string,
-    branch: string
-  ): Promise<{ worktreePath: string; branch: string }> =>
-    ipcRenderer.invoke(IPC.GIT_CREATE_WORKTREE, { projectPath, branch }),
+    branch: string,
+    worktreeName?: string
+  ): Promise<{ worktreePath: string; branch: string; name: string }> =>
+    ipcRenderer.invoke(IPC.GIT_CREATE_WORKTREE, { projectPath, branch, worktreeName }),
 
   removeWorktree: (projectPath: string, worktreePath: string, force?: boolean): Promise<boolean> =>
     ipcRenderer.invoke(IPC.GIT_REMOVE_WORKTREE, { projectPath, worktreePath, force }),
@@ -132,8 +133,14 @@ const api = {
 
   listWorktrees: (
     projectPath: string
-  ): Promise<{ path: string; branch: string; isMain: boolean }[]> =>
+  ): Promise<{ path: string; branch: string; isMain: boolean; name: string }[]> =>
     ipcRenderer.invoke(IPC.GIT_LIST_WORKTREES, projectPath),
+
+  checkoutBranch: (cwd: string, branch: string): Promise<boolean> =>
+    ipcRenderer.invoke(IPC.GIT_CHECKOUT_BRANCH, { cwd, branch }),
+
+  getWorktreeBranch: (worktreePath: string): Promise<string | null> =>
+    ipcRenderer.invoke(IPC.GIT_GET_WORKTREE_BRANCH, worktreePath),
 
   getWorktreeActiveSessions: (
     worktreePath: string

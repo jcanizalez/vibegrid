@@ -52,7 +52,6 @@ export const createUISlice: StateCreator<AppStore, [], [], UISlice> = (set, get)
   minimizedTerminals: new Set(),
   isOnboardingOpen: false,
   diffSidebarTerminalId: null,
-  diffReviewTaskId: null,
   gitDiffStats: new Map(),
   rightPanelTab: 'changes',
   isDiffPanelMaximized: false,
@@ -60,7 +59,6 @@ export const createUISlice: StateCreator<AppStore, [], [], UISlice> = (set, get)
   mainViewMode: 'sessions' as const,
   selectedTaskId: null,
   taskStatusFilter: 'all' as const,
-  isTaskPanelOpen: false,
   isTaskDialogOpen: false,
   taskDialogDefaultStatus: 'todo' as const,
   editingTask: null,
@@ -163,7 +161,6 @@ export const createUISlice: StateCreator<AppStore, [], [], UISlice> = (set, get)
   setOnboardingOpen: (open) => set({ isOnboardingOpen: open }),
   setDiffSidebarTerminalId: (id) =>
     set({ diffSidebarTerminalId: id, rightPanelTab: 'changes', isDiffPanelMaximized: false }),
-  setDiffReviewTaskId: (id) => set({ diffReviewTaskId: id }),
   setRightPanelTab: (tab) => set({ rightPanelTab: tab }),
   setDiffPanelMaximized: (maximized) => set({ isDiffPanelMaximized: maximized }),
   setDiffPanelWidth: (width) => set({ diffPanelWidth: width }),
@@ -197,7 +194,6 @@ export const createUISlice: StateCreator<AppStore, [], [], UISlice> = (set, get)
   },
   setSelectedTaskId: (id) => set({ selectedTaskId: id }),
   setTaskStatusFilter: (filter) => set({ taskStatusFilter: filter }),
-  setTaskPanelOpen: (open) => set({ isTaskPanelOpen: open }),
   setTaskDialogOpen: (open, defaultStatus) =>
     set({ isTaskDialogOpen: open, taskDialogDefaultStatus: defaultStatus ?? 'todo' }),
   setEditingTask: (task) => set({ editingTask: task }),

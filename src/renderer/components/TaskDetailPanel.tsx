@@ -528,7 +528,10 @@ export function TaskDetailPanel() {
     const newPaths = new Map(formImagePaths)
 
     for (const file of files) {
-      const filename = await window.api.saveTaskImage(taskId, file.path)
+      const filename = await window.api.saveTaskImage(
+        taskId,
+        (file as File & { path: string }).path
+      )
       newImages.push(filename)
       const absPath = await window.api.getTaskImagePath(taskId, filename)
       newPaths.set(filename, absPath)
