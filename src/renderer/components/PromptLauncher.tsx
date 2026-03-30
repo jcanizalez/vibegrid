@@ -134,28 +134,43 @@ export function PromptLauncher({ mode, onClose }: PromptLauncherProps) {
 
     try {
       const isRemote = settings.selectedHost !== 'local'
-      const isExistingWorktree =
-        settings.worktreeMode === 'existing' && settings.selectedWorktreePath
-      const isNewWorktree = settings.worktreeMode === 'new'
-      const branchChanged =
-        settings.selectedBranch && settings.selectedBranch !== settings.currentBranch
-      const branchToUse = isRemote
-        ? undefined
-        : isExistingWorktree
-          ? undefined // branch determined by existing worktree
-          : isNewWorktree
-            ? settings.selectedBranch || undefined
-            : branchChanged
-              ? settings.selectedBranch
-              : undefined
+      const { worktreeMode, selectedWorktreePath, selectedBranch, currentBranch, liveBranch } =
+        settings
+
+      let branch: string | undefined
+      let useWorktree: boolean | undefined
+      let existingWorktreePath: string | undefined
+      let worktreeName: string | undefined
+
+      if (isRemote) {
+        // Remote sessions don't use worktrees
+      } else if (worktreeMode === 'existing' && selectedWorktreePath) {
+        existingWorktreePath = selectedWorktreePath
+        worktreeName = settings.selectedWorktreeName || undefined
+        // Checkout different branch in the worktree if user changed it
+        if (selectedBranch && liveBranch && selectedBranch !== liveBranch) {
+          const ok = await window.api.checkoutBranch(selectedWorktreePath, selectedBranch)
+          if (!ok) {
+            console.error('[PromptLauncher] checkout failed:', selectedWorktreePath, selectedBranch)
+            return
+          }
+        }
+      } else if (worktreeMode === 'new' && selectedBranch) {
+        branch = selectedBranch
+        useWorktree = true
+      } else if (selectedBranch && selectedBranch !== currentBranch) {
+        // Project root: checkout if branch changed
+        branch = selectedBranch
+      }
 
       const session = await window.api.createTerminal({
         agentType: settings.selectedAgent,
         projectName: project.name,
         projectPath: project.path,
-        branch: branchToUse,
-        useWorktree: isNewWorktree && branchToUse ? true : undefined,
-        existingWorktreePath: isExistingWorktree ? settings.selectedWorktreePath! : undefined,
+        branch,
+        useWorktree,
+        existingWorktreePath,
+        worktreeName,
         remoteHostId: isRemote ? settings.selectedHost : undefined,
         initialPrompt: prompt.trim() || undefined
       })
@@ -289,107 +304,25 @@ export function PromptLauncher({ mode, onClose }: PromptLauncherProps) {
         )}
       </div>
 
-      {/* Branch picker — only for local with branches */}
-      {settings.selectedHost === 'local' &&
-        settings.activeProjectPath &&
-        settings.localBranches.length > 0 && (
-          <div className="relative" ref={settings.dropdownRef}>
-            <button
-              onClick={() => settings.setShowBranchDropdown(!settings.showBranchDropdown)}
-              className="flex items-center gap-1.5 px-2 py-1 rounded-md
-                       hover:bg-white/[0.06] transition-colors text-gray-400"
-            >
-              <GitBranch size={12} />
-              <span className="text-xs truncate max-w-[100px]">
-                {settings.loadingBranches ? 'Loading...' : settings.selectedBranch || 'branch'}
-              </span>
-              <ChevronDown size={10} />
-            </button>
-            {settings.showBranchDropdown && (
-              <div
-                className="absolute bottom-full left-0 mb-1 border border-white/[0.08]
-                            rounded-lg shadow-xl z-20 min-w-[220px] max-h-[240px] overflow-y-auto"
-                style={{ background: '#1e1e22' }}
-              >
-                <div className="p-2 border-b border-white/[0.06] flex items-center gap-1">
-                  <input
-                    ref={settings.branchInputRef}
-                    type="text"
-                    value={settings.branchFilter}
-                    onChange={(e) => settings.setBranchFilter(e.target.value)}
-                    placeholder="Filter branches..."
-                    className="flex-1 px-2 py-1 bg-transparent text-xs text-gray-200
-                             placeholder-gray-600 focus:outline-none"
-                    autoFocus
-                  />
-                  <button
-                    onClick={settings.handleFetchRemotes}
-                    disabled={settings.loadingRemotes}
-                    className="p-1 text-gray-500 hover:text-gray-300 transition-colors"
-                    title="Fetch remotes"
-                  >
-                    {settings.loadingRemotes ? (
-                      <Loader2 size={10} className="animate-spin" />
-                    ) : (
-                      <RefreshCw size={10} />
-                    )}
-                  </button>
-                </div>
-                <div className="py-1">
-                  {settings.filteredBranches.map((b) => (
-                    <button
-                      key={`${b.name}-${b.isRemote}`}
-                      onClick={() => {
-                        settings.setSelectedBranch(b.name)
-                        settings.setShowBranchDropdown(false)
-                        settings.setBranchFilter('')
-                      }}
-                      className={`w-full text-left px-3 py-1.5 text-xs flex items-center gap-2
-                               hover:bg-white/[0.06] transition-colors ${
-                                 settings.selectedBranch === b.name
-                                   ? 'text-white bg-white/[0.04]'
-                                   : 'text-gray-400'
-                               }`}
-                    >
-                      <GitBranch
-                        size={10}
-                        className={b.isRemote ? 'text-blue-400' : 'text-gray-500'}
-                      />
-                      <span className="truncate">{b.name}</span>
-                      {b.isRemote && (
-                        <span className="text-[9px] text-blue-400/60 ml-auto">remote</span>
-                      )}
-                      {b.name === settings.currentBranch && (
-                        <span className="text-[9px] text-green-400/60 ml-auto">current</span>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-      {/* Worktree picker */}
+      {/* Worktree picker — worktree-first, before branch */}
       {settings.selectedHost === 'local' && settings.activeProjectPath && (
         <div className="relative" ref={worktreePickerRef}>
           <button
             onClick={() => setShowWorktreePicker(!showWorktreePicker)}
-            className={`flex items-center gap-0.5 p-1.5 rounded-md transition-all ${
-              settings.worktreeMode !== 'none'
+            className={`flex items-center gap-1.5 px-2 py-1 rounded-md transition-all ${
+              settings.worktreeMode !== 'project-root'
                 ? 'bg-amber-500/10 text-amber-400'
                 : 'text-gray-600 hover:text-gray-400 hover:bg-white/[0.04]'
             }`}
-            title={
-              settings.worktreeMode === 'new'
-                ? 'New worktree'
-                : settings.worktreeMode === 'existing'
-                  ? 'Using existing worktree'
-                  : 'Worktree'
-            }
           >
             <FolderGit2 size={13} strokeWidth={1.5} />
-            {settings.worktreeMode !== 'none' && <ChevronDown size={8} />}
+            {settings.worktreeMode === 'existing' && settings.selectedWorktreeName && (
+              <span className="text-xs truncate max-w-[120px]">
+                {settings.selectedWorktreeName}
+              </span>
+            )}
+            {settings.worktreeMode === 'new' && <span className="text-xs">New worktree</span>}
+            <ChevronDown size={10} />
           </button>
           {showWorktreePicker && (
             <div
@@ -397,34 +330,30 @@ export function PromptLauncher({ mode, onClose }: PromptLauncherProps) {
                             rounded-lg shadow-xl z-20 min-w-[240px] max-h-[280px] overflow-y-auto py-1"
               style={{ background: '#1e1e22' }}
             >
-              {/* No worktree */}
+              {/* Project root */}
               <button
                 onClick={() => {
-                  settings.setWorktreeMode('none')
-                  settings.setSelectedWorktreePath(null)
+                  settings.handleSelectProjectRoot()
                   setShowWorktreePicker(false)
                 }}
                 className={`w-full text-left px-3 py-2 text-xs flex items-center gap-2
                            hover:bg-white/[0.06] transition-colors ${
-                             settings.worktreeMode === 'none'
+                             settings.worktreeMode === 'project-root'
                                ? 'text-white bg-white/[0.04]'
                                : 'text-gray-400'
                            }`}
               >
-                No worktree
+                Project root
               </button>
 
               {/* New worktree */}
               <button
                 onClick={() => {
-                  settings.setWorktreeMode('new')
-                  settings.setSelectedWorktreePath(null)
+                  settings.handleSelectNewWorktree()
                   setShowWorktreePicker(false)
                 }}
-                disabled={!settings.selectedBranch}
                 className={`w-full text-left px-3 py-2 text-xs flex items-center gap-2
-                           hover:bg-white/[0.06] transition-colors
-                           disabled:opacity-40 disabled:cursor-not-allowed ${
+                           hover:bg-white/[0.06] transition-colors ${
                              settings.worktreeMode === 'new'
                                ? 'text-white bg-white/[0.04]'
                                : 'text-gray-400'
@@ -432,9 +361,6 @@ export function PromptLauncher({ mode, onClose }: PromptLauncherProps) {
               >
                 <FolderGit2 size={11} className="text-amber-400/70" />
                 New worktree
-                {!settings.selectedBranch && (
-                  <span className="text-[9px] text-gray-600 ml-auto">select branch</span>
-                )}
               </button>
 
               {/* Existing worktrees */}
@@ -445,9 +371,7 @@ export function PromptLauncher({ mode, onClose }: PromptLauncherProps) {
                     <button
                       key={wt.path}
                       onClick={() => {
-                        settings.setWorktreeMode('existing')
-                        settings.setSelectedWorktreePath(wt.path)
-                        settings.setSelectedBranch(wt.branch)
+                        settings.handleSelectWorktree(wt)
                         setShowWorktreePicker(false)
                       }}
                       className={`w-full text-left px-3 py-2 hover:bg-white/[0.06] transition-colors ${
@@ -459,23 +383,115 @@ export function PromptLauncher({ mode, onClose }: PromptLauncherProps) {
                     >
                       <div className="flex items-center gap-2">
                         <FolderGit2 size={11} className="text-amber-400/70 shrink-0" />
-                        <span className="text-xs font-mono truncate">{wt.branch}</span>
+                        <span className="text-xs font-mono truncate">{wt.name}</span>
                       </div>
-                      <div className="ml-5 mt-0.5">
+                      <div className="ml-5 mt-0.5 flex items-center gap-2">
+                        <span className="text-[10px] text-gray-600 flex items-center gap-1">
+                          <GitBranch size={8} />
+                          {wt.branch}
+                        </span>
                         <span
                           className={`text-[10px] ${
                             wt.activeSessionCount > 0 ? 'text-green-400/70' : 'text-gray-600'
                           }`}
                         >
                           {wt.activeSessionCount > 0
-                            ? `${wt.activeSessionCount} session${wt.activeSessionCount > 1 ? 's' : ''} active`
-                            : 'idle'}
+                            ? `· ${wt.activeSessionCount} session${wt.activeSessionCount > 1 ? 's' : ''}`
+                            : '· idle'}
                         </span>
                       </div>
                     </button>
                   ))}
                 </>
               )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Branch picker */}
+      {settings.selectedHost === 'local' && settings.activeProjectPath && (
+        <div className="relative" ref={settings.dropdownRef}>
+          <button
+            onClick={() => settings.setShowBranchDropdown(!settings.showBranchDropdown)}
+            className="flex items-center gap-1.5 px-2 py-1 rounded-md
+                       hover:bg-white/[0.06] transition-colors text-gray-400"
+          >
+            <GitBranch size={12} />
+            <span className="text-xs truncate max-w-[100px]">
+              {settings.loadingBranches ? 'Loading...' : settings.selectedBranch || 'branch'}
+            </span>
+            <ChevronDown size={10} />
+          </button>
+          {settings.showBranchDropdown && (
+            <div
+              className="absolute bottom-full left-0 mb-1 border border-white/[0.08]
+                            rounded-lg shadow-xl z-20 min-w-[220px] max-h-[240px] overflow-y-auto"
+              style={{ background: '#1e1e22' }}
+            >
+              <div className="p-2 border-b border-white/[0.06] flex items-center gap-1">
+                <input
+                  ref={settings.branchInputRef}
+                  type="text"
+                  value={settings.branchFilter}
+                  onChange={(e) => settings.setBranchFilter(e.target.value)}
+                  placeholder="Filter branches..."
+                  className="flex-1 px-2 py-1 bg-transparent text-xs text-gray-200
+                             placeholder-gray-600 focus:outline-none"
+                  autoFocus
+                />
+                <button
+                  onClick={settings.handleFetchRemotes}
+                  disabled={settings.loadingRemotes}
+                  className="p-1 text-gray-500 hover:text-gray-300 transition-colors"
+                  title="Fetch remotes"
+                >
+                  {settings.loadingRemotes ? (
+                    <Loader2 size={10} className="animate-spin" />
+                  ) : (
+                    <RefreshCw size={10} />
+                  )}
+                </button>
+              </div>
+              <div className="py-1">
+                {settings.filteredBranches.map((b) => (
+                  <button
+                    key={`${b.name}-${b.isRemote}`}
+                    onClick={() => {
+                      settings.setSelectedBranch(b.name)
+                      settings.setShowBranchDropdown(false)
+                      settings.setBranchFilter('')
+                    }}
+                    className={`w-full text-left px-3 py-1.5 text-xs flex items-center gap-2
+                               hover:bg-white/[0.06] transition-colors ${
+                                 settings.selectedBranch === b.name
+                                   ? 'text-white bg-white/[0.04]'
+                                   : 'text-gray-400'
+                               }`}
+                  >
+                    <GitBranch
+                      size={10}
+                      className={b.isRemote ? 'text-blue-400' : 'text-gray-500'}
+                    />
+                    <span className="truncate">{b.name}</span>
+                    {b.isRemote && (
+                      <span className="text-[9px] text-blue-400/60 ml-auto">remote</span>
+                    )}
+                    {b.name === settings.currentBranch && (
+                      <span className="text-[9px] text-green-400/60 ml-auto">current</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          {settings.branchWarning && (
+            <div
+              className="absolute bottom-full left-0 mb-8 px-3 py-1.5 rounded-md
+                            bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[10px]
+                            whitespace-nowrap z-30"
+            >
+              {settings.branchWarning}
             </div>
           )}
         </div>

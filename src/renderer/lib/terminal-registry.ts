@@ -425,7 +425,7 @@ export function setAllTerminalsFontSize(fontSize: number): void {
  */
 export function getCurrentTerminalFontSize(): number {
   for (const entry of registry.values()) {
-    return entry.term.options.fontSize
+    return entry.term.options.fontSize ?? getEffectiveFontSize()
   }
   return getEffectiveFontSize()
 }

@@ -63,7 +63,7 @@ export function LaunchAgentConfigForm({
   )
 
   const [existingWorktrees, setExistingWorktrees] = useState<
-    { path: string; branch: string; isMain: boolean }[]
+    { path: string; branch: string; isMain: boolean; name: string }[]
   >([])
 
   const isRemote = !!config.remoteHostId
@@ -394,7 +394,7 @@ export function LaunchAgentConfigForm({
               <option value="">Select worktree...</option>
               {existingWorktrees.map((wt) => (
                 <option key={wt.path} value={wt.path}>
-                  {wt.branch}
+                  {wt.name} ({wt.branch})
                 </option>
               ))}
             </select>

@@ -285,7 +285,8 @@ async function executeNode(
       updateNodeState(execution, node.id, {
         sessionId: headlessSession.id,
         taskId: resolvedTaskId,
-        worktreePath: headlessSession.worktreePath
+        worktreePath: headlessSession.worktreePath,
+        worktreeName: headlessSession.worktreeName
       })
       persistExecution(workflow.id, execution)
 
@@ -337,7 +338,8 @@ async function executeNode(
       sessionId: session.id,
       logs: `Terminal session created: ${session.id}`,
       taskId: resolvedTaskId,
-      worktreePath: session.worktreePath
+      worktreePath: session.worktreePath,
+      worktreeName: session.worktreeName
     })
     persistExecution(workflow.id, execution)
   }
