@@ -1,6 +1,7 @@
 import { useMemo, useEffect } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { useAppStore } from '../stores'
+import { MAIN_WORKTREE_SENTINEL } from '../stores/types'
 
 export function useVisibleTerminals(): string[] {
   const {
@@ -41,7 +42,11 @@ export function useVisibleTerminals(): string[] {
           if (activeProject && t.session.projectName !== activeProject) return false
           if (!activeProject && workspaceProjects && !workspaceProjects.has(t.session.projectName))
             return false
-          if (activeWorktreePath && t.session.worktreePath !== activeWorktreePath) return false
+          if (activeWorktreePath) {
+            if (activeWorktreePath === MAIN_WORKTREE_SENTINEL) {
+              if (t.session.worktreePath) return false
+            } else if (t.session.worktreePath !== activeWorktreePath) return false
+          }
           if (statusFilter !== 'all' && t.status !== statusFilter) return false
           return true
         })

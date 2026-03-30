@@ -294,22 +294,23 @@ export const createUISlice: StateCreator<AppStore, [], [], UISlice> = (set, get)
     const terminals = get().terminals
 
     const enriched = await Promise.all(
-      worktrees
-        .filter((wt) => !wt.isMain)
-        .map(async (wt) => {
-          const isDirty = await window.api.isWorktreeDirty(wt.path)
-          const diffStat = isDirty
-            ? ((await window.api.getGitDiffStat(wt.path)) ?? undefined)
-            : undefined
-          let linkedSessionId: string | undefined
-          for (const [id, t] of terminals) {
-            if (t.session.worktreePath === wt.path) {
-              linkedSessionId = id
-              break
-            }
+      worktrees.map(async (wt) => {
+        if (wt.isMain) {
+          return { ...wt, isDirty: false, diffStat: undefined, linkedSessionId: undefined }
+        }
+        const isDirty = await window.api.isWorktreeDirty(wt.path)
+        const diffStat = isDirty
+          ? ((await window.api.getGitDiffStat(wt.path)) ?? undefined)
+          : undefined
+        let linkedSessionId: string | undefined
+        for (const [id, t] of terminals) {
+          if (t.session.worktreePath === wt.path) {
+            linkedSessionId = id
+            break
           }
-          return { ...wt, isDirty, diffStat, linkedSessionId }
-        })
+        }
+        return { ...wt, isDirty, diffStat, linkedSessionId }
+      })
     )
 
     set((state) => {

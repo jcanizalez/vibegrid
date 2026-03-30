@@ -13,12 +13,14 @@ export function ProjectsSection({
   workspaceProjects,
   projectTerminals,
   worktreeSessionCounts,
+  mainRepoSessionCounts,
   workspaceTerminalCount
 }: {
   isCollapsed: boolean
   workspaceProjects: ProjectConfig[]
   projectTerminals: Map<string, SidebarSessionInfo[]>
   worktreeSessionCounts: Map<string, number>
+  mainRepoSessionCounts: Map<string, number>
   workspaceTerminalCount: number
 }) {
   const activeProject = useAppStore((s) => s.activeProject)
@@ -93,6 +95,7 @@ export function ProjectsSection({
               isActive={activeProject === project.name}
               isCollapsed={isCollapsed}
               worktreeSessionCounts={worktreeSessionCounts}
+              mainRepoSessionCount={mainRepoSessionCounts.get(project.name) || 0}
             />
           )
         })}

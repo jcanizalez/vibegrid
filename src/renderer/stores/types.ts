@@ -25,6 +25,8 @@ export interface WorktreeInfo {
   linkedSessionId?: string
 }
 
+export const MAIN_WORKTREE_SENTINEL = '__main__'
+
 export type SortMode = 'manual' | 'created' | 'recent'
 export type StatusFilter = AgentStatus | 'all'
 export type TaskStatusFilter = 'all' | 'todo' | 'in_progress' | 'in_review' | 'done' | 'cancelled'
