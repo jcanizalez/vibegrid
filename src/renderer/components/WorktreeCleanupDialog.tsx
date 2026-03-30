@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { FolderGit2, Trash2, FolderOpen, AlertTriangle, Loader2 } from 'lucide-react'
+import { useAppStore } from '../stores'
 
 interface WorktreeCleanupInfo {
   id: string
@@ -101,15 +102,19 @@ export function WorktreeCleanupDialog() {
     try {
       if (explicitDelete && explicitDelete.sessionIds.length > 0) {
         await Promise.all(
-          explicitDelete.sessionIds.map((sid) => window.api.killTerminal(sid).catch(() => {}))
+          explicitDelete.sessionIds.flatMap((sid) => [
+            window.api.killTerminal(sid).catch(() => {}),
+            window.api.killHeadlessSession(sid).catch(() => {})
+          ])
         )
-        // Brief delay for PTY processes to release file locks
+        // Brief delay for processes to release file locks
         await new Promise((r) => setTimeout(r, 500))
       }
 
       const force = dirtyState === 'dirty' || dirtyState === 'unknown'
       const removed = await window.api.removeWorktree(activeProjectPath, activePath, force)
       if (removed) {
+        useAppStore.getState().loadWorktrees(activeProjectPath)
         handleClose()
       } else {
         setRemoveError(true)

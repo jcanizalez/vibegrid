@@ -50,7 +50,10 @@ class PtyManager extends EventEmitter {
   /** Count all sessions (pty + headless) using a worktree, excluding one ID */
   private countWorktreeSessions(worktreePath: string, excludeId?: string): number {
     const pty = this.getActiveSessionsForWorktree(worktreePath, excludeId)
-    const headless = this.headlessWorktreeCounter?.(worktreePath, excludeId) ?? { count: 0 }
+    const headless = this.headlessWorktreeCounter?.(worktreePath, excludeId) ?? {
+      count: 0,
+      sessionIds: []
+    }
     return pty.count + headless.count
   }
 

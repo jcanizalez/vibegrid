@@ -173,17 +173,25 @@ async function executeNode(
 
   // Resolve worktreeMode for cross-step worktree passing
   const worktreeMode = config.worktreeMode ?? (useWorktree ? 'new' : 'none')
-  if (worktreeMode === 'fromStep' && config.worktreeFromStepSlug) {
+  if (worktreeMode === 'fromStep') {
+    if (!config.worktreeFromStepSlug) {
+      throw new Error('Worktree mode "fromStep" requires a source step slug')
+    }
     const nodeMap = new Map(workflow.nodes.map((n) => [n.slug || n.id, n]))
     const sourceNode = nodeMap.get(config.worktreeFromStepSlug)
-    if (sourceNode) {
-      const sourceState = execution.nodeStates.find((s) => s.nodeId === sourceNode.id)
-      if (sourceState?.worktreePath) {
-        existingWorktreePath = sourceState.worktreePath
-        useWorktree = undefined // don't create new — reuse existing
-      }
+    if (!sourceNode) {
+      throw new Error(`Worktree source step "${config.worktreeFromStepSlug}" not found`)
     }
-  } else if (worktreeMode === 'existing' && config.existingWorktreePath) {
+    const sourceState = execution.nodeStates.find((s) => s.nodeId === sourceNode.id)
+    if (!sourceState?.worktreePath) {
+      throw new Error(`Source step "${config.worktreeFromStepSlug}" has no worktreePath`)
+    }
+    existingWorktreePath = sourceState.worktreePath
+    useWorktree = undefined
+  } else if (worktreeMode === 'existing') {
+    if (!config.existingWorktreePath) {
+      throw new Error('Worktree mode "existing" requires an existingWorktreePath')
+    }
     existingWorktreePath = config.existingWorktreePath
     useWorktree = undefined
   }
@@ -196,8 +204,11 @@ async function executeNode(
       const ctx = resolveTaskContext(task, branch, useWorktree)
       initialPrompt = ctx.initialPrompt
       resolvedTaskId = ctx.resolvedTaskId
-      branch = ctx.branch
-      useWorktree = ctx.useWorktree
+      // Don't let task context override worktree resolution from fromStep/existing
+      if (!existingWorktreePath) {
+        branch = ctx.branch
+        useWorktree = ctx.useWorktree
+      }
     }
   } else if (config.taskFromQueue) {
     const task = currentState.getNextTask(config.projectName)
@@ -205,8 +216,10 @@ async function executeNode(
       const ctx = resolveTaskContext(task, branch, useWorktree)
       initialPrompt = ctx.initialPrompt
       resolvedTaskId = ctx.resolvedTaskId
-      branch = ctx.branch
-      useWorktree = ctx.useWorktree
+      if (!existingWorktreePath) {
+        branch = ctx.branch
+        useWorktree = ctx.useWorktree
+      }
     }
   }
 
@@ -521,13 +534,16 @@ export async function executeWorkflow(
   persistExecution(workflow.id, execution)
 
   if (workflow.autoCleanupWorktrees) {
-    // Build worktreePath → projectPath map in one pass
+    // Only clean up worktrees created during this run (mode 'new'), not pre-existing ones
     const worktreeMap = new Map<string, string>()
     for (const ns of execution.nodeStates) {
       if (!ns.worktreePath || worktreeMap.has(ns.worktreePath)) continue
       const node = workflow.nodes.find((n) => n.id === ns.nodeId)
-      if (node) {
-        worktreeMap.set(ns.worktreePath, (node.config as LaunchAgentConfig).projectPath)
+      if (!node || node.type !== 'launchAgent') continue
+      const cfg = node.config as LaunchAgentConfig
+      const mode = cfg.worktreeMode ?? (cfg.useWorktree ? 'new' : 'none')
+      if (mode === 'new') {
+        worktreeMap.set(ns.worktreePath, cfg.projectPath)
       }
     }
 

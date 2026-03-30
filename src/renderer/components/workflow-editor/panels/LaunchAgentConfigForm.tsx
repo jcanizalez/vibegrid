@@ -90,7 +90,8 @@ export function LaunchAgentConfigForm({
         if (n.id === currentNodeId) return false
         if (n.type !== 'launchAgent') return false
         const c = n.config as LaunchAgentConfig
-        return c.worktreeMode === 'new' || c.worktreeMode === 'fromStep'
+        const mode = c.worktreeMode ?? (c.useWorktree ? 'new' : 'none')
+        return mode === 'new' || mode === 'fromStep'
       }),
     [allNodes, currentNodeId]
   )

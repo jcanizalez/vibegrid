@@ -134,8 +134,7 @@ export function WorktreeItem({
               type="button"
               onClick={async (e) => {
                 e.stopPropagation()
-                const { count, sessionIds } =
-                  await window.api.getWorktreeActiveSessions(wt.path)
+                const { count, sessionIds } = await window.api.getWorktreeActiveSessions(wt.path)
                 if (count > 0 || wt.isDirty) {
                   requestWorktreeDelete({
                     projectPath,

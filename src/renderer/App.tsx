@@ -276,11 +276,15 @@ export function App() {
     const removeSessionUpdatedListener = window.api.onSessionUpdated((session) => {
       const store = useAppStore.getState()
       const existing = store.terminals.get(session.id)
-      if (session.branch && existing?.session.branch !== session.branch) {
-        store.updateSessionBranch(session.id, session.branch)
-      }
-      if (session.displayName && existing?.session.displayName !== session.displayName) {
-        store.renameTerminal(session.id, session.displayName)
+      if (existing) {
+        if (session.branch && existing.session.branch !== session.branch) {
+          store.updateSessionBranch(session.id, session.branch)
+        }
+        if (session.displayName && existing.session.displayName !== session.displayName) {
+          store.renameTerminal(session.id, session.displayName)
+        }
+      } else if (session.branch) {
+        store.updateHeadlessSession(session.id, { branch: session.branch })
       }
     })
 
