@@ -3,6 +3,8 @@ import { TerminalSession } from '../../shared/types'
 import { AppStore, UISlice } from './types'
 
 const EMPTY_SESSIONS: TerminalSession[] = []
+const WORKTREE_CACHE_TTL = 5_000
+const worktreeCacheTimestamps = new Map<string, number>()
 const GRID_STORAGE_KEY = 'vibegrid:gridSettings'
 
 function loadGridSettings(): { gridColumns?: number; sortMode?: string; statusFilter?: string } {
@@ -290,32 +292,40 @@ export const createUISlice: StateCreator<AppStore, [], [], UISlice> = (set, get)
 
   worktreeCache: new Map(),
   loadWorktrees: async (projectPath) => {
-    const worktrees = await window.api.listWorktrees(projectPath)
-    const terminals = get().terminals
+    const lastLoaded = worktreeCacheTimestamps.get(projectPath)
+    if (lastLoaded && Date.now() - lastLoaded < WORKTREE_CACHE_TTL) return
+    worktreeCacheTimestamps.set(projectPath, Date.now())
 
-    const enriched = await Promise.all(
-      worktrees
-        .filter((wt) => !wt.isMain)
-        .map(async (wt) => {
-          const isDirty = await window.api.isWorktreeDirty(wt.path)
-          const diffStat = isDirty
-            ? ((await window.api.getGitDiffStat(wt.path)) ?? undefined)
-            : undefined
-          let linkedSessionId: string | undefined
-          for (const [id, t] of terminals) {
-            if (t.session.worktreePath === wt.path) {
-              linkedSessionId = id
-              break
+    try {
+      const worktrees = await window.api.listWorktrees(projectPath)
+      const terminals = get().terminals
+
+      const enriched = await Promise.all(
+        worktrees
+          .filter((wt) => !wt.isMain)
+          .map(async (wt) => {
+            const isDirty = await window.api.isWorktreeDirty(wt.path)
+            const diffStat = isDirty
+              ? ((await window.api.getGitDiffStat(wt.path)) ?? undefined)
+              : undefined
+            let linkedSessionId: string | undefined
+            for (const [id, t] of terminals) {
+              if (t.session.worktreePath === wt.path) {
+                linkedSessionId = id
+                break
+              }
             }
-          }
-          return { ...wt, isDirty, diffStat, linkedSessionId }
-        })
-    )
+            return { ...wt, isDirty, diffStat, linkedSessionId }
+          })
+      )
 
-    set((state) => {
-      const next = new Map(state.worktreeCache)
-      next.set(projectPath, enriched)
-      return { worktreeCache: next }
-    })
+      set((state) => {
+        const next = new Map(state.worktreeCache)
+        next.set(projectPath, enriched)
+        return { worktreeCache: next }
+      })
+    } catch {
+      worktreeCacheTimestamps.delete(projectPath)
+    }
   }
 })
