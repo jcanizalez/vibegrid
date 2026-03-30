@@ -69,9 +69,11 @@ export async function resolveResumeSessionId(
   if (!supportsExactSessionResume(s.agentType)) return undefined
   if (s.hookSessionId && !claimed.has(s.hookSessionId)) return s.hookSessionId
 
-  const targetPaths = [s.worktreePath, s.projectPath].filter(isDefined).map(normalizeComparablePath)
   const isAvailable = (r: RecentSession): boolean =>
     r.agentType === s.agentType && r.canResumeExact && !claimed.has(r.sessionId)
+
+  // Fallback for agents without hookSessionId: progressively looser matching
+  const targetPaths = [s.worktreePath, s.projectPath].filter(isDefined).map(normalizeComparablePath)
   const findPreferredPathMatch = (sessions: RecentSession[]): RecentSession | undefined => {
     for (const targetPath of targetPaths) {
       const match = sessions.find(
@@ -136,6 +138,7 @@ export function buildRestorePayload(
     displayName: s.displayName,
     branch: s.isWorktree ? s.branch : undefined,
     existingWorktreePath: s.isWorktree ? s.worktreePath : undefined,
+    worktreeName: s.worktreeName,
     useWorktree: (s.isWorktree && !s.worktreePath) || undefined,
     remoteHostId: s.remoteHostId,
     resumeSessionId

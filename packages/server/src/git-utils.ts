@@ -75,14 +75,95 @@ export function checkoutBranch(projectPath: string, branch: string): boolean {
   }
 }
 
+export function extractWorktreeName(worktreePath: string): string {
+  const basename = path.basename(worktreePath)
+  const match = basename.match(/^(.+)-[0-9a-f]{8}$/)
+  return match ? match[1] : basename
+}
+
+const ADJECTIVES = [
+  'lunar',
+  'stellar',
+  'cosmic',
+  'solar',
+  'astral',
+  'nebular',
+  'orbital',
+  'galactic',
+  'radiant',
+  'celestial',
+  'crimson',
+  'golden',
+  'frozen',
+  'blazing',
+  'silent',
+  'swift',
+  'phantom',
+  'crystal',
+  'ancient',
+  'vivid',
+  'amber',
+  'cobalt',
+  'emerald',
+  'iron',
+  'obsidian',
+  'sapphire',
+  'silver',
+  'violet',
+  'arctic',
+  'molten'
+]
+
+const NOUNS = [
+  'moon',
+  'sun',
+  'nova',
+  'comet',
+  'pulsar',
+  'quasar',
+  'nebula',
+  'orbit',
+  'titan',
+  'vega',
+  'mars',
+  'phoenix',
+  'zenith',
+  'eclipse',
+  'horizon',
+  'vertex',
+  'prism',
+  'flare',
+  'drift',
+  'spark',
+  'aurora',
+  'meteor',
+  'atlas',
+  'helix',
+  'ion',
+  'nexus',
+  'photon',
+  'sigma',
+  'omega',
+  'terra'
+]
+
+function generateName(): string {
+  const adj = ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)]
+  const noun = NOUNS[Math.floor(Math.random() * NOUNS.length)]
+  return `${adj}-${noun}`
+}
+
 export function createWorktree(
   projectPath: string,
-  branch: string
-): { worktreePath: string; branch: string } {
+  branch: string,
+  worktreeName?: string
+): { worktreePath: string; branch: string; name: string } {
   const projectName = path.basename(projectPath)
   const shortId = crypto.randomUUID().slice(0, 8)
+  const rawName = worktreeName || generateName()
+  const name = rawName.replace(/[^a-zA-Z0-9-]/g, '-')
   const baseDir = path.join(path.dirname(projectPath), '.vibegrid-worktrees', projectName)
-  const worktreeDir = path.join(baseDir, `${branch}-${shortId}`)
+  const worktreeDir = path.join(baseDir, `${name}-${shortId}`)
 
   fs.mkdirSync(baseDir, { recursive: true })
 
@@ -97,14 +178,14 @@ export function createWorktree(
         timeout: 30000
       })
     } catch {
-      // If branch is already checked out, create a new branch from it
-      const newBranch = `${branch}-worktree-${shortId}`
+      // If branch is already checked out, create a new branch named after the friendly name
+      const newBranch = localBranches.includes(name) ? `${name}-${shortId}` : name
       execFileSync('git', ['worktree', 'add', '-b', newBranch, worktreeDir, branch], {
         cwd: projectPath,
         ...EXEC_OPTS,
         timeout: 30000
       })
-      return { worktreePath: worktreeDir, branch: newBranch }
+      return { worktreePath: worktreeDir, branch: newBranch, name }
     }
   } else {
     // Branch doesn't exist locally -- create new branch from HEAD
@@ -115,7 +196,7 @@ export function createWorktree(
     })
   }
 
-  return { worktreePath: worktreeDir, branch }
+  return { worktreePath: worktreeDir, branch, name }
 }
 
 export function isWorktreeDirty(worktreePath: string): boolean {
@@ -157,6 +238,40 @@ export function renameWorktreeBranch(worktreePath: string, newBranch: string): b
   }
 }
 
+export function renameWorktree(
+  worktreePath: string,
+  newName: string
+): { newPath: string; name: string } | null {
+  const trimmed = newName
+    .trim()
+    .replace(/[^a-zA-Z0-9-]/g, '-')
+    .replace(/-{2,}/g, '-')
+    .replace(/^-|-$/g, '')
+  if (!trimmed) return null
+
+  const dir = path.dirname(worktreePath)
+  const basename = path.basename(worktreePath)
+  // Preserve the short-id suffix (last 8 hex chars)
+  const idMatch = basename.match(/-([0-9a-f]{8})$/)
+  if (!idMatch) return null
+  const shortId = idMatch[1]
+  const newDir = path.join(dir, `${trimmed}-${shortId}`)
+
+  if (newDir === worktreePath) return null
+  if (fs.existsSync(newDir)) return null
+
+  try {
+    execFileSync('git', ['worktree', 'move', worktreePath, newDir], {
+      cwd: worktreePath,
+      ...EXEC_OPTS,
+      timeout: 10000
+    })
+    return { newPath: newDir, name: trimmed }
+  } catch {
+    return null
+  }
+}
+
 export function removeWorktree(projectPath: string, worktreePath: string, force = false): boolean {
   try {
     const args = ['worktree', 'remove', worktreePath]
@@ -176,6 +291,7 @@ export interface WorktreeEntry {
   path: string
   branch: string
   isMain: boolean
+  name: string
 }
 
 export function getGitDiffStat(
@@ -342,7 +458,12 @@ export function listWorktrees(projectPath: string): WorktreeEntry[] {
       const branchLine = lines.find((l: string) => l.startsWith('branch '))
       const branch = branchLine?.replace('branch refs/heads/', '') || 'detached'
       if (wtPath) {
-        worktrees.push({ path: wtPath, branch, isMain: worktrees.length === 0 })
+        worktrees.push({
+          path: wtPath,
+          branch,
+          isMain: worktrees.length === 0,
+          name: extractWorktreeName(wtPath)
+        })
       }
     }
     return worktrees

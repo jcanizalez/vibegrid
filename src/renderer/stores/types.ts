@@ -19,6 +19,7 @@ export interface WorktreeInfo {
   path: string
   branch: string
   isMain: boolean
+  name: string
   isDirty?: boolean
   diffStat?: { filesChanged: number; insertions: number; deletions: number }
   linkedSessionId?: string
@@ -44,6 +45,10 @@ export interface TerminalsSlice {
   updateLastOutput: (id: string, timestamp: number) => void
   renameTerminal: (id: string, displayName: string) => void
   updateSessionBranch: (id: string, branch: string) => void
+  updateSessionWorktree: (
+    id: string,
+    updates: { worktreePath?: string; worktreeName?: string }
+  ) => void
   togglePinned: (id: string) => void
 
   // Headless agent tracking
@@ -116,7 +121,6 @@ export interface UISlice {
   minimizedTerminals: Set<string>
   isOnboardingOpen: boolean
   diffSidebarTerminalId: string | null
-  diffReviewTaskId: string | null
   gitDiffStats: Map<string, GitDiffStat>
   rightPanelTab: PanelTab
   isDiffPanelMaximized: boolean
@@ -124,7 +128,6 @@ export interface UISlice {
   mainViewMode: 'sessions' | 'tasks'
   selectedTaskId: string | null
   taskStatusFilter: TaskStatusFilter
-  isTaskPanelOpen: boolean
   isTaskDialogOpen: boolean
   taskDialogDefaultStatus: TaskStatus
   editingTask: TaskConfig | null
@@ -158,7 +161,6 @@ export interface UISlice {
   toggleMinimized: (id: string) => void
   setOnboardingOpen: (open: boolean) => void
   setDiffSidebarTerminalId: (id: string | null) => void
-  setDiffReviewTaskId: (id: string | null) => void
   updateGitDiffStat: (terminalId: string, stat: GitDiffStat) => void
   updateGitDiffStats: (stats: Map<string, GitDiffStat>) => void
   setRightPanelTab: (tab: PanelTab) => void
@@ -167,7 +169,6 @@ export interface UISlice {
   setMainViewMode: (mode: 'sessions' | 'tasks') => void
   setSelectedTaskId: (id: string | null) => void
   setTaskStatusFilter: (filter: TaskStatusFilter) => void
-  setTaskPanelOpen: (open: boolean) => void
   setTaskDialogOpen: (open: boolean, defaultStatus?: TaskStatus) => void
   setEditingTask: (task: TaskConfig | null) => void
   toggleTerminalPanel: () => void

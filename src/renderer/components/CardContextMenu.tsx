@@ -44,6 +44,7 @@ export function CardContextMenu({ terminalId, position, onClose }: Props) {
   const config = useAppStore((s) => s.config)
   const worktreeCache = useAppStore((s) => s.worktreeCache)
   const loadWorktrees = useAppStore((s) => s.loadWorktrees)
+  const layoutMode = useAppStore((s) => s.config?.defaults?.layoutMode ?? 'grid')
   const isMobile = useIsMobile()
 
   const [hoveredSubmenu, setHoveredSubmenu] = useState<number | null>(null)
@@ -97,7 +98,7 @@ export function CardContextMenu({ terminalId, position, onClose }: Props) {
 
   const items: MenuItem[] = []
 
-  if (!isFocused) {
+  if (!isFocused && layoutMode !== 'tabs') {
     items.push({
       icon: Maximize2,
       label: 'Expand',

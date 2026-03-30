@@ -1,5 +1,6 @@
 import { spawn, ChildProcess } from 'node:child_process'
 import crypto from 'node:crypto'
+import fs from 'node:fs'
 import { EventEmitter } from 'node:events'
 import {
   AgentType,
@@ -8,7 +9,7 @@ import {
   HeadlessSession,
   IPC
 } from '@vibegrid/shared/types'
-import { getGitBranch, checkoutBranch, createWorktree } from './git-utils'
+import { getGitBranch, checkoutBranch, createWorktree, extractWorktreeName } from './git-utils'
 import { getSafeEnv } from './process-utils'
 import { buildHeadlessSpawnArgs } from './agent-launch'
 import { DEFAULT_AGENT_COMMANDS } from '@vibegrid/shared/agent-defaults'
@@ -37,15 +38,18 @@ class HeadlessManager extends EventEmitter {
     const id = crypto.randomUUID()
     let effectivePath = payload.projectPath
     let effectiveBranch: string | undefined
+    let worktreeName: string | undefined
 
-    if (payload.existingWorktreePath) {
+    if (payload.existingWorktreePath && fs.existsSync(payload.existingWorktreePath)) {
       effectivePath = payload.existingWorktreePath
+      worktreeName = payload.worktreeName || extractWorktreeName(payload.existingWorktreePath)
       effectiveBranch = payload.branch
     }
-    // Handle worktree creation
-    else if (payload.useWorktree && payload.branch) {
-      const result = createWorktree(payload.projectPath, payload.branch)
+    // Handle worktree creation (or fallback if existing path gone)
+    else if ((payload.useWorktree || payload.existingWorktreePath) && payload.branch) {
+      const result = createWorktree(payload.projectPath, payload.branch, payload.worktreeName)
       effectivePath = result.worktreePath
+      worktreeName = result.name
       effectiveBranch = result.branch
     } else if (payload.branch) {
       const currentBranch = getGitBranch(payload.projectPath)
@@ -86,6 +90,7 @@ class HeadlessManager extends EventEmitter {
       displayName: payload.displayName,
       branch,
       worktreePath,
+      worktreeName,
       isWorktree: !!worktreePath,
       status: 'running',
       startedAt: Date.now()
@@ -169,10 +174,15 @@ class HeadlessManager extends EventEmitter {
     return { count: sessionIds.length, sessionIds }
   }
 
-  updateSessionsForWorktree(worktreePath: string, updates: { branch?: string }): void {
+  updateSessionsForWorktree(
+    worktreePath: string,
+    updates: { branch?: string; worktreePath?: string; worktreeName?: string }
+  ): void {
     for (const s of this.sessions.values()) {
       if (s.worktreePath === worktreePath) {
         if (updates.branch !== undefined) s.branch = updates.branch
+        if (updates.worktreeName !== undefined) s.worktreeName = updates.worktreeName
+        if (updates.worktreePath !== undefined) s.worktreePath = updates.worktreePath
         this.emit('client-message', IPC.SESSION_UPDATED, s)
       }
     }

@@ -14,7 +14,7 @@ import {
   TerminalSession,
   RemoteHost
 } from '@vibegrid/shared/types'
-import { getGitBranch, checkoutBranch, createWorktree } from './git-utils'
+import { getGitBranch, checkoutBranch, createWorktree, extractWorktreeName } from './git-utils'
 import { DEFAULT_AGENT_COMMANDS } from '@vibegrid/shared/agent-defaults'
 import { buildAgentLaunchLine as buildLaunchLine } from './agent-launch'
 import { shellEscape, getSafeEnv, getDefaultShell, normalizePath } from './process-utils'
@@ -141,11 +141,13 @@ class PtyManager extends EventEmitter {
   ): TerminalSession {
     let effectivePath = payload.projectPath
     let worktreePath: string | undefined
+    let worktreeName: string | undefined
     let effectiveBranch: string | undefined
 
     if (payload.existingWorktreePath && fs.existsSync(payload.existingWorktreePath)) {
       effectivePath = payload.existingWorktreePath
       worktreePath = payload.existingWorktreePath
+      worktreeName = payload.worktreeName || extractWorktreeName(payload.existingWorktreePath)
       effectiveBranch = payload.branch
     } else if ((payload.useWorktree || payload.existingWorktreePath) && payload.branch) {
       if (payload.existingWorktreePath) {
@@ -153,9 +155,10 @@ class PtyManager extends EventEmitter {
           `[pty] worktree path no longer exists, creating new: ${payload.existingWorktreePath}`
         )
       }
-      const result = createWorktree(payload.projectPath, payload.branch)
+      const result = createWorktree(payload.projectPath, payload.branch, payload.worktreeName)
       effectivePath = result.worktreePath
       worktreePath = result.worktreePath
+      worktreeName = result.name
       effectiveBranch = result.branch
     }
     // Handle branch checkout (no worktree)
@@ -175,6 +178,22 @@ class PtyManager extends EventEmitter {
       env: getSafeEnv()
     })
 
+    // Per-agent hookSessionId strategy:
+    //   Claude:       generate UUID → pass --session-id → stored as hookSessionId immediately
+    //   Copilot:      UUID injected into hooks.json by copilot-hook-installer; forceLink sets hookSessionId
+    //   Codex/OpenCode: no CLI support for session ID pinning; hookSessionId stays undefined,
+    //                   restore relies on history-based fallback in resolveResumeSessionId
+    //   Gemini:       no resume support (supportsExactSessionResume returns false)
+    let hookSessionId: string | undefined
+    if (payload.agentType === 'claude') {
+      if (payload.resumeSessionId) {
+        hookSessionId = payload.resumeSessionId
+      } else {
+        hookSessionId = crypto.randomUUID()
+        payload.sessionId = hookSessionId
+      }
+    }
+
     const launchLine = this.buildAgentLaunchLine(payload)
     setTimeout(() => ptyProcess.write(launchLine + '\r'), 300)
 
@@ -192,7 +211,8 @@ class PtyManager extends EventEmitter {
       pid: ptyProcess.pid,
       ...(payload.displayName ? { displayName: payload.displayName } : {}),
       ...(branch ? { branch } : {}),
-      ...(worktreePath ? { worktreePath, isWorktree: true } : {})
+      ...(worktreePath ? { worktreePath, worktreeName, isWorktree: true } : {}),
+      ...(hookSessionId ? { hookSessionId, statusSource: 'hooks' as const } : {})
     }
     this.sessions.set(id, session)
     this.sessionOrder.push(id)
@@ -624,10 +644,15 @@ class PtyManager extends EventEmitter {
     return { count: sessionIds.length, sessionIds }
   }
 
-  updateSessionsForWorktree(worktreePath: string, updates: { branch?: string }): void {
+  updateSessionsForWorktree(
+    worktreePath: string,
+    updates: { branch?: string; worktreePath?: string; worktreeName?: string }
+  ): void {
     for (const s of this.sessions.values()) {
       if (s.worktreePath === worktreePath) {
         if (updates.branch !== undefined) s.branch = updates.branch
+        if (updates.worktreeName !== undefined) s.worktreeName = updates.worktreeName
+        if (updates.worktreePath !== undefined) s.worktreePath = updates.worktreePath
         this.emit('client-message', IPC.SESSION_UPDATED, s)
       }
     }

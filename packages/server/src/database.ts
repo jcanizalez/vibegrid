@@ -130,6 +130,16 @@ export function closeDatabase(): void {
   }
 }
 
+/** Initialize an in-memory database for tests. Returns teardown function. */
+export function initTestDatabase(): () => void {
+  if (db) closeDatabase()
+  db = new Database(':memory:')
+  db.pragma('journal_mode = WAL')
+  db.pragma('foreign_keys = ON')
+  createSchema()
+  return () => closeDatabase()
+}
+
 function createSchema(): void {
   const d = getDb()
 
@@ -238,7 +248,8 @@ function createSchema(): void {
       hook_session_id TEXT,
       status_source TEXT,
       saved_at INTEGER,
-      sort_order INTEGER NOT NULL DEFAULT 0
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      worktree_name TEXT
     );
 
     CREATE TABLE IF NOT EXISTS schedule_log (
@@ -332,6 +343,7 @@ function createSchema(): void {
   `)
 
   migrateSchema(d)
+  verifySchema(d)
 }
 
 function migrateSchema(d: Database.Database): void {
@@ -420,6 +432,74 @@ function migrateSchema(d: Database.Database): void {
       ).run()
     })()
     log.info('[database] migrated schema to version 3 (session sort order)')
+  }
+
+  if (version < 4) {
+    d.transaction(() => {
+      const sessionCols = d.prepare('PRAGMA table_info(sessions)').all() as Array<{ name: string }>
+      if (!sessionCols.some((c) => c.name === 'worktree_name')) {
+        d.exec('ALTER TABLE sessions ADD COLUMN worktree_name TEXT')
+      }
+
+      d.prepare(
+        "INSERT OR REPLACE INTO schema_meta (key, value) VALUES ('schema_version', '4')"
+      ).run()
+    })()
+    log.info('[database] migrated schema to version 4 (worktree name)')
+  }
+}
+
+/**
+ * Self-healing schema check — runs after migrations to repair columns that
+ * migrations may have failed to add (e.g. version bumped but ALTER TABLE
+ * didn't stick). Only touches migration-added columns; logs repairs, stays
+ * silent when everything is healthy.
+ */
+function verifySchema(d: Database.Database): void {
+  // Grouped by table to avoid redundant PRAGMA calls
+  const expectedByTable: Record<string, { column: string; ddl: string }[]> = {
+    projects: [
+      {
+        column: 'workspace_id',
+        ddl: "ALTER TABLE projects ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'personal'"
+      }
+    ],
+    workflows: [
+      {
+        column: 'workspace_id',
+        ddl: "ALTER TABLE workflows ADD COLUMN workspace_id TEXT NOT NULL DEFAULT 'personal'"
+      }
+    ],
+    remote_hosts: [
+      { column: 'auth_method', ddl: 'ALTER TABLE remote_hosts ADD COLUMN auth_method TEXT' },
+      { column: 'credential_id', ddl: 'ALTER TABLE remote_hosts ADD COLUMN credential_id TEXT' },
+      {
+        column: 'encrypted_password',
+        ddl: 'ALTER TABLE remote_hosts ADD COLUMN encrypted_password TEXT'
+      }
+    ],
+    sessions: [
+      {
+        column: 'sort_order',
+        ddl: 'ALTER TABLE sessions ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0'
+      },
+      { column: 'worktree_name', ddl: 'ALTER TABLE sessions ADD COLUMN worktree_name TEXT' }
+    ]
+  }
+
+  for (const [table, columns] of Object.entries(expectedByTable)) {
+    const existing = new Set(
+      (d.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>).map((c) => c.name)
+    )
+    for (const { column, ddl } of columns) {
+      if (existing.has(column)) continue
+      try {
+        d.exec(ddl)
+        log.warn(`[database] self-heal: added missing column ${table}.${column}`)
+      } catch (err) {
+        log.error(`[database] self-heal: failed to add ${table}.${column}:`, err)
+      }
+    }
   }
 }
 
@@ -1331,8 +1411,8 @@ export function saveSessions(sessions: TerminalSession[]): void {
   const run = d.transaction(() => {
     d.prepare('DELETE FROM sessions').run()
     const insert = d.prepare(
-      `INSERT INTO sessions (id, agent_type, project_name, project_path, status, created_at, pid, display_name, branch, worktree_path, is_worktree, remote_host_id, remote_host_label, hook_session_id, status_source, saved_at, sort_order)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO sessions (id, agent_type, project_name, project_path, status, created_at, pid, display_name, branch, worktree_path, is_worktree, remote_host_id, remote_host_label, hook_session_id, status_source, saved_at, sort_order, worktree_name)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     for (let i = 0; i < sessions.length; i++) {
       const s = sessions[i]
@@ -1353,7 +1433,8 @@ export function saveSessions(sessions: TerminalSession[]): void {
         s.hookSessionId ?? null,
         s.statusSource ?? null,
         savedAt,
-        i
+        i,
+        s.worktreeName ?? null
       )
     }
   })
@@ -1379,6 +1460,7 @@ export function getPreviousSessions(): TerminalSession[] {
     hook_session_id: string | null
     status_source: string | null
     saved_at: number | null
+    worktree_name: string | null
   }>
   return rows.map((r) => ({
     id: r.id,
@@ -1397,7 +1479,8 @@ export function getPreviousSessions(): TerminalSession[] {
     ...(r.hook_session_id != null && { hookSessionId: r.hook_session_id }),
     ...(r.status_source != null && {
       statusSource: r.status_source as TerminalSession['statusSource']
-    })
+    }),
+    ...(r.worktree_name != null && { worktreeName: r.worktree_name })
   }))
 }
 

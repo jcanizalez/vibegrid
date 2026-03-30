@@ -344,7 +344,7 @@ function useCommands(
         category: 'workflows',
         icon: <Zap size={14} strokeWidth={1.5} />,
         keywords: actionNodes
-          .map((n) => (n.config as Record<string, unknown>)?.projectName as string)
+          .map((n) => (n.config as unknown as Record<string, unknown>)?.projectName as string)
           .filter(Boolean),
         onExecute: async () => {
           await executeWorkflow(wf)

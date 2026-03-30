@@ -166,6 +166,7 @@ export function registerAllMethods(): void {
   registerMethod('terminal:rename', ({ id, displayName }) => {
     ptyManager.renameSession(id, displayName)
     logSessionEvent(id, 'renamed', { displayName })
+    sessionManager.scheduleSave()
   })
   registerMethod('terminal:reorder', (ids) => {
     ptyManager.reorderSessions(ids)
@@ -195,18 +196,41 @@ export function registerAllMethods(): void {
   registerMethod('git:listRemoteBranches', (projectPath) =>
     gitUtils.listRemoteBranches(projectPath)
   )
-  registerMethod('git:createWorktree', ({ projectPath, branch }) =>
-    gitUtils.createWorktree(projectPath, branch)
+  registerMethod('git:createWorktree', ({ projectPath, branch, worktreeName }) =>
+    gitUtils.createWorktree(projectPath, branch, worktreeName)
   )
   registerMethod('git:removeWorktree', ({ projectPath, worktreePath, force }) =>
     gitUtils.removeWorktree(projectPath, worktreePath, force)
   )
+  registerMethod('git:checkoutBranch', ({ cwd, branch }) => {
+    const result = gitUtils.checkoutBranch(cwd, branch)
+    if (result) {
+      ptyManager.updateSessionsForWorktree(cwd, { branch })
+      headlessManager.updateSessionsForWorktree(cwd, { branch })
+    }
+    return result
+  })
+  registerMethod('git:getWorktreeBranch', (worktreePath) => gitUtils.getGitBranch(worktreePath))
   registerMethod('git:renameWorktreeBranch', ({ worktreePath, newBranch }) => {
     const result = gitUtils.renameWorktreeBranch(worktreePath, newBranch)
     if (result) {
       // Propagate the new branch name to all sessions using this worktree
       ptyManager.updateSessionsForWorktree(worktreePath, { branch: newBranch })
       headlessManager.updateSessionsForWorktree(worktreePath, { branch: newBranch })
+    }
+    return result
+  })
+  registerMethod('git:renameWorktree', ({ worktreePath, newName }) => {
+    const result = gitUtils.renameWorktree(worktreePath, newName)
+    if (result) {
+      ptyManager.updateSessionsForWorktree(worktreePath, {
+        worktreePath: result.newPath,
+        worktreeName: result.name
+      })
+      headlessManager.updateSessionsForWorktree(worktreePath, {
+        worktreePath: result.newPath,
+        worktreeName: result.name
+      })
     }
     return result
   })

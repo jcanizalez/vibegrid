@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { FolderGit2, Plus, Pencil, Trash2, Check, X } from 'lucide-react'
+import { FolderGit2, GitBranch, Plus, Pencil, Trash2, Check, X } from 'lucide-react'
 import { useAppStore } from '../../stores'
 import { Tooltip } from '../Tooltip'
 import { toast } from '../Toast'
@@ -38,9 +38,9 @@ export function WorktreeItem({
           onSubmit={async (e) => {
             e.preventDefault()
             const trimmed = renameValue.trim()
-            if (trimmed && trimmed !== wt.branch) {
-              const ok = await window.api.renameWorktreeBranch(wt.path, trimmed)
-              if (ok) {
+            if (trimmed && trimmed !== wt.name) {
+              const result = await window.api.renameWorktree(wt.path, trimmed)
+              if (result) {
                 toast.success('Worktree renamed')
                 onWorktreesChanged()
               } else {
@@ -89,9 +89,15 @@ export function WorktreeItem({
         }`}
       >
         <FolderGit2 size={14} className="text-gray-500 shrink-0" strokeWidth={1.5} />
-        <span className="truncate">{wt.branch}</span>
+        <div className="flex flex-col min-w-0 flex-1">
+          <span className="truncate">{wt.name}</span>
+          <span className="text-[10px] text-gray-600 flex items-center gap-1 truncate">
+            <GitBranch size={8} className="shrink-0" />
+            {wt.branch}
+          </span>
+        </div>
         {sessionCount > 0 && (
-          <span className="text-gray-600 text-xs ml-auto group-hover/wt:hidden">
+          <span className="text-gray-600 text-xs ml-auto group-hover/wt:hidden shrink-0">
             {sessionCount}
           </span>
         )}
@@ -122,7 +128,7 @@ export function WorktreeItem({
               onClick={(e) => {
                 e.stopPropagation()
                 setRenaming(true)
-                setRenameValue(wt.branch)
+                setRenameValue(wt.name)
               }}
               className="text-gray-500 hover:text-white p-0.5 rounded hover:bg-white/[0.08] transition-colors"
             >
