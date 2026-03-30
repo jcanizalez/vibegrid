@@ -31,4 +31,8 @@ describe('getBranchLabel', () => {
       getBranchLabel({ branch: 'main-worktree-abc123', isWorktree: true, worktreeName: '' })
     ).toBe('main-worktree-abc123')
   })
+
+  it('returns worktreeName even when branch is missing (detached HEAD)', () => {
+    expect(getBranchLabel({ isWorktree: true, worktreeName: 'vivid-nova' })).toBe('vivid-nova')
+  })
 })

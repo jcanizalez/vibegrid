@@ -9,6 +9,6 @@ export function getBranchLabel(session: {
   isWorktree?: boolean
   worktreeName?: string
 }): string | undefined {
-  if (!session.branch) return undefined
-  return (session.isWorktree && session.worktreeName) || session.branch
+  if (session.isWorktree && session.worktreeName) return session.worktreeName
+  return session.branch
 }

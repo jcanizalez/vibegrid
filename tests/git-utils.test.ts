@@ -269,7 +269,7 @@ describe('renameWorktree', () => {
     mockFs.existsSync.mockReturnValue(false)
     mockExecFileSync.mockReturnValue('')
     const result = renameWorktree('/base/old-name-abcd1234', 'my cool name!')
-    expect(result).toEqual({ newPath: '/base/my-cool-name--abcd1234', name: 'my-cool-name-' })
+    expect(result).toEqual({ newPath: '/base/my-cool-name-abcd1234', name: 'my-cool-name' })
   })
 
   it('returns null for empty name', () => {

@@ -242,7 +242,11 @@ export function renameWorktree(
   worktreePath: string,
   newName: string
 ): { newPath: string; name: string } | null {
-  const trimmed = newName.trim().replace(/[^a-zA-Z0-9-]/g, '-')
+  const trimmed = newName
+    .trim()
+    .replace(/[^a-zA-Z0-9-]/g, '-')
+    .replace(/-{2,}/g, '-')
+    .replace(/^-|-$/g, '')
   if (!trimmed) return null
 
   const dir = path.dirname(worktreePath)
