@@ -146,6 +146,11 @@ export const GridView = memo(function GridView() {
     setDropTargetIndex(null)
   }, [dragState, dropTargetIndex, orderedIds, reorderTerminals])
 
+  const handlePointerCancel = useCallback(() => {
+    setDragState(null)
+    setDropTargetIndex(null)
+  }, [])
+
   const handleGridDoubleClick = useCallback((e: React.MouseEvent) => {
     if (e.target !== e.currentTarget) return
     const state = useAppStore.getState()
@@ -172,7 +177,7 @@ export const GridView = memo(function GridView() {
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onPointerLeave={handlePointerUp}
-      onPointerCancel={handlePointerUp}
+      onPointerCancel={handlePointerCancel}
       onDoubleClick={handleGridDoubleClick}
       onContextMenu={handleGridContextMenu}
     >

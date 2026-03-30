@@ -24,6 +24,7 @@ class SessionManager {
       clearTimeout(this.debounceTimer)
       this.debounceTimer = null
     }
+    this.getActiveSessions = null
   }
 
   scheduleSave(): void {

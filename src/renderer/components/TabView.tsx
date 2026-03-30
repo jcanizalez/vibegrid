@@ -339,6 +339,11 @@ export function TabView() {
     setDropTargetIndex(null)
   }, [dragState, dropTargetIndex, orderedIds, reorderTerminals])
 
+  const handlePointerCancel = useCallback(() => {
+    setDragState(null)
+    setDropTargetIndex(null)
+  }, [])
+
   /* ── Quick launch ──────────────────────────────────────────── */
 
   const handleQuickLaunch = async (): Promise<void> => {
@@ -398,7 +403,7 @@ export function TabView() {
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerLeave={handlePointerUp}
-        onPointerCancel={handlePointerUp}
+        onPointerCancel={handlePointerCancel}
       >
         {orderedIds.map((id, index) => {
           const terminal = terminals.get(id)
