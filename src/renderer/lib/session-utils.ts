@@ -148,10 +148,14 @@ export function buildRestorePayload(
  */
 export function resolveActiveProject() {
   const state = useAppStore.getState()
+  const projects = state.config?.projects
+  if (!projects || projects.length === 0) return undefined
+
   const activeProjectName = state.activeProject
   if (activeProjectName) {
-    return state.config?.projects.find((p) => p.name === activeProjectName)
+    const match = projects.find((p) => p.name === activeProjectName)
+    if (match) return match
   }
   const ws = state.activeWorkspace
-  return state.config?.projects.find((p) => (p.workspaceId ?? 'personal') === ws)
+  return projects.find((p) => (p.workspaceId ?? 'personal') === ws)
 }

@@ -400,13 +400,15 @@ export function TabView() {
               ? assignedTask.title
               : getDisplayName(terminal.session)
 
+          const tooltipTaskTitle =
+            displayName === assignedTask?.title ? undefined : assignedTask?.title
           const tooltip = buildTooltip(
             displayName,
             terminal.status,
             terminal.session.branch,
             terminal.session.isWorktree,
             terminal.session.remoteHostLabel,
-            assignedTask?.title
+            tooltipTaskTitle
           )
 
           return (
