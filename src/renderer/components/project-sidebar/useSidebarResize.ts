@@ -26,6 +26,7 @@ export function useSidebarResize() {
         const newWidth = startWidth + delta
 
         if (newWidth < COLLAPSE_THRESHOLD) {
+          widthBeforeCollapse.current = startWidth
           setSidebarWidth(COLLAPSED_WIDTH)
         } else {
           setSidebarWidth(Math.min(Math.max(newWidth, MIN_WIDTH), MAX_WIDTH))

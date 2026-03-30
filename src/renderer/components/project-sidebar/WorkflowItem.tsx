@@ -1,4 +1,4 @@
-import { WorkflowDefinition } from '../../../shared/types'
+import type { WorkflowDefinition } from '../../../shared/types'
 import { ICON_MAP } from './icon-map'
 import { WorkflowContextMenu } from './WorkflowContextMenu'
 import { useAppStore } from '../../stores'
