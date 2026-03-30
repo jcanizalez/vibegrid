@@ -44,7 +44,10 @@ const DRAG_THRESHOLD = 5
 interface DragState {
   draggingId: string
   startX: number
+  offsetX: number
   isDragging: boolean
+  pointerX: number
+  pointerY: number
 }
 
 function getHorizontalDropIndex(
@@ -287,7 +290,16 @@ export function TabView() {
     (terminalId: string, e: React.PointerEvent) => {
       if (!isManualSort) return
       if (e.button !== 0) return
-      setDragState({ draggingId: terminalId, startX: e.clientX, isDragging: false })
+      const el = tabRefs.current.get(terminalId)
+      const rect = el?.getBoundingClientRect()
+      setDragState({
+        draggingId: terminalId,
+        startX: e.clientX,
+        offsetX: rect ? e.clientX - rect.left : 0,
+        isDragging: false,
+        pointerX: e.clientX,
+        pointerY: e.clientY
+      })
     },
     [isManualSort]
   )
@@ -298,7 +310,9 @@ export function TabView() {
       const dx = e.clientX - dragState.startX
       if (!dragState.isDragging && Math.abs(dx) < DRAG_THRESHOLD) return
       if (!dragState.isDragging) {
-        setDragState({ ...dragState, isDragging: true })
+        setDragState({ ...dragState, isDragging: true, pointerX: e.clientX, pointerY: e.clientY })
+      } else {
+        setDragState({ ...dragState, pointerX: e.clientX, pointerY: e.clientY })
       }
       const targetIndex = getHorizontalDropIndex(e.clientX, orderedIds, tabRefs.current)
       setDropTargetIndex(targetIndex)
@@ -594,6 +608,33 @@ export function TabView() {
           onClose={() => setContextMenu(null)}
         />
       )}
+      {dragState?.isDragging &&
+        (() => {
+          const terminal = terminals.get(dragState.draggingId)
+          if (!terminal) return null
+          const displayName = getDisplayName(terminal.session)
+          return createPortal(
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 0.9, scale: 1 }}
+              className="fixed flex items-center gap-1.5 px-2.5 h-[28px] rounded-md text-xs
+                       bg-white/[0.1] text-white border border-white/[0.12] pointer-events-none"
+              style={{
+                left: dragState.pointerX - dragState.offsetX,
+                top: dragState.pointerY - 14,
+                zIndex: 9999,
+                boxShadow: '0 4px 16px rgba(0,0,0,0.4)'
+              }}
+            >
+              <span
+                className={`w-1.5 h-1.5 rounded-full shrink-0 ${STATUS_DOT[terminal.status]}`}
+              />
+              <AgentIcon agentType={terminal.session.agentType} size={12} />
+              <span className="truncate max-w-[160px]">{displayName}</span>
+            </motion.div>,
+            document.body
+          )
+        })()}
     </div>
   )
 }
