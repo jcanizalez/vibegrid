@@ -41,7 +41,7 @@ interface Props {
  */
 export function MobileTerminalKeybar({ terminalId }: Props) {
   const [ctrlActive, setCtrlActive] = useState(false)
-  const ctrlTimeoutRef = useRef<ReturnType<typeof setTimeout>>()
+  const ctrlTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   const sendKey = useCallback(
     (data: string) => {

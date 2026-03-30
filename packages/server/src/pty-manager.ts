@@ -14,7 +14,7 @@ import {
   TerminalSession,
   RemoteHost
 } from '@vibegrid/shared/types'
-import { getGitBranch, checkoutBranch, createWorktree } from './git-utils'
+import { getGitBranch, checkoutBranch, createWorktree, extractWorktreeName } from './git-utils'
 import { DEFAULT_AGENT_COMMANDS } from '@vibegrid/shared/agent-defaults'
 import { buildAgentLaunchLine as buildLaunchLine } from './agent-launch'
 import { shellEscape, getSafeEnv, getDefaultShell, normalizePath } from './process-utils'
@@ -141,11 +141,13 @@ class PtyManager extends EventEmitter {
   ): TerminalSession {
     let effectivePath = payload.projectPath
     let worktreePath: string | undefined
+    let worktreeName: string | undefined
     let effectiveBranch: string | undefined
 
     if (payload.existingWorktreePath && fs.existsSync(payload.existingWorktreePath)) {
       effectivePath = payload.existingWorktreePath
       worktreePath = payload.existingWorktreePath
+      worktreeName = payload.worktreeName || extractWorktreeName(payload.existingWorktreePath)
       effectiveBranch = payload.branch
     } else if ((payload.useWorktree || payload.existingWorktreePath) && payload.branch) {
       if (payload.existingWorktreePath) {
@@ -153,9 +155,10 @@ class PtyManager extends EventEmitter {
           `[pty] worktree path no longer exists, creating new: ${payload.existingWorktreePath}`
         )
       }
-      const result = createWorktree(payload.projectPath, payload.branch)
+      const result = createWorktree(payload.projectPath, payload.branch, payload.worktreeName)
       effectivePath = result.worktreePath
       worktreePath = result.worktreePath
+      worktreeName = result.name
       effectiveBranch = result.branch
     }
     // Handle branch checkout (no worktree)
@@ -205,7 +208,7 @@ class PtyManager extends EventEmitter {
       pid: ptyProcess.pid,
       ...(payload.displayName ? { displayName: payload.displayName } : {}),
       ...(branch ? { branch } : {}),
-      ...(worktreePath ? { worktreePath, isWorktree: true } : {}),
+      ...(worktreePath ? { worktreePath, worktreeName, isWorktree: true } : {}),
       ...(hookSessionId ? { hookSessionId, statusSource: 'hooks' as const } : {})
     }
     this.sessions.set(id, session)

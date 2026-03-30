@@ -138,6 +138,7 @@ export function buildRestorePayload(
     displayName: s.displayName,
     branch: s.isWorktree ? s.branch : undefined,
     existingWorktreePath: s.isWorktree ? s.worktreePath : undefined,
+    worktreeName: s.worktreeName,
     useWorktree: (s.isWorktree && !s.worktreePath) || undefined,
     remoteHostId: s.remoteHostId,
     resumeSessionId

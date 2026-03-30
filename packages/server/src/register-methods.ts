@@ -196,12 +196,21 @@ export function registerAllMethods(): void {
   registerMethod('git:listRemoteBranches', (projectPath) =>
     gitUtils.listRemoteBranches(projectPath)
   )
-  registerMethod('git:createWorktree', ({ projectPath, branch }) =>
-    gitUtils.createWorktree(projectPath, branch)
+  registerMethod('git:createWorktree', ({ projectPath, branch, worktreeName }) =>
+    gitUtils.createWorktree(projectPath, branch, worktreeName)
   )
   registerMethod('git:removeWorktree', ({ projectPath, worktreePath, force }) =>
     gitUtils.removeWorktree(projectPath, worktreePath, force)
   )
+  registerMethod('git:checkoutBranch', ({ cwd, branch }) => {
+    const result = gitUtils.checkoutBranch(cwd, branch)
+    if (result) {
+      ptyManager.updateSessionsForWorktree(cwd, { branch })
+      headlessManager.updateSessionsForWorktree(cwd, { branch })
+    }
+    return result
+  })
+  registerMethod('git:getWorktreeBranch', (worktreePath) => gitUtils.getGitBranch(worktreePath))
   registerMethod('git:renameWorktreeBranch', ({ worktreePath, newBranch }) => {
     const result = gitUtils.renameWorktreeBranch(worktreePath, newBranch)
     if (result) {
