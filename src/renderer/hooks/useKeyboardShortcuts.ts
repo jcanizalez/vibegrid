@@ -180,6 +180,13 @@ export function useKeyboardShortcuts() {
         return
       }
 
+      // Cmd+J — view options
+      if (modKey(e) && !e.shiftKey && e.key.toLowerCase() === 'j' && !_isInputFocused()) {
+        e.preventDefault()
+        window.dispatchEvent(new CustomEvent('toggle-view-options'))
+        return
+      }
+
       // Cmd+1-9 — jump to card by position
       if (modKey(e) && !e.altKey && e.key >= '1' && e.key <= '9') {
         e.preventDefault()

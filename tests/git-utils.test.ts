@@ -23,7 +23,8 @@ import {
   listBranches,
   getGitDiffStat,
   gitCommit,
-  listWorktrees
+  listWorktrees,
+  renameWorktreeBranch
 } from '../packages/server/src/git-utils'
 
 const mockExecFileSync = vi.mocked(execFileSync)
@@ -194,5 +195,54 @@ describe('listWorktrees', () => {
   it('returns empty for empty output', () => {
     mockExecFileSync.mockReturnValue('')
     expect(listWorktrees('/project')).toEqual([])
+  })
+})
+
+describe('renameWorktreeBranch', () => {
+  it('renames branch when on an attached HEAD', () => {
+    // First call: getGitBranch returns current branch
+    mockExecFileSync.mockReturnValueOnce('old-branch\n')
+    // Second call: git branch -m succeeds
+    mockExecFileSync.mockReturnValueOnce('')
+    expect(renameWorktreeBranch('/worktree', 'new-branch')).toBe(true)
+    expect(mockExecFileSync).toHaveBeenCalledWith(
+      'git',
+      ['branch', '-m', 'new-branch'],
+      expect.objectContaining({ cwd: '/worktree' })
+    )
+  })
+
+  it('creates branch when on detached HEAD', () => {
+    // First call: getGitBranch throws (detached HEAD)
+    mockExecFileSync.mockImplementationOnce(() => {
+      throw new Error('not on a branch')
+    })
+    // Second call: git switch -c succeeds
+    mockExecFileSync.mockReturnValueOnce('')
+    expect(renameWorktreeBranch('/worktree', 'new-branch')).toBe(true)
+    expect(mockExecFileSync).toHaveBeenCalledWith(
+      'git',
+      ['switch', '-c', 'new-branch'],
+      expect.objectContaining({ cwd: '/worktree' })
+    )
+  })
+
+  it('rejects empty branch name', () => {
+    expect(renameWorktreeBranch('/worktree', '')).toBe(false)
+    expect(renameWorktreeBranch('/worktree', '  ')).toBe(false)
+    expect(mockExecFileSync).not.toHaveBeenCalled()
+  })
+
+  it('rejects option-like branch name', () => {
+    expect(renameWorktreeBranch('/worktree', '-dangerous')).toBe(false)
+    expect(mockExecFileSync).not.toHaveBeenCalled()
+  })
+
+  it('returns false on git error', () => {
+    mockExecFileSync.mockReturnValueOnce('main\n')
+    mockExecFileSync.mockImplementationOnce(() => {
+      throw new Error('branch already exists')
+    })
+    expect(renameWorktreeBranch('/worktree', 'existing')).toBe(false)
   })
 })

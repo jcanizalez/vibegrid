@@ -77,6 +77,10 @@ export interface RequestMethods {
     params: { projectPath: string; worktreePath: string; force?: boolean }
     result: void
   }
+  'git:renameWorktreeBranch': {
+    params: { worktreePath: string; newBranch: string }
+    result: boolean
+  }
   'git:worktreeDirty': { params: string; result: boolean }
   'git:listWorktrees': {
     params: string

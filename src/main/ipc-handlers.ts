@@ -51,6 +51,9 @@ export function registerIpcHandlers(): void {
   safeHandle(IPC.GIT_REMOVE_WORKTREE, (_, params) =>
     requireBridge().request(IPC.GIT_REMOVE_WORKTREE, params)
   )
+  safeHandle(IPC.GIT_RENAME_WORKTREE_BRANCH, (_, params) =>
+    requireBridge().request(IPC.GIT_RENAME_WORKTREE_BRANCH, params)
+  )
   safeHandle(IPC.GIT_WORKTREE_DIRTY, (_, path) =>
     requireBridge().request(IPC.GIT_WORKTREE_DIRTY, path)
   )

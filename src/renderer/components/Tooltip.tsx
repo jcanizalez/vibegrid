@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 
 interface Props {
   label: string
+  shortcut?: string
   children: React.ReactNode
   position?: 'top' | 'bottom' | 'right'
   delay?: number
@@ -19,7 +20,7 @@ function getTransform(position: 'top' | 'bottom' | 'right') {
   return position === 'top' ? 'translate(-50%, -100%)' : 'translate(-50%, 0)'
 }
 
-export function Tooltip({ label, children, position = 'top', delay = 400 }: Props) {
+export function Tooltip({ label, shortcut, children, position = 'top', delay = 400 }: Props) {
   const [visible, setVisible] = useState(false)
   const timeout = useRef<ReturnType<typeof setTimeout> | null>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
@@ -62,7 +63,12 @@ export function Tooltip({ label, children, position = 'top', delay = 400 }: Prop
   )
 
   return (
-    <div ref={wrapperRef} className="inline-flex" onMouseEnter={show} onMouseLeave={hide}>
+    <div
+      ref={wrapperRef}
+      className="inline-flex items-center"
+      onMouseEnter={show}
+      onMouseLeave={hide}
+    >
       {children}
       {visible &&
         createPortal(
@@ -76,6 +82,9 @@ export function Tooltip({ label, children, position = 'top', delay = 400 }: Prop
             }}
           >
             {label}
+            {shortcut && (
+              <span className="ml-2 text-gray-500 font-mono text-[10px]">{shortcut}</span>
+            )}
           </div>,
           document.body
         )}

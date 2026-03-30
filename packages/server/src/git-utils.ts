@@ -132,6 +132,31 @@ export function isWorktreeDirty(worktreePath: string): boolean {
   }
 }
 
+export function renameWorktreeBranch(worktreePath: string, newBranch: string): boolean {
+  const trimmed = newBranch.trim()
+  if (!trimmed || trimmed.startsWith('-')) return false
+
+  try {
+    const currentBranch = getGitBranch(worktreePath)
+    if (!currentBranch) {
+      execFileSync('git', ['switch', '-c', trimmed], {
+        cwd: worktreePath,
+        ...EXEC_OPTS,
+        timeout: 10000
+      })
+    } else {
+      execFileSync('git', ['branch', '-m', trimmed], {
+        cwd: worktreePath,
+        ...EXEC_OPTS,
+        timeout: 10000
+      })
+    }
+    return true
+  } catch {
+    return false
+  }
+}
+
 export function removeWorktree(projectPath: string, worktreePath: string, force = false): boolean {
   try {
     const args = ['worktree', 'remove', worktreePath]

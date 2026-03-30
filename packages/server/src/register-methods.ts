@@ -193,6 +193,9 @@ export function registerAllMethods(): void {
   registerMethod('git:removeWorktree', ({ projectPath, worktreePath, force }) =>
     gitUtils.removeWorktree(projectPath, worktreePath, force)
   )
+  registerMethod('git:renameWorktreeBranch', ({ worktreePath, newBranch }) =>
+    gitUtils.renameWorktreeBranch(worktreePath, newBranch)
+  )
   registerMethod('git:worktreeDirty', (worktreePath) => gitUtils.isWorktreeDirty(worktreePath))
   registerMethod('git:listWorktrees', (projectPath) => gitUtils.listWorktrees(projectPath))
   registerMethod('git:getBranch', (cwd) => gitUtils.getGitBranch(cwd))

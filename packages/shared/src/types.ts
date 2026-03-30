@@ -498,6 +498,7 @@ export const IPC = {
   GIT_LIST_REMOTE_BRANCHES: 'git:listRemoteBranches',
   GIT_CREATE_WORKTREE: 'git:createWorktree',
   GIT_REMOVE_WORKTREE: 'git:removeWorktree',
+  GIT_RENAME_WORKTREE_BRANCH: 'git:renameWorktreeBranch',
   GIT_WORKTREE_DIRTY: 'git:worktreeDirty',
   GIT_LIST_WORKTREES: 'git:listWorktrees',
   WORKTREE_CONFIRM_CLEANUP: 'worktree:confirmCleanup',
