@@ -53,9 +53,10 @@ export function RightPanel() {
     lineContent: string
   } | null>(null)
 
+  const cwd = terminal?.session.worktreePath || terminal?.session.projectPath || ''
+
   const fetchDiff = useCallback(async () => {
-    if (!terminal) return
-    const cwd = terminal.session.worktreePath || terminal.session.projectPath
+    if (!cwd) return
     setLoading(true)
     try {
       const result = await window.api.getGitDiffFull(cwd)
@@ -66,10 +67,10 @@ export function RightPanel() {
     } finally {
       setLoading(false)
     }
-  }, [terminal])
+  }, [cwd])
 
   useEffect(() => {
-    if (terminalId && terminal) {
+    if (terminalId && cwd) {
       fetchDiff()
     } else {
       setDiffResult(null)
@@ -77,7 +78,7 @@ export function RightPanel() {
       setComments([])
       setCommentingLine(null)
     }
-  }, [terminalId, terminal, fetchDiff])
+  }, [terminalId, cwd, fetchDiff])
 
   // Trigger resize so xterm instances re-fit when maximize toggles (drag-end fires its own)
   useEffect(() => {
@@ -87,7 +88,6 @@ export function RightPanel() {
 
   if (!terminalId || !terminal) return null
 
-  const cwd = terminal.session.worktreePath || terminal.session.projectPath || ''
   const hasChanges = stat && (stat.insertions > 0 || stat.deletions > 0)
 
   const handleClose = (): void => {
@@ -166,12 +166,12 @@ export function RightPanel() {
     setActiveTab('changes')
   }
 
-  const computedWidth = isMaximized ? 'calc(100vw - 80px)' : panelWidth
+  const computedWidth = isMaximized ? 'calc(100% - 48px)' : panelWidth
 
   return (
     <>
       <div
-        className="relative flex flex-col border-l border-white/[0.06] shrink-0"
+        className="relative flex min-h-0 flex-col border-l border-white/[0.06] shrink-0"
         style={{ width: computedWidth, background: '#141416' }}
       >
         {/* Resize handle */}
