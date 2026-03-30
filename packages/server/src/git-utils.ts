@@ -160,7 +160,8 @@ export function createWorktree(
 ): { worktreePath: string; branch: string; name: string } {
   const projectName = path.basename(projectPath)
   const shortId = crypto.randomUUID().slice(0, 8)
-  const name = worktreeName || generateName()
+  const rawName = worktreeName || generateName()
+  const name = rawName.replace(/[^a-zA-Z0-9-]/g, '-')
   const baseDir = path.join(path.dirname(projectPath), '.vibegrid-worktrees', projectName)
   const worktreeDir = path.join(baseDir, `${name}-${shortId}`)
 

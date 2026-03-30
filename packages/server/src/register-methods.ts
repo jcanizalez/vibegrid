@@ -202,10 +202,12 @@ export function registerAllMethods(): void {
     gitUtils.removeWorktree(projectPath, worktreePath, force)
   )
   registerMethod('git:checkoutBranch', ({ cwd, branch }) => {
-    gitUtils.checkoutBranch(cwd, branch)
-    ptyManager.updateSessionsForWorktree(cwd, { branch })
-    headlessManager.updateSessionsForWorktree(cwd, { branch })
-    return true
+    const result = gitUtils.checkoutBranch(cwd, branch)
+    if (result) {
+      ptyManager.updateSessionsForWorktree(cwd, { branch })
+      headlessManager.updateSessionsForWorktree(cwd, { branch })
+    }
+    return result
   })
   registerMethod('git:getWorktreeBranch', (worktreePath) => gitUtils.getGitBranch(worktreePath))
   registerMethod('git:renameWorktreeBranch', ({ worktreePath, newBranch }) => {

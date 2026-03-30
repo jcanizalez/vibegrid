@@ -1,5 +1,6 @@
 import { spawn, ChildProcess } from 'node:child_process'
 import crypto from 'node:crypto'
+import fs from 'node:fs'
 import { EventEmitter } from 'node:events'
 import {
   AgentType,
@@ -39,13 +40,13 @@ class HeadlessManager extends EventEmitter {
     let effectiveBranch: string | undefined
     let worktreeName: string | undefined
 
-    if (payload.existingWorktreePath) {
+    if (payload.existingWorktreePath && fs.existsSync(payload.existingWorktreePath)) {
       effectivePath = payload.existingWorktreePath
       worktreeName = payload.worktreeName || extractWorktreeName(payload.existingWorktreePath)
       effectiveBranch = payload.branch
     }
-    // Handle worktree creation
-    else if (payload.useWorktree && payload.branch) {
+    // Handle worktree creation (or fallback if existing path gone)
+    else if ((payload.useWorktree || payload.existingWorktreePath) && payload.branch) {
       const result = createWorktree(payload.projectPath, payload.branch, payload.worktreeName)
       effectivePath = result.worktreePath
       worktreeName = result.name

@@ -73,7 +73,8 @@ export function generateWorktreeName(): string {
 }
 
 export function extractWorktreeNameFromPath(worktreePath: string): string {
-  const basename = worktreePath.split('/').pop() || worktreePath
+  const normalized = worktreePath.replace(/\\/g, '/')
+  const basename = normalized.split('/').pop() || worktreePath
   const match = basename.match(/^(.+)-[0-9a-f]{8}$/)
   return match ? match[1] : basename
 }

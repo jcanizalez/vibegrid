@@ -143,12 +143,15 @@ export function useLaunchSettings() {
       setBranchWarning(null)
       return
     }
-    window.api.getWorktreeBranch(selectedWorktreePath).then((branch) => {
-      if (branch) {
-        setLiveBranch(branch)
-        setSelectedBranch(branch)
-      }
-    })
+    window.api
+      .getWorktreeBranch(selectedWorktreePath)
+      .then((branch) => {
+        if (branch) {
+          setLiveBranch(branch)
+          setSelectedBranch(branch)
+        }
+      })
+      .catch(() => {})
   }, [worktreeMode, selectedWorktreePath])
 
   // Update branch warning when branch changes on existing worktree
@@ -162,15 +165,18 @@ export function useLaunchSettings() {
       setBranchWarning(null)
       return
     }
-    window.api.getWorktreeActiveSessions(selectedWorktreePath).then(({ count }) => {
-      if (count > 0) {
-        setBranchWarning(
-          `This will change the branch for ${count} active session${count > 1 ? 's' : ''} in this worktree`
-        )
-      } else {
-        setBranchWarning(null)
-      }
-    })
+    window.api
+      .getWorktreeActiveSessions(selectedWorktreePath)
+      .then(({ count }) => {
+        if (count > 0) {
+          setBranchWarning(
+            `This will change the branch for ${count} active session${count > 1 ? 's' : ''} in this worktree`
+          )
+        } else {
+          setBranchWarning(null)
+        }
+      })
+      .catch(() => setBranchWarning(null))
   }, [worktreeMode, selectedWorktreePath, selectedBranch, liveBranch])
 
   // Narrow subscription: only re-render when worktree path counts change
