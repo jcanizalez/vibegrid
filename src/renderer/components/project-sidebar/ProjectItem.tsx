@@ -98,7 +98,9 @@ export function ProjectItem({
                       e.stopPropagation()
                       const name = generateWorktreeName()
                       try {
-                        await window.api.createWorktree(project.path, name)
+                        const currentBranch =
+                          (await window.api.getWorktreeBranch(project.path)) || 'main'
+                        await window.api.createWorktree(project.path, currentBranch, name)
                         if (!isExpanded) {
                           toggleExpanded()
                         } else {

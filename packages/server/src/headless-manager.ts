@@ -8,7 +8,7 @@ import {
   HeadlessSession,
   IPC
 } from '@vibegrid/shared/types'
-import { getGitBranch, checkoutBranch, createWorktree } from './git-utils'
+import { getGitBranch, checkoutBranch, createWorktree, extractWorktreeName } from './git-utils'
 import { getSafeEnv } from './process-utils'
 import { buildHeadlessSpawnArgs } from './agent-launch'
 import { DEFAULT_AGENT_COMMANDS } from '@vibegrid/shared/agent-defaults'
@@ -37,15 +37,18 @@ class HeadlessManager extends EventEmitter {
     const id = crypto.randomUUID()
     let effectivePath = payload.projectPath
     let effectiveBranch: string | undefined
+    let worktreeName: string | undefined
 
     if (payload.existingWorktreePath) {
       effectivePath = payload.existingWorktreePath
+      worktreeName = payload.worktreeName || extractWorktreeName(payload.existingWorktreePath)
       effectiveBranch = payload.branch
     }
     // Handle worktree creation
     else if (payload.useWorktree && payload.branch) {
-      const result = createWorktree(payload.projectPath, payload.branch)
+      const result = createWorktree(payload.projectPath, payload.branch, payload.worktreeName)
       effectivePath = result.worktreePath
+      worktreeName = result.name
       effectiveBranch = result.branch
     } else if (payload.branch) {
       const currentBranch = getGitBranch(payload.projectPath)
@@ -86,6 +89,7 @@ class HeadlessManager extends EventEmitter {
       displayName: payload.displayName,
       branch,
       worktreePath,
+      worktreeName,
       isWorktree: !!worktreePath,
       status: 'running',
       startedAt: Date.now()

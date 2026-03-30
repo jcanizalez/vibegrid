@@ -71,3 +71,9 @@ function pick<T>(arr: T[]): T {
 export function generateWorktreeName(): string {
   return `${pick(ADJECTIVES)}-${pick(NOUNS)}`
 }
+
+export function extractWorktreeNameFromPath(worktreePath: string): string {
+  const basename = worktreePath.split('/').pop() || worktreePath
+  const match = basename.match(/^(.+)-[0-9a-f]{8}$/)
+  return match ? match[1] : basename
+}

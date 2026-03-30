@@ -40,6 +40,7 @@ export interface TerminalSession {
   displayName?: string
   branch?: string
   worktreePath?: string
+  worktreeName?: string
   isWorktree?: boolean
   remoteHostId?: string
   remoteHostLabel?: string
@@ -308,6 +309,7 @@ export interface NodeExecutionState {
   taskId?: string
   agentSessionId?: string
   worktreePath?: string
+  worktreeName?: string
 }
 
 export interface WorkflowDefinition {
@@ -416,6 +418,8 @@ export interface CreateTerminalPayload {
   useWorktree?: boolean
   /** Pass an existing worktree path to reuse it (skips createWorktree) */
   existingWorktreePath?: string
+  /** Friendly worktree name (e.g. "amber-aurora") */
+  worktreeName?: string
   remoteHostId?: string
   initialPrompt?: string
   promptDelayMs?: number
@@ -439,6 +443,7 @@ export interface HeadlessSession {
   displayName?: string
   branch?: string
   worktreePath?: string
+  worktreeName?: string
   isWorktree?: boolean
   status: 'running' | 'exited'
   exitCode?: number
@@ -510,6 +515,8 @@ export const IPC = {
   GIT_RENAME_WORKTREE_BRANCH: 'git:renameWorktreeBranch',
   GIT_WORKTREE_DIRTY: 'git:worktreeDirty',
   GIT_LIST_WORKTREES: 'git:listWorktrees',
+  GIT_CHECKOUT_BRANCH: 'git:checkoutBranch',
+  GIT_GET_WORKTREE_BRANCH: 'git:getWorktreeBranch',
   WORKTREE_CONFIRM_CLEANUP: 'worktree:confirmCleanup',
   WORKTREE_ACTIVE_SESSIONS: 'worktree:activeSessions',
   GIT_GET_BRANCH: 'git:getBranch',

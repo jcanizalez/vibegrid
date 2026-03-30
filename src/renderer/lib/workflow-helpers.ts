@@ -413,7 +413,7 @@ function buildFlowFromNode(
     const node = nodeMap.get(currentId)
     if (!node) break
 
-    const successors = successorsMap.get(currentId) || []
+    const successors: string[] = successorsMap.get(currentId) || []
 
     if (successors.length <= 1) {
       rows.push({ kind: 'node', node })
@@ -422,7 +422,7 @@ function buildFlowFromNode(
       rows.push({ kind: 'node', node })
 
       const joinNodeId = findJoinPoint(currentId, successors, successorsMap)
-      const branches = successors.map((childId) =>
+      const branches = successors.map((childId: string) =>
         buildFlowFromNode(childId, joinNodeId, nodeMap, successorsMap)
       )
 

@@ -22,10 +22,10 @@ const hiddenValueOperators: ConditionOperator[] = ['isEmpty', 'isNotEmpty']
 
 export function ConditionConfigForm({ config, onChange, triggerType, stepGroups }: Props) {
   const contextVars = TEMPLATE_VARIABLES.filter((v) => {
-    if (v.group === 'task') {
+    if (v.category === 'task') {
       return triggerType === 'taskCreated' || triggerType === 'taskStatusChanged'
     }
-    if (v.group === 'trigger') {
+    if (v.category === 'trigger') {
       return triggerType === 'taskStatusChanged'
     }
     return false
