@@ -1,0 +1,141 @@
+import { useState, useRef, useEffect, useCallback } from 'react'
+import { GitBranch, Loader2, RefreshCw } from 'lucide-react'
+
+interface BranchPickerProps {
+  projectPath: string
+  currentBranch: string | null
+  selectedBranch?: string
+  onSelect: (branch: string) => void
+  onClose: () => void
+  /** Position the dropdown above or below the trigger. Default: 'below' */
+  position?: 'above' | 'below'
+  /** Minimum width for the dropdown */
+  minWidth?: number
+}
+
+export function BranchPicker({
+  projectPath,
+  currentBranch,
+  selectedBranch,
+  onSelect,
+  onClose,
+  position = 'below',
+  minWidth = 220
+}: BranchPickerProps) {
+  const [localBranches, setLocalBranches] = useState<string[]>([])
+  const [remoteBranches, setRemoteBranches] = useState<string[]>([])
+  const [filter, setFilter] = useState('')
+  const [loadingLocal, setLoadingLocal] = useState(true)
+  const [loadingRemotes, setLoadingRemotes] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  // Load local branches on mount
+  useEffect(() => {
+    setLoadingLocal(true)
+    window.api
+      .listBranches(projectPath)
+      .then((result) => {
+        setLocalBranches(result.local)
+      })
+      .catch(() => setLocalBranches([]))
+      .finally(() => setLoadingLocal(false))
+  }, [projectPath])
+
+  // Close on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose()
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [onClose])
+
+  // Autofocus input
+  useEffect(() => {
+    setTimeout(() => inputRef.current?.focus(), 0)
+  }, [])
+
+  const handleFetchRemotes = useCallback(async () => {
+    if (loadingRemotes) return
+    setLoadingRemotes(true)
+    try {
+      const remotes = await window.api.listRemoteBranches(projectPath)
+      setRemoteBranches(remotes.filter((r) => !localBranches.includes(r)))
+    } catch {
+      setRemoteBranches([])
+    } finally {
+      setLoadingRemotes(false)
+    }
+  }, [projectPath, loadingRemotes, localBranches])
+
+  const allBranches = [
+    ...localBranches.map((b) => ({ name: b, isRemote: false })),
+    ...remoteBranches.map((b) => ({ name: b, isRemote: true }))
+  ]
+
+  const filtered = filter
+    ? allBranches.filter((b) => b.name.toLowerCase().includes(filter.toLowerCase()))
+    : allBranches
+
+  const active = selectedBranch ?? currentBranch
+
+  const positionClass = position === 'above' ? 'bottom-full mb-1' : 'top-full mt-1'
+
+  return (
+    <div
+      ref={ref}
+      className={`absolute ${positionClass} left-1/2 -translate-x-1/2 border border-white/[0.08] rounded-lg shadow-xl z-50 max-h-[280px] overflow-hidden flex flex-col`}
+      style={{ background: '#1e1e22', minWidth }}
+    >
+      <div className="p-2 border-b border-white/[0.06] flex items-center gap-1">
+        <input
+          ref={inputRef}
+          type="text"
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+          placeholder="Filter branches..."
+          className="flex-1 px-2 py-1 bg-transparent text-xs text-gray-200 placeholder-gray-600 focus:outline-none"
+        />
+        <button
+          onClick={handleFetchRemotes}
+          disabled={loadingRemotes}
+          className="p-1 text-gray-500 hover:text-gray-300 transition-colors"
+          title="Fetch remotes"
+        >
+          {loadingRemotes ? (
+            <Loader2 size={10} className="animate-spin" />
+          ) : (
+            <RefreshCw size={10} />
+          )}
+        </button>
+      </div>
+      <div className="py-1 overflow-y-auto">
+        {loadingLocal ? (
+          <div className="flex items-center justify-center py-3">
+            <Loader2 size={14} className="animate-spin text-gray-500" />
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="text-gray-500 text-[12px] px-3 py-2">No branches found</div>
+        ) : (
+          filtered.map((b) => (
+            <button
+              key={`${b.name}-${b.isRemote}`}
+              onClick={() => onSelect(b.name)}
+              className={`w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 hover:bg-white/[0.06] transition-colors ${
+                active === b.name ? 'text-white bg-white/[0.04]' : 'text-gray-400'
+              }`}
+            >
+              <GitBranch size={10} className={b.isRemote ? 'text-blue-400' : 'text-gray-500'} />
+              <span className="truncate">{b.name}</span>
+              {b.isRemote && <span className="text-[9px] text-blue-400/60 ml-auto">remote</span>}
+              {b.name === currentBranch && (
+                <span className="text-[9px] text-green-400/60 ml-auto">current</span>
+              )}
+            </button>
+          ))
+        )}
+      </div>
+    </div>
+  )
+}

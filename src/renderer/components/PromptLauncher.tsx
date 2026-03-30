@@ -5,6 +5,7 @@ import { AgentType, ProjectConfig } from '../../shared/types'
 import { AGENT_LIST } from '../lib/agent-definitions'
 import { AgentIcon } from './AgentIcon'
 import { useLaunchSettings } from '../hooks/useLaunchSettings'
+import { BranchPicker } from './BranchPicker'
 import { useAgentInstallStatus } from '../hooks/useAgentInstallStatus'
 import { getRandomTips } from '../lib/tips-data'
 import {
@@ -30,9 +31,7 @@ import {
   Rocket,
   GitBranch,
   ChevronDown,
-  Loader2,
   ArrowUp,
-  RefreshCw,
   Lightbulb
 } from 'lucide-react'
 import vibegridLogo from '../assets/vibegrid-logo.png'
@@ -424,66 +423,17 @@ export function PromptLauncher({ mode, onClose }: PromptLauncherProps) {
             <ChevronDown size={10} />
           </button>
           {settings.showBranchDropdown && (
-            <div
-              className="absolute bottom-full left-0 mb-1 border border-white/[0.08]
-                            rounded-lg shadow-xl z-20 min-w-[220px] max-h-[240px] overflow-y-auto"
-              style={{ background: '#1e1e22' }}
-            >
-              <div className="p-2 border-b border-white/[0.06] flex items-center gap-1">
-                <input
-                  ref={settings.branchInputRef}
-                  type="text"
-                  value={settings.branchFilter}
-                  onChange={(e) => settings.setBranchFilter(e.target.value)}
-                  placeholder="Filter branches..."
-                  className="flex-1 px-2 py-1 bg-transparent text-xs text-gray-200
-                             placeholder-gray-600 focus:outline-none"
-                  autoFocus
-                />
-                <button
-                  onClick={settings.handleFetchRemotes}
-                  disabled={settings.loadingRemotes}
-                  className="p-1 text-gray-500 hover:text-gray-300 transition-colors"
-                  title="Fetch remotes"
-                >
-                  {settings.loadingRemotes ? (
-                    <Loader2 size={10} className="animate-spin" />
-                  ) : (
-                    <RefreshCw size={10} />
-                  )}
-                </button>
-              </div>
-              <div className="py-1">
-                {settings.filteredBranches.map((b) => (
-                  <button
-                    key={`${b.name}-${b.isRemote}`}
-                    onClick={() => {
-                      settings.setSelectedBranch(b.name)
-                      settings.setShowBranchDropdown(false)
-                      settings.setBranchFilter('')
-                    }}
-                    className={`w-full text-left px-3 py-1.5 text-xs flex items-center gap-2
-                               hover:bg-white/[0.06] transition-colors ${
-                                 settings.selectedBranch === b.name
-                                   ? 'text-white bg-white/[0.04]'
-                                   : 'text-gray-400'
-                               }`}
-                  >
-                    <GitBranch
-                      size={10}
-                      className={b.isRemote ? 'text-blue-400' : 'text-gray-500'}
-                    />
-                    <span className="truncate">{b.name}</span>
-                    {b.isRemote && (
-                      <span className="text-[9px] text-blue-400/60 ml-auto">remote</span>
-                    )}
-                    {b.name === settings.currentBranch && (
-                      <span className="text-[9px] text-green-400/60 ml-auto">current</span>
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
+            <BranchPicker
+              projectPath={settings.activeProjectPath}
+              currentBranch={settings.currentBranch}
+              selectedBranch={settings.selectedBranch}
+              onSelect={(branch) => {
+                settings.setSelectedBranch(branch)
+                settings.setShowBranchDropdown(false)
+              }}
+              onClose={() => settings.setShowBranchDropdown(false)}
+              position="above"
+            />
           )}
           {settings.branchWarning && (
             <div
