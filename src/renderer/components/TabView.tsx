@@ -44,7 +44,7 @@ interface DragState {
 function getHorizontalDropIndex(
   pointerX: number,
   orderedIds: string[],
-  refs: Map<string, HTMLButtonElement>
+  refs: Map<string, HTMLElement>
 ): number | null {
   let closestIndex: number | null = null
   let closestDist = Infinity
@@ -231,7 +231,7 @@ export function TabView() {
   const [dragState, setDragState] = useState<DragState | null>(null)
   const [dropTargetIndex, setDropTargetIndex] = useState<number | null>(null)
   const [plusDropdownPos, setPlusDropdownPos] = useState<{ top: number; left: number } | null>(null)
-  const tabRefs = useRef<Map<string, HTMLButtonElement>>(new Map())
+  const tabRefs = useRef<Map<string, HTMLDivElement>>(new Map())
 
   const isFiltered = statusFilter !== 'all'
   const isManualSort = sortMode === 'manual'
@@ -400,8 +400,10 @@ export function TabView() {
           )
 
           return (
-            <button
+            <div
               key={id}
+              role="tab"
+              tabIndex={0}
               ref={(el) => {
                 if (el) tabRefs.current.set(id, el)
                 else tabRefs.current.delete(id)
@@ -414,7 +416,7 @@ export function TabView() {
               }}
               title={tooltip}
               className={`group relative flex items-center gap-1.5 px-2.5 h-[28px] rounded-md text-xs
-                         transition-colors shrink-0 max-w-[240px]
+                         transition-colors shrink-0 max-w-[240px] select-none
                          ${isDragTarget ? 'ring-1 ring-blue-500/50' : ''}
                          ${isDragging ? 'opacity-50' : ''}
                          ${
@@ -506,7 +508,7 @@ export function TabView() {
                   </svg>
                 </span>
               </ConfirmPopover>
-            </button>
+            </div>
           )
         })}
 
@@ -560,7 +562,7 @@ export function TabView() {
       </div>
 
       {/* Terminal content */}
-      <div className="flex-1 min-h-0" style={{ background: '#141416' }}>
+      <div className="relative flex-1 min-h-0" style={{ background: '#141416' }}>
         {activeTabId && activeTerminal && (
           <TerminalInstance key={activeTabId} terminalId={activeTabId} isFocused={true} />
         )}

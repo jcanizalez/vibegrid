@@ -221,9 +221,9 @@ export function useKeyboardShortcuts() {
 
       // Cmd+O — expand selected terminal (grid mode only)
       if (modKey(e) && e.key === 'o' && !state.focusedTerminalId && state.selectedTerminalId) {
+        e.preventDefault()
         const layoutMode = state.config?.defaults?.layoutMode ?? 'grid'
         if (layoutMode === 'tabs') return
-        e.preventDefault()
         state.setFocusedTerminal(state.selectedTerminalId)
         return
       }
