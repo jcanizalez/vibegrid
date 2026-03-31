@@ -87,6 +87,15 @@ describe('process-utils (server package)', () => {
     expect(shell).toBe('/bin/zsh') // from TEST_ENV
   })
 
+  it('getShellArgs returns platform-appropriate flags', async () => {
+    const { getShellArgs } = await import('../packages/server/src/process-utils')
+    if (process.platform === 'win32') {
+      expect(getShellArgs()).toEqual([])
+    } else {
+      expect(getShellArgs()).toEqual(['-l'])
+    }
+  })
+
   describe('testSshConnection', () => {
     beforeEach(() => {
       mockExecFile.mockReset()

@@ -93,7 +93,10 @@ class HeadlessManager extends EventEmitter {
       worktreeName,
       isWorktree: !!worktreePath,
       status: 'running',
-      startedAt: Date.now()
+      startedAt: Date.now(),
+      ...(payload.workflowId != null && { workflowId: payload.workflowId }),
+      ...(payload.workflowName != null && { workflowName: payload.workflowName }),
+      ...(payload.taskId != null && { taskId: payload.taskId })
     }
     this.sessions.set(id, session)
 
@@ -142,7 +145,10 @@ class HeadlessManager extends EventEmitter {
 
   killHeadless(id: string): void {
     const proc = this.processes.get(id)
-    if (proc) {
+    if (!proc) return
+    if (process.platform === 'win32') {
+      proc.kill()
+    } else {
       proc.kill('SIGTERM')
       // Force kill after 5s if still running
       setTimeout(() => {
@@ -190,7 +196,8 @@ class HeadlessManager extends EventEmitter {
 
   killAll(): void {
     for (const [id, proc] of this.processes) {
-      proc.kill('SIGKILL')
+      if (process.platform === 'win32') proc.kill()
+      else proc.kill('SIGKILL')
       this.processes.delete(id)
     }
     this.sessions.clear()
