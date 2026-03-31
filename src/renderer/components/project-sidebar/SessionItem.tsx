@@ -33,10 +33,11 @@ export function SessionItem({
           : 'text-gray-400 hover:text-white hover:bg-white/[0.04]'
       }`}
     >
-      <div className="relative shrink-0">
+      <div className="relative shrink-0" title={STATUS_CONFIG[session.status].label}>
         <AgentIcon agentType={session.agentType} size={14} />
         <div
           className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full border border-[#1a1a2e] ${STATUS_CONFIG[session.status].color}`}
+          aria-label={STATUS_CONFIG[session.status].label}
         >
           {STATUS_CONFIG[session.status].pulse && (
             <div
@@ -54,12 +55,14 @@ export function SessionItem({
       </div>
       <button
         type="button"
+        aria-label={`Close session ${session.name}`}
+        title="Close session"
         onClick={async (e) => {
           e.stopPropagation()
           await closeTerminalSession(session.id)
           toast.success('Session closed')
         }}
-        className="hidden group-hover/session:block text-gray-500 hover:text-red-400 p-0.5 rounded hover:bg-white/[0.08] transition-colors shrink-0"
+        className="opacity-0 group-hover/session:opacity-100 focus:opacity-100 text-gray-500 hover:text-red-400 p-0.5 rounded hover:bg-white/[0.08] transition-colors shrink-0"
       >
         <X size={12} strokeWidth={2} />
       </button>

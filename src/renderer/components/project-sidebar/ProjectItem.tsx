@@ -187,11 +187,8 @@ export function ProjectItem({
                       const name = generateWorktreeName()
                       try {
                         await window.api.createWorktree(project.path, 'main', name)
-                        if (!isExpanded) {
-                          toggleExpanded()
-                        } else {
-                          loadWorktrees(project.path, true)
-                        }
+                        loadWorktrees(project.path, true)
+                        if (!isExpanded) setIsExpanded(true)
                       } catch {
                         toast.error('Failed to create worktree')
                       }
