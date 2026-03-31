@@ -257,28 +257,31 @@ async function highlightCode(code: string, lang: string): Promise<TokenLine[]> {
 }
 
 function useHighlightedLines(text: string, fileName: string): TokenLine[] | null {
-  const [tokens, setTokens] = useState<TokenLine[] | null>(null)
+  const [result, setResult] = useState<{ key: string; tokens: TokenLine[] } | null>(null)
   const lang = getLang(fileName)
+  const key = `${fileName}\0${text.length}`
 
   useEffect(() => {
     if (!lang) return
 
     let stale = false
     highlightCode(text, lang)
-      .then((result) => {
+      .then((tokens) => {
         if (stale) return
-        setTokens(result.length > 0 ? result : null)
+        setResult(tokens.length > 0 ? { key, tokens } : null)
       })
       .catch(() => {
-        if (!stale) setTokens(null)
+        if (!stale) setResult(null)
       })
 
     return () => {
       stale = true
     }
-  }, [text, lang])
+  }, [text, lang, key])
 
-  return lang ? tokens : null
+  // Only return tokens if they match the current file
+  if (!lang || !result || result.key !== key) return null
+  return result.tokens
 }
 
 function LineRow({ lineNum, children }: { lineNum: number; children: React.ReactNode }) {

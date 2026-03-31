@@ -44,6 +44,7 @@ export function BrowseFilesButton({ terminalId }: Props) {
       <button
         onClick={handleClick}
         className="p-1 text-gray-600 hover:text-gray-300 rounded transition-colors"
+        aria-label="Browse files"
       >
         <FolderOpen size={13} strokeWidth={1.5} />
       </button>

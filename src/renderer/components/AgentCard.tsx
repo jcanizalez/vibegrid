@@ -278,6 +278,7 @@ export const AgentCard = memo(
                       ? 'text-amber-400 hover:text-amber-300'
                       : 'text-gray-500 hover:text-gray-300'
                   }`}
+                  aria-label={isPinned ? 'Unpin session' : 'Pin session'}
                 >
                   <Pin size={12} strokeWidth={2} className={isPinned ? 'fill-current' : ''} />
                 </button>
@@ -290,6 +291,7 @@ export const AgentCard = memo(
                       archiveSession(terminalId)
                     }}
                     className="p-2 rounded text-gray-500 hover:text-gray-300 transition-colors"
+                    aria-label="Archive session"
                   >
                     <Archive size={12} strokeWidth={2} />
                   </button>
