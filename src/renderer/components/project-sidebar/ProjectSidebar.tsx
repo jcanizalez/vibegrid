@@ -63,14 +63,18 @@ export function ProjectSidebar() {
     return map
   }, [terminals])
 
-  const worktreeSessionCounts = useMemo(() => {
-    const counts = new Map<string, number>()
+  const { worktreeSessionCounts, mainRepoSessionCounts } = useMemo(() => {
+    const wtCounts = new Map<string, number>()
+    const mainCounts = new Map<string, number>()
     for (const [, t] of terminals) {
       if (t.session.worktreePath) {
-        counts.set(t.session.worktreePath, (counts.get(t.session.worktreePath) || 0) + 1)
+        wtCounts.set(t.session.worktreePath, (wtCounts.get(t.session.worktreePath) || 0) + 1)
+      } else {
+        const pName = t.session.projectName
+        mainCounts.set(pName, (mainCounts.get(pName) || 0) + 1)
       }
     }
-    return counts
+    return { worktreeSessionCounts: wtCounts, mainRepoSessionCounts: mainCounts }
   }, [terminals])
 
   const workspaceTerminalCount = useMemo(() => {
@@ -106,6 +110,7 @@ export function ProjectSidebar() {
           workspaceProjects={workspaceProjects}
           projectTerminals={projectTerminals}
           worktreeSessionCounts={worktreeSessionCounts}
+          mainRepoSessionCounts={mainRepoSessionCounts}
           workspaceTerminalCount={workspaceTerminalCount}
         />
 

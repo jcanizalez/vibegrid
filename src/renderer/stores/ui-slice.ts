@@ -6,6 +6,7 @@ const EMPTY_SESSIONS: TerminalSession[] = []
 const WORKTREE_CACHE_TTL = 5_000
 const worktreeCacheTimestamps = new Map<string, number>()
 const GRID_STORAGE_KEY = 'vibegrid:gridSettings'
+const SIDEBAR_STORAGE_KEY = 'vibegrid:sidebarSettings'
 
 function loadGridSettings(): { gridColumns?: number; sortMode?: string; statusFilter?: string } {
   try {
@@ -25,7 +26,26 @@ function saveGridSettings(patch: Record<string, unknown>): void {
   }
 }
 
+function loadSidebarSettings(): Record<string, string> {
+  try {
+    const raw = localStorage.getItem(SIDEBAR_STORAGE_KEY)
+    return raw ? JSON.parse(raw) : {}
+  } catch {
+    return {}
+  }
+}
+
+function saveSidebarSettings(patch: Record<string, unknown>): void {
+  try {
+    const current = loadSidebarSettings()
+    localStorage.setItem(SIDEBAR_STORAGE_KEY, JSON.stringify({ ...current, ...patch }))
+  } catch {
+    /* ignore */
+  }
+}
+
 const savedGrid = loadGridSettings()
+const savedSidebar = loadSidebarSettings()
 
 export const createUISlice: StateCreator<AppStore, [], [], UISlice> = (set, get) => ({
   activeWorkspace: 'personal',
@@ -301,22 +321,23 @@ export const createUISlice: StateCreator<AppStore, [], [], UISlice> = (set, get)
       const terminals = get().terminals
 
       const enriched = await Promise.all(
-        worktrees
-          .filter((wt) => !wt.isMain)
-          .map(async (wt) => {
-            const isDirty = await window.api.isWorktreeDirty(wt.path)
-            const diffStat = isDirty
-              ? ((await window.api.getGitDiffStat(wt.path)) ?? undefined)
-              : undefined
-            let linkedSessionId: string | undefined
-            for (const [id, t] of terminals) {
-              if (t.session.worktreePath === wt.path) {
-                linkedSessionId = id
-                break
-              }
+        worktrees.map(async (wt) => {
+          if (wt.isMain) {
+            return { ...wt, isDirty: false, diffStat: undefined, linkedSessionId: undefined }
+          }
+          const isDirty = await window.api.isWorktreeDirty(wt.path)
+          const diffStat = isDirty
+            ? ((await window.api.getGitDiffStat(wt.path)) ?? undefined)
+            : undefined
+          let linkedSessionId: string | undefined
+          for (const [id, t] of terminals) {
+            if (t.session.worktreePath === wt.path) {
+              linkedSessionId = id
+              break
             }
-            return { ...wt, isDirty, diffStat, linkedSessionId }
-          })
+          }
+          return { ...wt, isDirty, diffStat, linkedSessionId }
+        })
       )
 
       set((state) => {
@@ -327,5 +348,42 @@ export const createUISlice: StateCreator<AppStore, [], [], UISlice> = (set, get)
     } catch {
       worktreeCacheTimestamps.delete(projectPath)
     }
-  }
+  },
+
+  sidebarProjectSort: (savedSidebar.projectSort as 'manual' | 'name' | 'recent') ?? 'manual',
+  sidebarWorktreeSort: (savedSidebar.worktreeSort as 'name' | 'recent') ?? 'name',
+  sidebarWorktreeFilter: (savedSidebar.worktreeFilter as 'all' | 'active') ?? 'all',
+
+  setSidebarProjectSort: (mode) => {
+    saveSidebarSettings({ projectSort: mode })
+    set({ sidebarProjectSort: mode })
+  },
+  setSidebarWorktreeSort: (mode) => {
+    saveSidebarSettings({ worktreeSort: mode })
+    set({ sidebarWorktreeSort: mode })
+  },
+  setSidebarWorktreeFilter: (filter) => {
+    saveSidebarSettings({ worktreeFilter: filter })
+    set({ sidebarWorktreeFilter: filter })
+  },
+
+  reorderProjects: (fromIndex, toIndex) =>
+    set((state) => {
+      if (!state.config) return {}
+      const activeWs = state.activeWorkspace
+      const wsProjects = state.config.projects.filter(
+        (p) => (p.workspaceId ?? 'personal') === activeWs
+      )
+      const reordered = [...wsProjects]
+      const [moved] = reordered.splice(fromIndex, 1)
+      reordered.splice(toIndex, 0, moved)
+      let wsIdx = 0
+      const projects = state.config.projects.map((p) => {
+        if ((p.workspaceId ?? 'personal') === activeWs) return reordered[wsIdx++]
+        return p
+      })
+      const updated = { ...state.config, projects }
+      window.api.saveConfig(updated)
+      return { config: updated }
+    })
 })

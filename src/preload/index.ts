@@ -142,7 +142,7 @@ const api = {
   ): Promise<{ path: string; branch: string; isMain: boolean; name: string }[]> =>
     ipcRenderer.invoke(IPC.GIT_LIST_WORKTREES, projectPath),
 
-  checkoutBranch: (cwd: string, branch: string): Promise<boolean> =>
+  checkoutBranch: (cwd: string, branch: string): Promise<{ ok: boolean; error?: string }> =>
     ipcRenderer.invoke(IPC.GIT_CHECKOUT_BRANCH, { cwd, branch }),
 
   getWorktreeBranch: (worktreePath: string): Promise<string | null> =>

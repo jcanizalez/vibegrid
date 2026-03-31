@@ -16,6 +16,7 @@ import { executeWorkflow as runWorkflow } from './lib/workflow-execution'
 import { CommandPalette } from './components/CommandPalette'
 import { SessionRestoredBanner } from './components/SessionRestoredBanner'
 import { GridToolbar } from './components/GridToolbar'
+import { ToolbarBreadcrumb } from './components/ToolbarBreadcrumb'
 import { SettingsPage } from './components/SettingsPage'
 import { RecentSessionsPopover } from './components/RecentSessionsPopover'
 import { Tooltip } from './components/Tooltip'
@@ -382,7 +383,7 @@ export function App() {
         {/* Top bar */}
         <div
           className={`titlebar-drag shrink-0 border-b border-white/[0.06]
-                        flex items-center justify-between ${isMobile ? 'px-2' : 'px-3'} h-[52px]`}
+                        flex items-center ${isMobile ? 'px-2 justify-between' : 'px-3'} h-[52px]`}
           style={!isSidebarOpen && !isWeb && !isMobile ? { paddingLeft: '80px' } : undefined}
         >
           <div className={`flex items-center titlebar-no-drag ${isMobile ? 'gap-2.5' : 'gap-1'}`}>
@@ -466,6 +467,11 @@ export function App() {
               </>
             )}
           </div>
+          {!isMobile && (
+            <div className="flex-1 flex justify-center min-w-0 titlebar-no-drag">
+              <ToolbarBreadcrumb />
+            </div>
+          )}
           <div className={`flex items-center titlebar-no-drag ${isMobile ? 'gap-1.5' : 'gap-1'}`}>
             {mainViewMode === 'sessions' ? (
               <>
