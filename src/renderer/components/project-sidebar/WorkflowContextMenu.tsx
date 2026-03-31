@@ -5,6 +5,13 @@ import { ICON_COLOR_PALETTE } from '../../lib/project-icons'
 
 const WORKFLOW_ICON_OPTIONS = Object.keys(ICON_MAP)
 
+/** Resolve a potentially lowercase icon key to the PascalCase ICON_MAP key */
+function resolveIconKey(key: string): string {
+  if (ICON_MAP[key]) return key
+  const lower = key.toLowerCase()
+  return WORKFLOW_ICON_OPTIONS.find((k) => k.toLowerCase() === lower) ?? key
+}
+
 export function WorkflowContextMenu({
   onEdit,
   onDelete,
@@ -70,20 +77,19 @@ export function WorkflowContextMenu({
           <div className="grid grid-cols-5 gap-1">
             {WORKFLOW_ICON_OPTIONS.map((name) => {
               const IconComp = ICON_MAP[name]
+              const isSelected = resolveIconKey(currentIcon) === name
               return (
                 <button
                   key={name}
                   onClick={() => onChangeIcon(name, currentColor)}
                   className={`p-1.5 rounded ${
-                    currentIcon === name
-                      ? 'bg-white/[0.1] ring-1 ring-white/[0.2]'
-                      : 'hover:bg-white/[0.06]'
+                    isSelected ? 'bg-white/[0.1] ring-1 ring-white/[0.2]' : 'hover:bg-white/[0.06]'
                   }`}
                   title={name}
                 >
                   <IconComp
                     size={12}
-                    color={currentIcon === name ? currentColor : '#9ca3af'}
+                    color={isSelected ? currentColor : '#9ca3af'}
                     strokeWidth={1.5}
                   />
                 </button>
@@ -94,7 +100,7 @@ export function WorkflowContextMenu({
             {ICON_COLOR_PALETTE.map((color) => (
               <button
                 key={color}
-                onClick={() => onChangeIcon(currentIcon, color)}
+                onClick={() => onChangeIcon(resolveIconKey(currentIcon), color)}
                 className={`w-5 h-5 rounded-full border ${
                   currentColor === color
                     ? 'border-white scale-110'

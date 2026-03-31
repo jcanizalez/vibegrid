@@ -227,8 +227,8 @@ async function executeNode(
     initialPrompt = resolveTemplateVars(initialPrompt, context, stepOutputs)
   }
 
-  // Wrap with workflow context when the prompt isn't already a task prompt
-  if (initialPrompt && !resolvedTaskId) {
+  // Wrap with workflow context so the agent knows which workflow/step it belongs to
+  if (initialPrompt) {
     initialPrompt = buildWorkflowPrompt({
       workflow,
       stepName: config.displayName || node.label,
