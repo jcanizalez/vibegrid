@@ -78,10 +78,12 @@ export function ProjectItem({
   // Narrow selector: only re-render when linked session timestamps change
   const linkedIds = useMemo(
     () =>
-      allWorktrees
-        .filter((wt) => !wt.isMain && wt.linkedSessionId)
-        .map((wt) => wt.linkedSessionId!),
-    [allWorktrees]
+      sessionsOnly
+        ? []
+        : allWorktrees
+            .filter((wt) => !wt.isMain && wt.linkedSessionId)
+            .map((wt) => wt.linkedSessionId!),
+    [allWorktrees, sessionsOnly]
   )
   const linkedTimestamps = useAppStore(
     useShallow(
@@ -100,6 +102,7 @@ export function ProjectItem({
   )
 
   const sortedWorktrees = useMemo(() => {
+    if (sessionsOnly) return []
     let wts = allWorktrees.filter((wt) => !wt.isMain)
     if (worktreeFilter === 'active') {
       wts = wts.filter((wt) => (worktreeSessionCounts.get(wt.path) || 0) > 0)
@@ -115,7 +118,14 @@ export function ProjectItem({
       wts = [...wts].sort((a, b) => a.name.localeCompare(b.name))
     }
     return wts
-  }, [allWorktrees, worktreeFilter, worktreeSort, worktreeSessionCounts, linkedTimestamps])
+  }, [
+    allWorktrees,
+    worktreeFilter,
+    worktreeSort,
+    worktreeSessionCounts,
+    linkedTimestamps,
+    sessionsOnly
+  ])
 
   const toggleExpanded = () => {
     const expanding = !isExpanded

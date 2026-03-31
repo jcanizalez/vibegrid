@@ -1,6 +1,6 @@
 import { StateCreator } from 'zustand'
 import { TerminalSession } from '../../shared/types'
-import { AppStore, UISlice } from './types'
+import { AppStore, UISlice, SidebarViewMode } from './types'
 
 const EMPTY_SESSIONS: TerminalSession[] = []
 const WORKTREE_CACHE_TTL = 5_000
@@ -353,8 +353,7 @@ export const createUISlice: StateCreator<AppStore, [], [], UISlice> = (set, get)
   sidebarProjectSort: (savedSidebar.projectSort as 'manual' | 'name' | 'recent') ?? 'manual',
   sidebarWorktreeSort: (savedSidebar.worktreeSort as 'name' | 'recent') ?? 'name',
   sidebarWorktreeFilter: (savedSidebar.worktreeFilter as 'all' | 'active') ?? 'all',
-  sidebarViewMode:
-    (savedSidebar.viewMode as 'worktrees' | 'worktrees-sessions' | 'sessions') ?? 'worktrees',
+  sidebarViewMode: (savedSidebar.viewMode as SidebarViewMode) ?? 'worktrees',
 
   setSidebarProjectSort: (mode) => {
     saveSidebarSettings({ projectSort: mode })
