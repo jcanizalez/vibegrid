@@ -46,7 +46,7 @@ export function ProjectItem({
 
   const allWorktrees = worktreeCache.get(project.path) ?? EMPTY_WORKTREES
   const mainWt = allWorktrees.find((wt) => wt.isMain)
-  const isMainActive = activeWorktreePath === MAIN_WORKTREE_SENTINEL
+  const isMainActive = activeWorktreePath === MAIN_WORKTREE_SENTINEL && isActive
 
   const toggleExpanded = () => {
     const expanding = !isExpanded
