@@ -43,11 +43,18 @@ export function ToolbarBreadcrumb() {
         if (result.ok) {
           loadWorktrees(projectPath)
         } else {
-          const short = result.error?.includes('already checked out')
-            ? `'${branch}' is already checked out in another worktree`
-            : `Failed to checkout '${branch}'`
-          toast.error(short)
-          console.warn('[BreadcrumbCheckout]', result.error)
+          const err = result.error || ''
+          let msg: string
+          if (err.includes('already checked out')) {
+            msg = `'${branch}' is already checked out in another worktree`
+          } else if (err.includes('local changes')) {
+            msg = 'Commit or stash your changes before switching branches'
+          } else if (err.includes('conflict')) {
+            msg = 'Merge conflicts prevent branch switch'
+          } else {
+            msg = `Failed to checkout '${branch}'`
+          }
+          toast.error(msg)
         }
       } finally {
         setIsSwitching(false)
