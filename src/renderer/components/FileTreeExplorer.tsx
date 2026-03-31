@@ -249,7 +249,10 @@ async function highlightCode(code: string, lang: string): Promise<TokenLine[]> {
       return []
     }
   }
-  const result = hl.codeToTokens(code, { lang, theme: 'vitesse-dark' })
+  const result = hl.codeToTokens(code, {
+    lang: lang as Parameters<typeof hl.codeToTokens>[1]['lang'],
+    theme: 'vitesse-dark'
+  })
   return result.tokens.map((line) => line.map((t) => ({ content: t.content, color: t.color })))
 }
 
