@@ -62,16 +62,20 @@ export function listRemoteBranches(projectPath: string): string[] {
   }
 }
 
-export function checkoutBranch(projectPath: string, branch: string): boolean {
+export function checkoutBranch(
+  projectPath: string,
+  branch: string
+): { ok: boolean; error?: string } {
   try {
     execFileSync('git', ['checkout', branch], {
       cwd: projectPath,
       ...EXEC_OPTS,
       timeout: 10000
     })
-    return true
-  } catch {
-    return false
+    return { ok: true }
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err)
+    return { ok: false, error: msg }
   }
 }
 

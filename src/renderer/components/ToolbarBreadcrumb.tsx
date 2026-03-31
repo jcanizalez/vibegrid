@@ -4,6 +4,7 @@ import { MAIN_WORKTREE_SENTINEL } from '../stores/types'
 import type { WorktreeInfo } from '../stores/types'
 import { ChevronRight, GitBranch, ChevronDown } from 'lucide-react'
 import { BranchPicker } from './BranchPicker'
+import { toast } from './Toast'
 
 const EMPTY_WORKTREES: WorktreeInfo[] = []
 
@@ -38,8 +39,16 @@ export function ToolbarBreadcrumb() {
       if (!branchCwd || !projectPath || branch === branchName || isSwitching) return
       setIsSwitching(true)
       try {
-        const ok = await window.api.checkoutBranch(branchCwd, branch)
-        if (ok) loadWorktrees(projectPath)
+        const result = await window.api.checkoutBranch(branchCwd, branch)
+        if (result.ok) {
+          loadWorktrees(projectPath)
+        } else {
+          const short = result.error?.includes('already checked out')
+            ? `'${branch}' is already checked out in another worktree`
+            : `Failed to checkout '${branch}'`
+          toast.error(short)
+          console.warn('[BreadcrumbCheckout]', result.error)
+        }
       } finally {
         setIsSwitching(false)
         setShowBranchPicker(false)

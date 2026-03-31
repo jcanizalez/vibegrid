@@ -204,7 +204,7 @@ export function registerAllMethods(): void {
   )
   registerMethod('git:checkoutBranch', ({ cwd, branch }) => {
     const result = gitUtils.checkoutBranch(cwd, branch)
-    if (result) {
+    if (result.ok) {
       ptyManager.updateSessionsForWorktree(cwd, { branch })
       headlessManager.updateSessionsForWorktree(cwd, { branch })
     }

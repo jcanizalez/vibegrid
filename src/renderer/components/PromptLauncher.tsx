@@ -148,8 +148,11 @@ export function PromptLauncher({ mode, onClose }: PromptLauncherProps) {
         worktreeName = settings.selectedWorktreeName || undefined
         // Checkout different branch in the worktree if user changed it
         if (selectedBranch && liveBranch && selectedBranch !== liveBranch) {
-          const ok = await window.api.checkoutBranch(selectedWorktreePath, selectedBranch)
-          if (!ok) {
+          const checkoutResult = await window.api.checkoutBranch(
+            selectedWorktreePath,
+            selectedBranch
+          )
+          if (!checkoutResult.ok) {
             console.error('[PromptLauncher] checkout failed:', selectedWorktreePath, selectedBranch)
             return
           }
