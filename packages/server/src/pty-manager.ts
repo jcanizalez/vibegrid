@@ -17,7 +17,13 @@ import {
 import { getGitBranch, checkoutBranch, createWorktree, extractWorktreeName } from './git-utils'
 import { DEFAULT_AGENT_COMMANDS } from '@vibegrid/shared/agent-defaults'
 import { buildAgentLaunchLine as buildLaunchLine } from './agent-launch'
-import { shellEscape, getSafeEnv, getDefaultShell, normalizePath } from './process-utils'
+import {
+  shellEscape,
+  getSafeEnv,
+  getDefaultShell,
+  getShellArgs,
+  normalizePath
+} from './process-utils'
 
 import { stripAnsi } from './ansi-strip'
 import { analyzeOutput, createStatusContext, StatusContext } from './status-parser'
@@ -174,7 +180,7 @@ class PtyManager extends EventEmitter {
       effectiveBranch = payload.branch
     }
 
-    const ptyProcess = pty.spawn(shell, ['-l'], {
+    const ptyProcess = pty.spawn(shell, getShellArgs(), {
       name: 'xterm-256color',
       cols: 80,
       rows: 24,
@@ -230,7 +236,7 @@ class PtyManager extends EventEmitter {
     payload: CreateTerminalPayload,
     host: RemoteHost
   ): TerminalSession {
-    const ptyProcess = pty.spawn(shell, ['-l'], {
+    const ptyProcess = pty.spawn(shell, getShellArgs(), {
       name: 'xterm-256color',
       cols: 80,
       rows: 24,
@@ -275,7 +281,7 @@ class PtyManager extends EventEmitter {
 
     // Build remote command: cd to project path then launch agent
     const agentLine = this.buildAgentLaunchLine(payload)
-    const remoteCmd = `cd ${shellEscape(payload.projectPath)} && ${agentLine}`
+    const remoteCmd = `cd ${shellEscape(payload.projectPath, 'posix')} && ${agentLine}`
 
     // Write SSH command after local shell is ready
     setTimeout(() => {
@@ -390,7 +396,7 @@ class PtyManager extends EventEmitter {
   createShellPty(cwd?: string): { id: string; pid: number } {
     const id = crypto.randomUUID()
     const shell = getDefaultShell()
-    const ptyProcess = pty.spawn(shell, ['-l'], {
+    const ptyProcess = pty.spawn(shell, getShellArgs(), {
       name: 'xterm-256color',
       cols: 80,
       rows: 24,

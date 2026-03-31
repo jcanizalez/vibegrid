@@ -135,12 +135,16 @@ export async function stopServer(): Promise<void> {
       // ChildProcess (dev mode)
       const child = serverProcess as ChildProcess
       if (!child.killed) {
-        child.kill('SIGTERM')
-        setTimeout(() => {
-          if (child && !child.killed) {
-            child.kill('SIGKILL')
-          }
-        }, 3000)
+        if (process.platform === 'win32') {
+          child.kill()
+        } else {
+          child.kill('SIGTERM')
+          setTimeout(() => {
+            if (child && !child.killed) {
+              child.kill('SIGKILL')
+            }
+          }, 3000)
+        }
       }
     } else {
       // UtilityProcess (production) — only has kill()

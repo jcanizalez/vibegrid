@@ -222,6 +222,9 @@ export async function startServer(
 
   process.on('SIGTERM', shutdown)
   process.on('SIGINT', shutdown)
+  process.on('message', (msg) => {
+    if (msg === 'shutdown') shutdown()
+  })
 
   return { app, port: actualPort }
 }
