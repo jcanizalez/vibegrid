@@ -222,7 +222,7 @@ export const AgentCard = memo(
                   >
                     {getBranchLabel(terminal.session)}
                   </span>
-                  {terminal.session.isWorktree && terminal.session.branch && (
+                  {terminal.session.isWorktree && (
                     <>
                       <GitBranch size={9} className="text-gray-600 shrink-0" strokeWidth={1.5} />
                       <span className="text-[9px] font-mono text-gray-500 truncate">
