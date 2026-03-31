@@ -166,7 +166,7 @@ export interface UISlice {
   reorderTerminals: (fromIndex: number, toIndex: number) => void
   toggleMinimized: (id: string) => void
   setOnboardingOpen: (open: boolean) => void
-  setDiffSidebarTerminalId: (id: string | null) => void
+  setDiffSidebarTerminalId: (id: string | null, tab?: PanelTab) => void
   updateGitDiffStat: (terminalId: string, stat: GitDiffStat) => void
   updateGitDiffStats: (stats: Map<string, GitDiffStat>) => void
   setRightPanelTab: (tab: PanelTab) => void

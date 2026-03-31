@@ -181,8 +181,12 @@ export const createUISlice: StateCreator<AppStore, [], [], UISlice> = (set, get)
     }),
 
   setOnboardingOpen: (open) => set({ isOnboardingOpen: open }),
-  setDiffSidebarTerminalId: (id) =>
-    set({ diffSidebarTerminalId: id, rightPanelTab: 'changes', isDiffPanelMaximized: false }),
+  setDiffSidebarTerminalId: (id, tab) =>
+    set({
+      diffSidebarTerminalId: id,
+      rightPanelTab: tab ?? 'changes',
+      isDiffPanelMaximized: false
+    }),
   setRightPanelTab: (tab) => set({ rightPanelTab: tab }),
   setDiffPanelMaximized: (maximized) => set({ isDiffPanelMaximized: maximized }),
   setDiffPanelWidth: (width) => set({ diffPanelWidth: width }),

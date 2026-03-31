@@ -1,7 +1,7 @@
 import { useAppStore } from '../stores'
 import { useShallow } from 'zustand/react/shallow'
 import { StatusBadge } from './StatusBadge'
-import { GitChangesIndicator } from './GitChangesIndicator'
+import { GitChangesIndicator, BrowseFilesButton } from './GitChangesIndicator'
 import { OpenInButton } from './OpenInButton'
 import { GitBranch, FolderGit2, Server, ListTodo } from 'lucide-react'
 import { getBranchLabel } from '../lib/terminal-display'
@@ -76,9 +76,12 @@ export function TabStatusBar({ terminalId }: Props) {
         )}
       </div>
 
-      <div className="flex items-center gap-2 shrink-0">
+      <div className="group/status flex items-center gap-2 shrink-0">
         <StatusBadge status={terminal.status} />
         <GitChangesIndicator terminalId={terminalId} />
+        <div className="hidden group-hover/status:block">
+          <BrowseFilesButton terminalId={terminalId} />
+        </div>
         <OpenInButton projectPath={terminal.session.projectPath} direction="up" />
       </div>
     </div>

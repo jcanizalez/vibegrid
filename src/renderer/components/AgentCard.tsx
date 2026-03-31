@@ -7,13 +7,14 @@ import { StatusBadge } from './StatusBadge'
 import { TerminalInstance } from './TerminalInstance'
 import { TrafficLights } from './TrafficLights'
 import { InlineRename } from './InlineRename'
-import { GitChangesIndicator } from './GitChangesIndicator'
+import { GitChangesIndicator, BrowseFilesButton } from './GitChangesIndicator'
 import { closeTerminalSession } from '../lib/terminal-close'
 import { getDisplayName, getBranchLabel } from '../lib/terminal-display'
 import { CardContextMenu } from './CardContextMenu'
 import { useTerminalScrollButton } from '../hooks/useTerminalScrollButton'
 import { GitBranch, FolderGit2, Server, Pencil, ListTodo, Pin, Archive } from 'lucide-react'
 import { toast } from './Toast'
+import { Tooltip } from './Tooltip'
 
 const isMac = navigator.platform.toUpperCase().includes('MAC')
 // On touch devices, always show action buttons (no hover available)
@@ -262,34 +263,37 @@ export const AgentCard = memo(
           <StatusBadge status={terminal.status} />
           <GitChangesIndicator terminalId={terminalId} />
 
-          {/* Pin / Archive buttons */}
+          {/* Pin / Archive / Browse buttons */}
           {cardHovered && (
             <div className="flex items-center gap-0.5">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  togglePinned(terminalId)
-                }}
-                className={`p-2 rounded transition-colors ${
-                  isPinned
-                    ? 'text-amber-400 hover:text-amber-300'
-                    : 'text-gray-500 hover:text-gray-300'
-                }`}
-                title={isPinned ? 'Unpin session' : 'Pin session'}
-              >
-                <Pin size={12} strokeWidth={2} className={isPinned ? 'fill-current' : ''} />
-              </button>
-              {isIdlePinned && (
+              <BrowseFilesButton terminalId={terminalId} />
+              <Tooltip label={isPinned ? 'Unpin session' : 'Pin session'} position="top">
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
-                    archiveSession(terminalId)
+                    togglePinned(terminalId)
                   }}
-                  className="p-2 rounded text-gray-500 hover:text-gray-300 transition-colors"
-                  title="Archive session"
+                  className={`p-2 rounded transition-colors ${
+                    isPinned
+                      ? 'text-amber-400 hover:text-amber-300'
+                      : 'text-gray-500 hover:text-gray-300'
+                  }`}
                 >
-                  <Archive size={12} strokeWidth={2} />
+                  <Pin size={12} strokeWidth={2} className={isPinned ? 'fill-current' : ''} />
                 </button>
+              </Tooltip>
+              {isIdlePinned && (
+                <Tooltip label="Archive session" position="top">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      archiveSession(terminalId)
+                    }}
+                    className="p-2 rounded text-gray-500 hover:text-gray-300 transition-colors"
+                  >
+                    <Archive size={12} strokeWidth={2} />
+                  </button>
+                </Tooltip>
               )}
             </div>
           )}

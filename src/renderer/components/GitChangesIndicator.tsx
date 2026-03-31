@@ -1,4 +1,6 @@
+import { FolderOpen } from 'lucide-react'
 import { useAppStore } from '../stores'
+import { Tooltip } from './Tooltip'
 
 interface Props {
   terminalId: string
@@ -26,5 +28,25 @@ export function GitChangesIndicator({ terminalId }: Props) {
       <span className="text-green-400">+{stat.insertions}</span>
       <span className="text-red-400">-{stat.deletions}</span>
     </button>
+  )
+}
+
+export function BrowseFilesButton({ terminalId }: Props) {
+  const setDiffSidebar = useAppStore((s) => s.setDiffSidebarTerminalId)
+
+  const handleClick = (e: React.MouseEvent): void => {
+    e.stopPropagation()
+    setDiffSidebar(terminalId, 'all-files')
+  }
+
+  return (
+    <Tooltip label="Browse files" position="top">
+      <button
+        onClick={handleClick}
+        className="p-1 text-gray-600 hover:text-gray-300 rounded transition-colors"
+      >
+        <FolderOpen size={13} strokeWidth={1.5} />
+      </button>
+    </Tooltip>
   )
 }

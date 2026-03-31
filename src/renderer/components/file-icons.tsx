@@ -762,7 +762,7 @@ export function FileTypeIcon({ name, size = 16 }: IconProps & { name: string }) 
         alignItems: 'center',
         justifyContent: 'center',
         WebkitFontSmoothing: 'antialiased',
-        MozOsxFontSmoothing: 'grayscale' as string
+        MozOsxFontSmoothing: 'grayscale'
       }}
     >
       {icon.ch}

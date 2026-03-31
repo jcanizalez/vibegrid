@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef, type JSX } from 'react'
 import type { FileEntry } from '../../shared/types'
 import { ChevronRight, Loader2, X, Folder, FolderOpen } from 'lucide-react'
 import { FileTypeIcon } from './file-icons'
@@ -75,9 +75,9 @@ function TreeNode({
             />
           )}
           {expanded ? (
-            <FolderOpen size={14} strokeWidth={1.5} className="text-amber-400 shrink-0" />
+            <FolderOpen size={14} strokeWidth={1.2} className="text-gray-500 shrink-0" />
           ) : (
-            <Folder size={14} strokeWidth={1.5} className="text-amber-400 shrink-0" />
+            <Folder size={14} strokeWidth={1.2} className="text-gray-500 shrink-0" />
           )}
           <span className="truncate text-gray-300 leading-none">{entry.name}</span>
         </button>
@@ -138,6 +138,156 @@ function TreeNode({
   )
 }
 
+// ---------------------------------------------------------------------------
+// Shiki syntax highlighting
+// ---------------------------------------------------------------------------
+const EXT_TO_LANG: Record<string, string> = {
+  ts: 'typescript',
+  tsx: 'tsx',
+  mts: 'typescript',
+  cts: 'typescript',
+  js: 'javascript',
+  jsx: 'jsx',
+  mjs: 'javascript',
+  cjs: 'javascript',
+  json: 'json',
+  jsonc: 'jsonc',
+  json5: 'json5',
+  html: 'html',
+  htm: 'html',
+  vue: 'vue',
+  svelte: 'svelte',
+  css: 'css',
+  scss: 'scss',
+  sass: 'sass',
+  less: 'less',
+  md: 'markdown',
+  mdx: 'mdx',
+  py: 'python',
+  pyi: 'python',
+  rs: 'rust',
+  go: 'go',
+  java: 'java',
+  kt: 'kotlin',
+  swift: 'swift',
+  rb: 'ruby',
+  php: 'php',
+  lua: 'lua',
+  zig: 'zig',
+  c: 'c',
+  h: 'c',
+  cpp: 'cpp',
+  cc: 'cpp',
+  hpp: 'cpp',
+  cxx: 'cpp',
+  cs: 'csharp',
+  sh: 'bash',
+  bash: 'bash',
+  zsh: 'bash',
+  fish: 'fish',
+  sql: 'sql',
+  graphql: 'graphql',
+  gql: 'graphql',
+  yml: 'yaml',
+  yaml: 'yaml',
+  toml: 'toml',
+  ini: 'ini',
+  xml: 'xml',
+  svg: 'xml',
+  dockerfile: 'dockerfile',
+  makefile: 'makefile',
+  r: 'r',
+  dart: 'dart',
+  ex: 'elixir',
+  exs: 'elixir',
+  prisma: 'prisma',
+  tf: 'hcl',
+  ps1: 'powershell',
+  bat: 'batch'
+}
+
+const FILENAME_TO_LANG: Record<string, string> = {
+  dockerfile: 'dockerfile',
+  makefile: 'makefile',
+  '.gitignore': 'gitignore',
+  '.env': 'dotenv'
+}
+
+function getLang(name: string): string | undefined {
+  const lower = name.toLowerCase()
+  if (FILENAME_TO_LANG[lower]) return FILENAME_TO_LANG[lower]
+  const ext = lower.includes('.') ? lower.split('.').pop()! : undefined
+  return ext ? EXT_TO_LANG[ext] : undefined
+}
+
+type TokenLine = { content: string; color?: string }[]
+
+let highlighterPromise: Promise<import('shiki').HighlighterGeneric<string, string>> | null = null
+const loadedLangs = new Set<string>()
+
+function getHighlighter() {
+  if (!highlighterPromise) {
+    highlighterPromise = import('shiki').then((m) =>
+      m.createHighlighter({
+        themes: ['vitesse-dark'],
+        langs: [],
+        engine: m.createJavaScriptRegexEngine()
+      })
+    )
+  }
+  return highlighterPromise
+}
+
+async function highlightCode(code: string, lang: string): Promise<TokenLine[]> {
+  const hl = await getHighlighter()
+  if (!loadedLangs.has(lang)) {
+    try {
+      await hl.loadLanguage(lang as Parameters<typeof hl.loadLanguage>[0])
+      loadedLangs.add(lang)
+    } catch {
+      return []
+    }
+  }
+  const result = hl.codeToTokens(code, { lang, theme: 'vitesse-dark' })
+  return result.tokens.map((line) => line.map((t) => ({ content: t.content, color: t.color })))
+}
+
+function useHighlightedLines(text: string, fileName: string): TokenLine[] | null {
+  const [tokens, setTokens] = useState<TokenLine[] | null>(null)
+  const lang = getLang(fileName)
+
+  useEffect(() => {
+    if (!lang) return
+
+    let stale = false
+    highlightCode(text, lang)
+      .then((result) => {
+        if (stale) return
+        setTokens(result.length > 0 ? result : null)
+      })
+      .catch(() => {
+        if (!stale) setTokens(null)
+      })
+
+    return () => {
+      stale = true
+    }
+  }, [text, lang])
+
+  return lang ? tokens : null
+}
+
+function LineRow({ lineNum, children }: { lineNum: number; children: React.ReactNode }) {
+  return (
+    <div className="flex select-text hover:bg-white/[0.02]">
+      <span className="w-[40px] shrink-0 text-right pr-3 text-[11px] text-gray-600 select-none">
+        {lineNum}
+      </span>
+      {children}
+    </div>
+  )
+}
+
 function FilePreview({
   filePath,
   content,
@@ -147,10 +297,38 @@ function FilePreview({
   content: string
   onClose: () => void
 }) {
-  const lines = useMemo(() => content.split('\n'), [content])
+  const allLines = useMemo(() => content.split('\n'), [content])
   const fileName = filePath.split(/[/\\]/).pop() || filePath
-  const capped = lines.length > MAX_PREVIEW_LINES
-  const visibleLines = capped ? lines.slice(0, MAX_PREVIEW_LINES) : lines
+  const capped = allLines.length > MAX_PREVIEW_LINES
+  const visibleText = useMemo(
+    () => (capped ? allLines.slice(0, MAX_PREVIEW_LINES).join('\n') : content),
+    [allLines, capped, content]
+  )
+  const highlighted = useHighlightedLines(visibleText, fileName)
+
+  const renderedLines = useMemo<JSX.Element[]>(() => {
+    if (highlighted) {
+      return highlighted.map((tokens, i) => (
+        <LineRow key={i} lineNum={i + 1}>
+          <span className="px-1 flex-1 whitespace-pre">
+            {tokens.map((t, j) => (
+              <span key={j} style={t.color ? { color: t.color } : undefined}>
+                {t.content}
+              </span>
+            ))}
+            {tokens.length === 0 && ' '}
+          </span>
+        </LineRow>
+      ))
+    }
+
+    const plain = capped ? allLines.slice(0, MAX_PREVIEW_LINES) : allLines
+    return plain.map((line, i) => (
+      <LineRow key={i} lineNum={i + 1}>
+        <span className="text-gray-400 px-1 flex-1 whitespace-pre">{line || ' '}</span>
+      </LineRow>
+    ))
+  }, [allLines, capped, highlighted])
 
   return (
     <div className="flex-1 flex flex-col min-h-0 border-t border-white/[0.06]">
@@ -161,7 +339,7 @@ function FilePreview({
       >
         <FileTypeIcon name={fileName} size={14} />
         <span className="text-gray-300 flex-1 min-w-0 truncate">{fileName}</span>
-        <span className="text-gray-600 text-[11px] shrink-0">{lines.length} lines</span>
+        <span className="text-gray-600 text-[11px] shrink-0">{allLines.length} lines</span>
         <button
           onClick={onClose}
           className="text-gray-600 hover:text-white p-0.5 rounded transition-colors shrink-0"
@@ -172,17 +350,10 @@ function FilePreview({
 
       <div className="flex-1 overflow-y-auto">
         <pre className="text-[12px] leading-[1.6] font-mono">
-          {visibleLines.map((line, i) => (
-            <div key={i} className="flex select-text hover:bg-white/[0.02]">
-              <span className="w-[40px] shrink-0 text-right pr-3 text-[11px] text-gray-600 select-none">
-                {i + 1}
-              </span>
-              <span className="text-gray-400 px-1 flex-1 whitespace-pre">{line || ' '}</span>
-            </div>
-          ))}
+          {renderedLines}
           {capped && (
             <div className="px-3 py-2 text-[11px] text-gray-600 italic">
-              Showing first {MAX_PREVIEW_LINES} of {lines.length} lines
+              Showing first {MAX_PREVIEW_LINES} of {allLines.length} lines
             </div>
           )}
         </pre>
