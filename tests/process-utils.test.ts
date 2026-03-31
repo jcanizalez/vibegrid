@@ -87,6 +87,12 @@ describe('process-utils (server package)', () => {
     expect(shell).toBe('/bin/zsh') // from TEST_ENV
   })
 
+  it('getShellArgs returns login flag on non-Windows', async () => {
+    const { getShellArgs } = await import('../packages/server/src/process-utils')
+    // Tests run on macOS/Linux, so expect login shell flag
+    expect(getShellArgs()).toEqual(['-l'])
+  })
+
   describe('testSshConnection', () => {
     beforeEach(() => {
       mockExecFile.mockReset()
