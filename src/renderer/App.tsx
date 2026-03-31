@@ -248,6 +248,9 @@ export function App() {
       const state = useAppStore.getState()
       if (!state.terminals.has(session.id)) {
         state.addTerminal(session)
+        if (session.projectPath) {
+          state.loadWorktrees(session.projectPath)
+        }
       }
     })
 
