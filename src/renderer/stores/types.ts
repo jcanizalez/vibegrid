@@ -34,7 +34,7 @@ export type ProjectSortMode = 'manual' | 'name' | 'recent'
 export type WorktreeSortMode = 'name' | 'recent'
 export type WorktreeFilter = 'all' | 'active'
 export type SidebarViewMode = 'worktrees' | 'worktrees-sessions' | 'sessions'
-export type PanelTab = 'changes' | 'all-files' | 'checks'
+export type PanelTab = 'changes' | 'all-files'
 
 export interface TerminalState {
   id: string
