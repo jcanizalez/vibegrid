@@ -1,15 +1,15 @@
 /* eslint-disable react-refresh/only-export-components */
 import { useState, useEffect, useRef } from 'react'
 import { GitFileDiff } from '../../shared/types'
-import { X, FileCode, FilePlus, FileMinus, FileSymlink, MessageSquare } from 'lucide-react'
+import { X, MessageSquare } from 'lucide-react'
+import { FileTypeIcon } from './file-icons'
 
-export const STATUS_ICONS: Record<string, { icon: typeof FileCode; color: string; label: string }> =
-  {
-    modified: { icon: FileCode, color: 'text-yellow-400', label: 'M' },
-    added: { icon: FilePlus, color: 'text-green-400', label: 'A' },
-    deleted: { icon: FileMinus, color: 'text-red-400', label: 'D' },
-    renamed: { icon: FileSymlink, color: 'text-blue-400', label: 'R' }
-  }
+const STATUS_COLORS: Record<string, { color: string; label: string }> = {
+  modified: { color: 'text-yellow-400', label: 'M' },
+  added: { color: 'text-green-400', label: 'A' },
+  deleted: { color: 'text-red-400', label: 'D' },
+  renamed: { color: 'text-blue-400', label: 'R' }
+}
 
 export interface DiffComment {
   filePath: string
@@ -30,9 +30,9 @@ export function DiffFileList({
   return (
     <div className="border-b border-white/[0.06] max-h-[200px] overflow-y-auto">
       {files.map((file) => {
-        const meta = STATUS_ICONS[file.status] || STATUS_ICONS.modified
-        const Icon = meta.icon
+        const meta = STATUS_COLORS[file.status] || STATUS_COLORS.modified
         const isSelected = selectedFile === file.filePath
+        const fileName = file.filePath.split('/').pop() || file.filePath
         return (
           <button
             key={file.filePath}
@@ -40,12 +40,13 @@ export function DiffFileList({
             className={`w-full flex items-center gap-2 px-3 py-1.5 text-left text-[12px] transition-colors
                        ${isSelected ? 'bg-white/[0.08]' : 'hover:bg-white/[0.04]'}`}
           >
-            <Icon size={13} className={`${meta.color} shrink-0`} strokeWidth={1.5} />
+            <FileTypeIcon name={fileName} size={15} />
             <span className="flex-1 min-w-0 truncate text-gray-300 font-mono">{file.filePath}</span>
             <span className="shrink-0 flex items-center gap-1.5 text-[11px] font-mono">
               {file.insertions > 0 && <span className="text-green-400">+{file.insertions}</span>}
               {file.deletions > 0 && <span className="text-red-400">-{file.deletions}</span>}
             </span>
+            <span className={`shrink-0 text-[10px] font-bold ${meta.color}`}>{meta.label}</span>
           </button>
         )
       })}
@@ -158,7 +159,8 @@ export function DiffContent({
   return (
     <div className="flex-1 overflow-y-auto">
       {files.map((file) => {
-        const meta = STATUS_ICONS[file.status] || STATUS_ICONS.modified
+        const meta = STATUS_COLORS[file.status] || STATUS_COLORS.modified
+        const fileName = file.filePath.split('/').pop() || file.filePath
         const lines = parseDiffLines(
           file.diff,
           file.filePath,
@@ -184,8 +186,9 @@ export function DiffContent({
                             border-b border-white/[0.06]"
               style={{ background: '#1e1e22' }}
             >
-              <span className={`${meta.color} font-bold`}>{meta.label}</span>
-              <span className="text-gray-300">{file.filePath}</span>
+              <FileTypeIcon name={fileName} size={14} />
+              <span className="text-gray-300 flex-1 min-w-0 truncate">{file.filePath}</span>
+              <span className={`${meta.color} text-[10px] font-bold shrink-0`}>{meta.label}</span>
               {fileCommentCount > 0 && (
                 <span className="text-[10px] text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded-full ml-auto">
                   {fileCommentCount} comment{fileCommentCount !== 1 ? 's' : ''}
