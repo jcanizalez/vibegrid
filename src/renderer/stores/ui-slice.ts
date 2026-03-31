@@ -364,13 +364,16 @@ export const createUISlice: StateCreator<AppStore, [], [], UISlice> = (set, get)
       const wsProjects = state.config.projects.filter(
         (p) => (p.workspaceId ?? 'personal') === activeWs
       )
-      const otherProjects = state.config.projects.filter(
-        (p) => (p.workspaceId ?? 'personal') !== activeWs
-      )
       const reordered = [...wsProjects]
       const [moved] = reordered.splice(fromIndex, 1)
       reordered.splice(toIndex, 0, moved)
-      const updated = { ...state.config, projects: [...otherProjects, ...reordered] }
+      // Rebuild full array preserving positions of other-workspace projects
+      let wsIdx = 0
+      const projects = state.config.projects.map((p) => {
+        if ((p.workspaceId ?? 'personal') === activeWs) return reordered[wsIdx++]
+        return p
+      })
+      const updated = { ...state.config, projects }
       window.api.saveConfig(updated)
       return { config: updated }
     })

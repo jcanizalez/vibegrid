@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import { GitBranch, Loader2, RefreshCw } from 'lucide-react'
 
 interface BranchPickerProps {
@@ -7,9 +7,7 @@ interface BranchPickerProps {
   selectedBranch?: string
   onSelect: (branch: string) => void
   onClose: () => void
-  /** Position the dropdown above or below the trigger. Default: 'below' */
   position?: 'above' | 'below'
-  /** Minimum width for the dropdown */
   minWidth?: number
 }
 
@@ -30,19 +28,15 @@ export function BranchPicker({
   const ref = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // Load local branches on mount
   useEffect(() => {
     setLoadingLocal(true)
     window.api
       .listBranches(projectPath)
-      .then((result) => {
-        setLocalBranches(result.local)
-      })
+      .then((result) => setLocalBranches(result.local))
       .catch(() => setLocalBranches([]))
       .finally(() => setLoadingLocal(false))
   }, [projectPath])
 
-  // Close on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) onClose()
@@ -51,7 +45,6 @@ export function BranchPicker({
     return () => document.removeEventListener('mousedown', handler)
   }, [onClose])
 
-  // Autofocus input
   useEffect(() => {
     setTimeout(() => inputRef.current?.focus(), 0)
   }, [])
@@ -69,17 +62,23 @@ export function BranchPicker({
     }
   }, [projectPath, loadingRemotes, localBranches])
 
-  const allBranches = [
-    ...localBranches.map((b) => ({ name: b, isRemote: false })),
-    ...remoteBranches.map((b) => ({ name: b, isRemote: true }))
-  ]
+  const allBranches = useMemo(
+    () => [
+      ...localBranches.map((b) => ({ name: b, isRemote: false })),
+      ...remoteBranches.map((b) => ({ name: b, isRemote: true }))
+    ],
+    [localBranches, remoteBranches]
+  )
 
-  const filtered = filter
-    ? allBranches.filter((b) => b.name.toLowerCase().includes(filter.toLowerCase()))
-    : allBranches
+  const filtered = useMemo(
+    () =>
+      filter
+        ? allBranches.filter((b) => b.name.toLowerCase().includes(filter.toLowerCase()))
+        : allBranches,
+    [allBranches, filter]
+  )
 
   const active = selectedBranch ?? currentBranch
-
   const positionClass = position === 'above' ? 'bottom-full mb-1' : 'top-full mt-1'
 
   return (

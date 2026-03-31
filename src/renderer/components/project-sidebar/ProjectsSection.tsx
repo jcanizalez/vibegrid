@@ -28,8 +28,6 @@ export function ProjectsSection({
   const setActiveProject = useAppStore((s) => s.setActiveProject)
   const setAddProjectDialogOpen = useAppStore((s) => s.setAddProjectDialogOpen)
   const sidebarProjectSort = useAppStore((s) => s.sidebarProjectSort)
-  const sidebarWorktreeSort = useAppStore((s) => s.sidebarWorktreeSort)
-  const sidebarWorktreeFilter = useAppStore((s) => s.sidebarWorktreeFilter)
   const reorderProjects = useAppStore((s) => s.reorderProjects)
   const terminals = useAppStore((s) => s.terminals)
 
@@ -39,24 +37,27 @@ export function ProjectsSection({
 
   const iconSize = isCollapsed ? 22 : 14
 
+  const projectLastActivity = useMemo(() => {
+    if (sidebarProjectSort !== 'recent') return null
+    const map = new Map<string, number>()
+    for (const t of terminals.values()) {
+      const cur = map.get(t.session.projectName) ?? 0
+      if (t.lastOutputTimestamp > cur) map.set(t.session.projectName, t.lastOutputTimestamp)
+    }
+    return map
+  }, [sidebarProjectSort, terminals])
+
   const sortedProjects = useMemo(() => {
     if (sidebarProjectSort === 'manual') return workspaceProjects
     if (sidebarProjectSort === 'name') {
       return [...workspaceProjects].sort((a, b) => a.name.localeCompare(b.name))
     }
-    // 'recent' — sort by most recent session activity
     return [...workspaceProjects].sort((a, b) => {
-      let aMax = 0
-      let bMax = 0
-      for (const t of terminals.values()) {
-        if (t.session.projectName === a.name && t.lastOutputTimestamp > aMax)
-          aMax = t.lastOutputTimestamp
-        if (t.session.projectName === b.name && t.lastOutputTimestamp > bMax)
-          bMax = t.lastOutputTimestamp
-      }
+      const aMax = projectLastActivity?.get(a.name) ?? 0
+      const bMax = projectLastActivity?.get(b.name) ?? 0
       return bMax - aMax
     })
-  }, [workspaceProjects, sidebarProjectSort, terminals])
+  }, [workspaceProjects, sidebarProjectSort, projectLastActivity])
 
   const handleDragStart = useCallback(
     (e: React.DragEvent, index: number) => {
@@ -81,6 +82,7 @@ export function ProjectsSection({
   const handleDrop = useCallback(
     (e: React.DragEvent, toIndex: number) => {
       e.preventDefault()
+      if (sidebarProjectSort !== 'manual') return
       const fromIndex = parseInt(e.dataTransfer.getData('text/plain'), 10)
       if (!isNaN(fromIndex) && fromIndex !== toIndex) {
         reorderProjects(fromIndex, toIndex)
@@ -88,7 +90,7 @@ export function ProjectsSection({
       setDragSourceIndex(null)
       setDragOverIndex(null)
     },
-    [reorderProjects]
+    [reorderProjects, sidebarProjectSort]
   )
 
   const handleDragEnd = useCallback(() => {
@@ -177,8 +179,6 @@ export function ProjectsSection({
                 isCollapsed={isCollapsed}
                 worktreeSessionCounts={worktreeSessionCounts}
                 mainRepoSessionCount={mainRepoSessionCounts.get(project.name) || 0}
-                worktreeFilter={sidebarWorktreeFilter}
-                worktreeSort={sidebarWorktreeSort}
               />
             </div>
           )

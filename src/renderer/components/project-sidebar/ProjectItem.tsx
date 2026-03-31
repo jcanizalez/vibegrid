@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
+import { useShallow } from 'zustand/react/shallow'
 import { useAppStore } from '../../stores'
 import { Tooltip } from '../Tooltip'
 import { toast } from '../Toast'
@@ -9,7 +10,7 @@ import { generateWorktreeName } from '../../lib/worktree-names'
 import { ChevronRight, Plus, MoreHorizontal, GitBranch, FolderGit2 } from 'lucide-react'
 import type { ProjectConfig } from '../../../shared/types'
 import { MAIN_WORKTREE_SENTINEL } from '../../stores/types'
-import type { WorktreeInfo, WorktreeFilter, WorktreeSortMode } from '../../stores/types'
+import type { WorktreeInfo } from '../../stores/types'
 
 const EMPTY_WORKTREES: WorktreeInfo[] = []
 
@@ -20,9 +21,7 @@ export function ProjectItem({
   isActive,
   isCollapsed,
   worktreeSessionCounts,
-  mainRepoSessionCount,
-  worktreeFilter,
-  worktreeSort
+  mainRepoSessionCount
 }: {
   project: ProjectConfig
   sessionCount: number
@@ -31,8 +30,6 @@ export function ProjectItem({
   isCollapsed: boolean
   worktreeSessionCounts: Map<string, number>
   mainRepoSessionCount: number
-  worktreeFilter: WorktreeFilter
-  worktreeSort: WorktreeSortMode
 }) {
   const setActiveProject = useAppStore((s) => s.setActiveProject)
   const activeWorktreePath = useAppStore((s) => s.activeWorktreePath)
@@ -44,7 +41,8 @@ export function ProjectItem({
   const setEditingProject = useAppStore((s) => s.setEditingProject)
   const setAddProjectDialogOpen = useAppStore((s) => s.setAddProjectDialogOpen)
   const removeProject = useAppStore((s) => s.removeProject)
-  const terminals = useAppStore((s) => s.terminals)
+  const worktreeFilter = useAppStore((s) => s.sidebarWorktreeFilter)
+  const worktreeSort = useAppStore((s) => s.sidebarWorktreeSort)
 
   const [isExpanded, setIsExpanded] = useState(defaultExpanded)
   const [openMenu, setOpenMenu] = useState(false)
@@ -53,19 +51,39 @@ export function ProjectItem({
   const mainWt = allWorktrees.find((wt) => wt.isMain)
   const isMainActive = activeWorktreePath === MAIN_WORKTREE_SENTINEL && isActive
 
+  // Narrow selector: only re-render when linked session timestamps change
+  const linkedIds = useMemo(
+    () =>
+      allWorktrees
+        .filter((wt) => !wt.isMain && wt.linkedSessionId)
+        .map((wt) => wt.linkedSessionId!),
+    [allWorktrees]
+  )
+  const linkedTimestamps = useAppStore(
+    useShallow(
+      useCallback(
+        (s) => {
+          if (worktreeSort !== 'recent') return null
+          const map: Record<string, number> = {}
+          for (const id of linkedIds) {
+            map[id] = s.terminals.get(id)?.lastOutputTimestamp ?? 0
+          }
+          return map
+        },
+        [worktreeSort, linkedIds]
+      )
+    )
+  )
+
   const sortedWorktrees = useMemo(() => {
     let wts = allWorktrees.filter((wt) => !wt.isMain)
     if (worktreeFilter === 'active') {
       wts = wts.filter((wt) => (worktreeSessionCounts.get(wt.path) || 0) > 0)
     }
-    if (worktreeSort === 'recent') {
+    if (worktreeSort === 'recent' && linkedTimestamps) {
       wts = [...wts].sort((a, b) => {
-        const aTime = a.linkedSessionId
-          ? (terminals.get(a.linkedSessionId)?.lastOutputTimestamp ?? 0)
-          : 0
-        const bTime = b.linkedSessionId
-          ? (terminals.get(b.linkedSessionId)?.lastOutputTimestamp ?? 0)
-          : 0
+        const aTime = a.linkedSessionId ? (linkedTimestamps[a.linkedSessionId] ?? 0) : 0
+        const bTime = b.linkedSessionId ? (linkedTimestamps[b.linkedSessionId] ?? 0) : 0
         if (bTime !== aTime) return bTime - aTime
         return a.name.localeCompare(b.name)
       })
@@ -73,7 +91,7 @@ export function ProjectItem({
       wts = [...wts].sort((a, b) => a.name.localeCompare(b.name))
     }
     return wts
-  }, [allWorktrees, worktreeFilter, worktreeSort, worktreeSessionCounts, terminals])
+  }, [allWorktrees, worktreeFilter, worktreeSort, worktreeSessionCounts, linkedTimestamps])
 
   const toggleExpanded = () => {
     const expanding = !isExpanded
