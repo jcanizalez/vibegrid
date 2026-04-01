@@ -16,6 +16,15 @@ import { DEFAULT_AGENT_COMMANDS } from '@vibegrid/shared/agent-defaults'
 import log from './logger'
 
 const MAX_OUTPUT_LINES = 1000
+const FORCE_KILL_DELAY_MS = 5000
+
+/** Force-kill a Windows process tree via taskkill. */
+function forceKillWin(pid: number): void {
+  spawn('taskkill', ['/F', '/T', '/PID', String(pid)], {
+    stdio: 'ignore',
+    windowsHide: true
+  }).unref()
+}
 
 class HeadlessManager extends EventEmitter {
   private processes = new Map<string, ChildProcess>()
@@ -68,10 +77,12 @@ class HeadlessManager extends EventEmitter {
     const child = spawn(spawnArgs.command, spawnArgs.args, {
       cwd: effectivePath,
       env,
-      stdio: ['pipe', 'pipe', 'pipe']
+      stdio: ['pipe', 'pipe', 'pipe'],
+      windowsHide: true
     })
 
     // Close stdin immediately so the process doesn't hang waiting for input
+    child.stdin?.on('error', () => {}) // prevent EPIPE if process exits early
     child.stdin?.end()
 
     this.processes.set(id, child)
@@ -148,14 +159,14 @@ class HeadlessManager extends EventEmitter {
     if (!proc) return
     if (process.platform === 'win32') {
       proc.kill()
+      setTimeout(() => {
+        if (this.processes.has(id) && proc.pid) forceKillWin(proc.pid)
+      }, FORCE_KILL_DELAY_MS)
     } else {
       proc.kill('SIGTERM')
-      // Force kill after 5s if still running
       setTimeout(() => {
-        if (this.processes.has(id)) {
-          proc.kill('SIGKILL')
-        }
-      }, 5000)
+        if (this.processes.has(id)) proc.kill('SIGKILL')
+      }, FORCE_KILL_DELAY_MS)
     }
   }
 
@@ -196,8 +207,12 @@ class HeadlessManager extends EventEmitter {
 
   killAll(): void {
     for (const [id, proc] of this.processes) {
-      if (process.platform === 'win32') proc.kill()
-      else proc.kill('SIGKILL')
+      if (process.platform === 'win32') {
+        proc.kill()
+        if (proc.pid) forceKillWin(proc.pid)
+      } else {
+        proc.kill('SIGKILL')
+      }
       this.processes.delete(id)
     }
     this.sessions.clear()
