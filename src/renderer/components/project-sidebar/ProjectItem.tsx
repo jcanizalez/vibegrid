@@ -149,6 +149,11 @@ export function ProjectItem({
     sessionsOnly
   ])
 
+  // Load worktrees when isGitRepo resolves true while already expanded
+  useEffect(() => {
+    if (isExpanded && !sessionsOnly && isGitRepo) loadWorktrees(project.path)
+  }, [isGitRepo]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const toggleExpanded = () => {
     const expanding = !isExpanded
     if (expanding && !sessionsOnly && isGitRepo) loadWorktrees(project.path)

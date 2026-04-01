@@ -174,6 +174,10 @@ class HeadlessManager extends EventEmitter {
         sess.endedAt = Date.now()
         this.processes.delete(id)
         this.emit('client-message', IPC.HEADLESS_EXIT, { id, exitCode: 1 })
+        setTimeout(() => {
+          this.outputBuffers.delete(id)
+          this.sessions.delete(id)
+        }, 30_000)
       }
     })
 

@@ -19,7 +19,8 @@ export function MinimizedPill({ terminalId }: { terminalId: string }) {
   const { session, status } = terminal
 
   return (
-    <div
+    <button
+      type="button"
       className="inline-flex items-center gap-1.5 rounded-md border border-white/[0.06] bg-[#1a1a1e]
                  px-2.5 py-1 cursor-pointer transition-[border-color] select-none
                  hover:border-white/[0.12]"
@@ -50,6 +51,6 @@ export function MinimizedPill({ terminalId }: { terminalId: string }) {
           </span>
         </>
       )}
-    </div>
+    </button>
   )
 }
