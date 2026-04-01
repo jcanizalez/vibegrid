@@ -10,7 +10,7 @@ import { generateWorktreeName } from '../../lib/worktree-names'
 import { SessionItem } from './SessionItem'
 import { ChevronRight, Plus, MoreHorizontal, GitBranch, FolderGit2, Server } from 'lucide-react'
 import type { ProjectConfig } from '../../../shared/types'
-import { getProjectHostIds } from '../../../shared/types'
+import { getProjectHostIds, getProjectRemoteHostId } from '../../../shared/types'
 import { MAIN_WORKTREE_SENTINEL } from '../../stores/types'
 import type { SidebarViewMode, WorktreeInfo } from '../../stores/types'
 import type { SidebarSessionInfo } from './types'
@@ -316,8 +316,7 @@ export function ProjectItem({
                             onClick={async (e) => {
                               e.stopPropagation()
                               const agentType = config?.defaults.defaultAgent || 'claude'
-                              const hostIds = getProjectHostIds(project)
-                              const remoteHostId = hostIds.find((id) => id !== 'local')
+                              const remoteHostId = getProjectRemoteHostId(project)
                               const session = await window.api.createTerminal({
                                 agentType,
                                 projectName: project.name,

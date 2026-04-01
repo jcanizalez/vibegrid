@@ -15,7 +15,7 @@ import {
   LaunchAgentConfig,
   TriggerConfig,
   WorkflowNode,
-  getProjectHostIds
+  getProjectRemoteHostId
 } from '../../../../shared/types'
 import { useAppStore } from '../../../stores'
 import { TEMPLATE_VARIABLES, StepVariableGroup } from '../../../lib/template-vars'
@@ -65,8 +65,7 @@ export function LaunchAgentConfigForm({
 
   // Remote host is now derived from the project's hostIds
   const selectedProject = projects.find((p) => p.name === config.projectName)
-  const projectHostIds = selectedProject ? getProjectHostIds(selectedProject) : ['local']
-  const isRemote = projectHostIds.some((id) => id !== 'local')
+  const isRemote = !!selectedProject && !!getProjectRemoteHostId(selectedProject)
 
   // Fetch existing worktrees when project changes
   useEffect(() => {

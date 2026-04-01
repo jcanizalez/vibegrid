@@ -394,8 +394,6 @@ function useCommands(
       }
     }
 
-    // Remote host quick-launch is now project-level — remoteHostId is derived from project config
-
     // --- Filter & Sort ---
     const statusOptions: { value: StatusFilter; label: string; shortcut?: string }[] = [
       { value: 'all', label: 'Show All', shortcut: '\u23181' },

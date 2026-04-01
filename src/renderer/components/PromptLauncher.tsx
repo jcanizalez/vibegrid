@@ -448,8 +448,6 @@ export function PromptLauncher({ mode, onClose }: PromptLauncherProps) {
         </div>
       )}
 
-      {/* Host indicator (derived from project, not selectable) */}
-
       {/* Spacer */}
       <div className="flex-1" />
 
