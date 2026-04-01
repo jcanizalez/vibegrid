@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useShallow } from 'zustand/react/shallow'
 import { HeadlessSession } from '../../shared/types'
 import { AgentIcon } from './AgentIcon'
 import { useAppStore } from '../stores'
@@ -40,12 +41,23 @@ export function HeadlessPill({ session }: Props) {
   const [duration, setDuration] = useState('')
   const logsRef = useRef<HTMLDivElement>(null)
   const lastOutput = useAppStore((s) => s.headlessLastOutput.get(session.id))
-  const dismissHeadless = useAppStore((s) => s.dismissHeadlessSession)
-  const setEditingWorkflowId = useAppStore((s) => s.setEditingWorkflowId)
-  const setWorkflowEditorOpen = useAppStore((s) => s.setWorkflowEditorOpen)
-  const setSelectedTaskId = useAppStore((s) => s.setSelectedTaskId)
-  const workflows = useAppStore((s) => s.config?.workflows)
-  const tasks = useAppStore((s) => s.config?.tasks)
+  const {
+    dismissHeadless,
+    setEditingWorkflowId,
+    setWorkflowEditorOpen,
+    setSelectedTaskId,
+    workflows,
+    tasks
+  } = useAppStore(
+    useShallow((s) => ({
+      dismissHeadless: s.dismissHeadlessSession,
+      setEditingWorkflowId: s.setEditingWorkflowId,
+      setWorkflowEditorOpen: s.setWorkflowEditorOpen,
+      setSelectedTaskId: s.setSelectedTaskId,
+      workflows: s.config?.workflows,
+      tasks: s.config?.tasks
+    }))
+  )
 
   const workflow = useMemo(
     () => (session.workflowId ? workflows?.find((w) => w.id === session.workflowId) : undefined),

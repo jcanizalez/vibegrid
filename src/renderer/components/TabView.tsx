@@ -14,20 +14,14 @@ import { TabStatusBar } from './TabStatusBar'
 import { getDisplayName, getBranchLabel } from '../lib/terminal-display'
 import { closeTerminalSession } from '../lib/terminal-close'
 import { resolveActiveProject } from '../lib/session-utils'
-import { AgentStatus } from '../../shared/types'
+import type { AgentStatus } from '../../shared/types'
+import { STATUS_DOT } from '../lib/status-colors'
 import { ConfirmPopover } from './ConfirmPopover'
 import { toast } from './Toast'
 import { ChevronDown, GripVertical, Pencil } from 'lucide-react'
 import { GridContextMenu } from './GridContextMenu'
 
 const isMac = navigator.platform.toUpperCase().includes('MAC')
-
-const STATUS_DOT: Record<AgentStatus, string> = {
-  running: 'bg-green-500',
-  waiting: 'bg-yellow-500',
-  idle: 'bg-gray-500',
-  error: 'bg-red-500'
-}
 
 const STATUS_LABEL: Record<AgentStatus, string> = {
   running: 'Running',

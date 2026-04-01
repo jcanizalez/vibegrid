@@ -145,13 +145,13 @@ class HeadlessManager extends EventEmitter {
     child.on('exit', (exitCode) => {
       log.info(`[headless] process ${id} exited with code ${exitCode}`)
       const sess = this.sessions.get(id)
-      if (sess) {
+      if (sess && sess.status === 'running') {
         sess.status = 'exited'
         sess.exitCode = exitCode ?? undefined
         sess.endedAt = Date.now()
+        this.emit('client-message', IPC.HEADLESS_EXIT, { id, exitCode: exitCode ?? 1 })
       }
       this.processes.delete(id)
-      this.emit('client-message', IPC.HEADLESS_EXIT, { id, exitCode: exitCode ?? 1 })
 
       // Clean up output buffer and session after a short delay to allow
       // final reads from the renderer, preventing unbounded memory growth.

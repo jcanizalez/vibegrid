@@ -2,15 +2,8 @@ import { useAppStore } from '../stores'
 import { useShallow } from 'zustand/react/shallow'
 import { AgentIcon } from './AgentIcon'
 import { getDisplayName, getBranchLabel } from '../lib/terminal-display'
+import { STATUS_DOT } from '../lib/status-colors'
 import { GitBranch, FolderGit2 } from 'lucide-react'
-import type { AgentStatus } from '../../shared/types'
-
-const STATUS_DOT: Record<AgentStatus, string> = {
-  running: 'bg-green-500',
-  waiting: 'bg-yellow-500',
-  idle: 'bg-gray-500',
-  error: 'bg-red-500'
-}
 
 export function MinimizedPill({ terminalId }: { terminalId: string }) {
   const { terminal, toggleMinimized, setActiveTabId } = useAppStore(
