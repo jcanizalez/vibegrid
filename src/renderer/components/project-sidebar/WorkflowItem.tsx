@@ -79,13 +79,8 @@ export function WorkflowItem({
               <WorkflowContextMenu
                 onEdit={handleEdit}
                 onDelete={() => removeWorkflow(wf.id)}
-                onChangeIcon={(icon, color) => {
-                  updateWorkflow(wf.id, { ...wf, icon, iconColor: color })
-                }}
                 isScheduled={isScheduled}
                 isEnabled={wf.enabled}
-                currentIcon={wf.icon}
-                currentColor={wf.iconColor || '#3b82f6'}
                 onToggleEnabled={() => {
                   updateWorkflow(wf.id, { ...wf, enabled: !wf.enabled })
                 }}
