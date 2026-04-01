@@ -605,6 +605,12 @@ function loadDefaults(d: Database.Database): AppConfig['defaults'] {
     }),
     ...(map.networkAccessEnabled !== undefined && {
       networkAccessEnabled: map.networkAccessEnabled as boolean
+    }),
+    ...(map.showHeadlessAgents !== undefined && {
+      showHeadlessAgents: map.showHeadlessAgents as boolean
+    }),
+    ...(map.headlessRetentionMinutes !== undefined && {
+      headlessRetentionMinutes: map.headlessRetentionMinutes as number
     })
   }
 }

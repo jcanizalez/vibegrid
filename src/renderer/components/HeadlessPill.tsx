@@ -41,6 +41,9 @@ export function HeadlessPill({ session }: Props) {
   const logsRef = useRef<HTMLDivElement>(null)
   const lastOutput = useAppStore((s) => s.headlessLastOutput.get(session.id))
   const dismissHeadless = useAppStore((s) => s.dismissHeadlessSession)
+  const setEditingWorkflowId = useAppStore((s) => s.setEditingWorkflowId)
+  const setWorkflowEditorOpen = useAppStore((s) => s.setWorkflowEditorOpen)
+  const setSelectedTaskId = useAppStore((s) => s.setSelectedTaskId)
   const workflows = useAppStore((s) => s.config?.workflows)
   const tasks = useAppStore((s) => s.config?.tasks)
 
@@ -227,18 +230,33 @@ export function HeadlessPill({ session }: Props) {
 
       {/* Tag row: workflow or task */}
       {WfIcon && session.workflowName && (
-        <div className="flex items-center gap-1 -mt-0.5 ml-5">
+        <button
+          className="flex items-center gap-1 -mt-0.5 ml-5 hover:text-gray-300 transition-colors"
+          onClick={(e) => {
+            e.stopPropagation()
+            if (session.workflowId) {
+              setEditingWorkflowId(session.workflowId)
+              setWorkflowEditorOpen(true)
+            }
+          }}
+        >
           <WfIcon size={9} strokeWidth={1.5} color={wfIconColor || undefined} />
-          <span className="text-[10px] text-gray-500 truncate max-w-[120px]">
+          <span className="text-[10px] text-gray-500 truncate max-w-[120px] hover:text-gray-300">
             {session.workflowName}
           </span>
-        </div>
+        </button>
       )}
-      {!session.workflowId && taskMeta && (
-        <div className="flex items-center gap-1 -mt-0.5 ml-5">
+      {!session.workflowId && taskMeta && task && (
+        <button
+          className="flex items-center gap-1 -mt-0.5 ml-5 hover:text-gray-300 transition-colors"
+          onClick={(e) => {
+            e.stopPropagation()
+            setSelectedTaskId(task.id)
+          }}
+        >
           <taskMeta.Icon size={9} strokeWidth={1.5} className={taskMeta.color} />
-          <span className="text-[10px] text-gray-500">task</span>
-        </div>
+          <span className="text-[10px] text-gray-500 hover:text-gray-300">{task.title}</span>
+        </button>
       )}
 
       {/* Expanded: log output */}
