@@ -57,6 +57,7 @@ export function useLaunchSettings() {
   const [selectedWorktreeName, setSelectedWorktreeName] = useState<string | null>(null)
   const [liveBranch, setLiveBranch] = useState<string | null>(null)
   const [branchWarning, setBranchWarning] = useState<string | null>(null)
+  const [isGitRepo, setIsGitRepo] = useState(true)
   const [existingWorktrees, setExistingWorktrees] = useState<
     { path: string; branch: string; isMain: boolean; name: string }[]
   >([])
@@ -111,6 +112,7 @@ export function useLaunchSettings() {
       setRemoteBranches([])
       setCurrentBranch(null)
       setSelectedBranch('')
+      setIsGitRepo(true)
       return
     }
     setLoadingBranches(true)
@@ -119,6 +121,7 @@ export function useLaunchSettings() {
       setLocalBranches(result.local)
       setCurrentBranch(result.current)
       setSelectedBranch(result.current || '')
+      setIsGitRepo(result.isGitRepo)
       setLoadingBranches(false)
     })
   }, [activeProjectPath])
@@ -335,6 +338,7 @@ export function useLaunchSettings() {
     handleSelectWorktree,
     handleSelectProjectRoot,
     handleSelectNewWorktree,
+    isGitRepo,
     liveBranch,
     branchWarning,
     branchInputRef,
