@@ -105,7 +105,7 @@ function MobileSessionCard({
  * Replaces the old single-pane swipe navigation.
  */
 export function MobileSinglePane() {
-  const orderedIds = useVisibleTerminals()
+  const { orderedIds } = useVisibleTerminals()
   const selectedId = useAppStore((s) => s.selectedTerminalId)
   const setSelected = useAppStore((s) => s.setSelectedTerminal)
   const setFocused = useAppStore((s) => s.setFocusedTerminal)

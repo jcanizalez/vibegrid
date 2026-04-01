@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { useAppStore } from '../../stores'
 import { Tooltip } from '../Tooltip'
@@ -59,6 +59,16 @@ export function ProjectItem({
   const [isExpanded, setIsExpanded] = useState(defaultExpanded)
   const [openMenu, setOpenMenu] = useState(false)
   const [collapsedBranches, setCollapsedBranches] = useState<Set<string>>(new Set())
+  const isRemoteProject = !!getProjectRemoteHostId(project)
+  const [isGitRepo, setIsGitRepo] = useState(isRemoteProject)
+
+  useEffect(() => {
+    if (isRemoteProject) return
+    window.api
+      .isGitRepo(project.path)
+      .then(setIsGitRepo)
+      .catch(() => setIsGitRepo(false))
+  }, [project.path, isRemoteProject])
 
   const showSessions = viewMode === 'worktrees-sessions'
   const sessionsOnly = viewMode === 'sessions'
@@ -139,9 +149,14 @@ export function ProjectItem({
     sessionsOnly
   ])
 
+  // Load worktrees when isGitRepo resolves true while already expanded
+  useEffect(() => {
+    if (isExpanded && !sessionsOnly && isGitRepo) loadWorktrees(project.path)
+  }, [isGitRepo]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const toggleExpanded = () => {
     const expanding = !isExpanded
-    if (expanding && !sessionsOnly) loadWorktrees(project.path)
+    if (expanding && !sessionsOnly && isGitRepo) loadWorktrees(project.path)
     setIsExpanded(!isExpanded)
   }
 
@@ -200,26 +215,54 @@ export function ProjectItem({
                 </span>
               )}
               <div className="hidden group-hover:flex items-center gap-0.5 ml-auto">
-                <Tooltip label="New worktree" position="right">
-                  <button
-                    type="button"
-                    onClick={async (e) => {
-                      e.stopPropagation()
-                      const name = generateWorktreeName()
-                      try {
-                        await window.api.createWorktree(project.path, 'main', name)
-                        loadWorktrees(project.path, true)
-                        if (!isExpanded) setIsExpanded(true)
-                      } catch (err) {
-                        const msg = err instanceof Error ? err.message : String(err)
-                        toast.error(msg || 'Failed to create worktree')
-                      }
-                    }}
-                    className="text-gray-500 hover:text-white p-0.5 rounded hover:bg-white/[0.08] transition-colors"
-                  >
-                    <FolderGit2 size={14} strokeWidth={1.5} className="text-amber-400/70" />
-                  </button>
-                </Tooltip>
+                {isGitRepo ? (
+                  <Tooltip label="New worktree" position="right">
+                    <button
+                      type="button"
+                      onClick={async (e) => {
+                        e.stopPropagation()
+                        const name = generateWorktreeName()
+                        try {
+                          await window.api.createWorktree(project.path, 'main', name)
+                          loadWorktrees(project.path, true)
+                          if (!isExpanded) setIsExpanded(true)
+                        } catch (err) {
+                          const msg = err instanceof Error ? err.message : String(err)
+                          toast.error(msg || 'Failed to create worktree')
+                        }
+                      }}
+                      className="text-gray-500 hover:text-white p-0.5 rounded hover:bg-white/[0.08] transition-colors"
+                    >
+                      <FolderGit2 size={14} strokeWidth={1.5} className="text-amber-400/70" />
+                    </button>
+                  </Tooltip>
+                ) : (
+                  <Tooltip label="New session" position="right">
+                    <button
+                      type="button"
+                      onClick={async (e) => {
+                        e.stopPropagation()
+                        try {
+                          const agentType = config?.defaults.defaultAgent || 'claude'
+                          const remoteHostId = getProjectRemoteHostId(project)
+                          const session = await window.api.createTerminal({
+                            agentType,
+                            projectName: project.name,
+                            projectPath: project.path,
+                            remoteHostId
+                          })
+                          addTerminal(session)
+                        } catch (err) {
+                          const msg = err instanceof Error ? err.message : String(err)
+                          toast.error(msg || 'Failed to create session')
+                        }
+                      }}
+                      className="text-gray-500 hover:text-white p-0.5 rounded hover:bg-white/[0.08] transition-colors"
+                    >
+                      <Plus size={14} strokeWidth={2} />
+                    </button>
+                  </Tooltip>
+                )}
                 <Tooltip label="More" position="right">
                   <button
                     type="button"
@@ -256,6 +299,14 @@ export function ProjectItem({
             ) : (
               <p className="text-[11px] text-gray-600 px-2 py-1">No active sessions</p>
             )
+          ) : !isGitRepo ? (
+            showSessions || sessionsOnly ? (
+              projectSessions.length > 0 ? (
+                projectSessions.map((s) => <SessionItem key={s.id} session={s} />)
+              ) : (
+                <p className="text-[11px] text-gray-600 px-2 py-1">No active sessions</p>
+              )
+            ) : null
           ) : (
             <>
               {mainWt && (

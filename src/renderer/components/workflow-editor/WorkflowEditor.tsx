@@ -1,6 +1,8 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { motion } from 'framer-motion'
-import { ArrowLeft, Save, Play, Trash2, History } from 'lucide-react'
+import { ArrowLeft, Save, Play, Trash2, History, Zap } from 'lucide-react'
+import { ICON_MAP } from '../project-sidebar/icon-map'
+import { PROJECT_ICON_OPTIONS, ICON_COLOR_PALETTE } from '../../lib/project-icons'
 import { ToggleSwitch } from '../settings/ToggleSwitch'
 import { useAppStore } from '../../stores'
 import {
@@ -65,6 +67,8 @@ export function WorkflowEditor() {
   const [autoCleanupWorktrees, setAutoCleanupWorktrees] = useState(false)
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
   const [showRunHistory, setShowRunHistory] = useState(false)
+  const [showIconPicker, setShowIconPicker] = useState(false)
+  const iconPickerRef = useRef<HTMLDivElement>(null)
   const [executionHistory, setExecutionHistory] = useState<
     import('../../../shared/types').WorkflowExecution[]
   >([])
@@ -145,6 +149,17 @@ export function WorkflowEditor() {
     setSelectedNodeId(null)
     setShowRunHistory(false)
   }, [existingWorkflow, editingId, isOpen])
+
+  useEffect(() => {
+    if (!showIconPicker) return
+    const handler = (e: MouseEvent) => {
+      if (iconPickerRef.current && !iconPickerRef.current.contains(e.target as Node)) {
+        setShowIconPicker(false)
+      }
+    }
+    document.addEventListener('pointerdown', handler)
+    return () => document.removeEventListener('pointerdown', handler)
+  }, [showIconPicker])
 
   const handleClose = useCallback(() => {
     setOpen(false)
@@ -467,6 +482,63 @@ export function WorkflowEditor() {
           >
             <ArrowLeft size={16} />
           </button>
+          <div className="relative">
+            <button
+              onClick={() => setShowIconPicker(!showIconPicker)}
+              className="p-1.5 rounded-md hover:bg-white/[0.08] transition-colors"
+              title="Change icon"
+            >
+              {(() => {
+                const WfIcon = ICON_MAP[icon] || Zap
+                return <WfIcon size={16} color={iconColor} strokeWidth={1.5} />
+              })()}
+            </button>
+            {showIconPicker && (
+              <div
+                ref={iconPickerRef}
+                className="absolute top-full left-0 mt-1 p-2 rounded-lg border border-white/[0.08] shadow-xl z-50 w-[220px] space-y-2"
+                style={{ background: '#1e1e22' }}
+              >
+                <div className="grid grid-cols-8 gap-1">
+                  {PROJECT_ICON_OPTIONS.map((opt) => {
+                    const IconComp = ICON_MAP[opt.name] || Zap
+                    return (
+                      <button
+                        key={opt.name}
+                        onClick={() => setIcon(opt.name)}
+                        className={`p-1.5 rounded ${
+                          icon === opt.name
+                            ? 'bg-white/[0.1] ring-1 ring-white/[0.2]'
+                            : 'hover:bg-white/[0.06]'
+                        }`}
+                        title={opt.label}
+                      >
+                        <IconComp
+                          size={12}
+                          color={icon === opt.name ? iconColor : '#9ca3af'}
+                          strokeWidth={1.5}
+                        />
+                      </button>
+                    )
+                  })}
+                </div>
+                <div className="flex gap-1.5">
+                  {ICON_COLOR_PALETTE.map((color) => (
+                    <button
+                      key={color}
+                      onClick={() => setIconColor(color)}
+                      className={`w-5 h-5 rounded-full border ${
+                        iconColor === color
+                          ? 'border-white scale-110'
+                          : 'border-transparent hover:border-white/30'
+                      }`}
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
           <input
             type="text"
             value={name}

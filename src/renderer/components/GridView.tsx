@@ -5,6 +5,7 @@ import { AnimatePresence, LayoutGroup, motion } from 'framer-motion'
 import { useAppStore } from '../stores'
 import { AgentCard } from './AgentCard'
 import { HeadlessPill } from './HeadlessPill'
+import { MinimizedPill } from './MinimizedPill'
 import { PromptLauncher } from './PromptLauncher'
 import { GridContextMenu } from './GridContextMenu'
 import { AgentIcon } from './AgentIcon'
@@ -72,7 +73,7 @@ export const GridView = memo(function GridView() {
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map())
 
   const terminals = useAppStore((s) => s.terminals)
-  const orderedIds = useVisibleTerminals()
+  const { orderedIds, minimizedIds } = useVisibleTerminals()
 
   const isMobile = useIsMobile()
 
@@ -201,7 +202,25 @@ export const GridView = memo(function GridView() {
         </div>
       )}
 
-      {orderedIds.length === 0 && filteredHeadless.length === 0 ? (
+      {/* Minimized sessions section */}
+      {minimizedIds.length > 0 && (
+        <div className="mb-4">
+          <div className="flex items-center gap-2 mb-2 px-1">
+            <span className="text-[11px] font-medium text-gray-500 uppercase tracking-wider">
+              Minimized
+            </span>
+            <span className="text-[10px] text-gray-600">{minimizedIds.length}</span>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {minimizedIds.map((id) => (
+              <MinimizedPill key={id} terminalId={id} />
+            ))}
+          </div>
+          {orderedIds.length > 0 && <div className="h-px bg-white/[0.06] mt-4" />}
+        </div>
+      )}
+
+      {orderedIds.length === 0 && filteredHeadless.length === 0 && minimizedIds.length === 0 ? (
         isFiltered ? (
           <div className="flex flex-col items-center justify-center h-full">
             <svg

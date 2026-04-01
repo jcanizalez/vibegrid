@@ -1,6 +1,7 @@
-import { X } from 'lucide-react'
+import { Pencil, X } from 'lucide-react'
 import { useAppStore } from '../../stores'
 import { AgentIcon } from '../AgentIcon'
+import { InlineRename } from '../InlineRename'
 import { closeTerminalSession } from '../../lib/terminal-close'
 import { toast } from '../Toast'
 import type { AgentStatus } from '../../../shared/types'
@@ -22,7 +23,11 @@ export function SessionItem({
 }) {
   const focusedTerminalId = useAppStore((s) => s.focusedTerminalId)
   const setFocusedTerminal = useAppStore((s) => s.setFocusedTerminal)
+  const renamingTerminalId = useAppStore((s) => s.renamingTerminalId)
+  const setRenamingTerminalId = useAppStore((s) => s.setRenamingTerminalId)
+  const renameTerminal = useAppStore((s) => s.renameTerminal)
   const isFocused = focusedTerminalId === session.id
+  const isRenaming = renamingTerminalId === session.id
 
   return (
     <button
@@ -48,24 +53,61 @@ export function SessionItem({
         </div>
       </div>
       <div className="min-w-0 flex-1">
-        <div className="truncate">{session.name}</div>
+        {isRenaming ? (
+          <InlineRename
+            value={session.name}
+            onCommit={(name) => {
+              renameTerminal(session.id, name)
+              setRenamingTerminalId(null)
+              toast.success(`Renamed to "${name}"`)
+            }}
+            onCancel={() => setRenamingTerminalId(null)}
+            className="text-[12px] w-full"
+          />
+        ) : (
+          <div className="flex items-center gap-1 group/rename">
+            <span className="truncate">{session.name}</span>
+            <span
+              role="button"
+              tabIndex={0}
+              aria-label="Rename session"
+              title="Rename"
+              onClick={(e) => {
+                e.stopPropagation()
+                setRenamingTerminalId(session.id)
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  setRenamingTerminalId(session.id)
+                }
+              }}
+              className="opacity-0 group-hover/rename:opacity-100 text-gray-500 hover:text-gray-300 transition-opacity shrink-0 cursor-pointer"
+            >
+              <Pencil size={9} />
+            </span>
+          </div>
+        )}
         {showBranch && session.branch && (
           <div className="text-[10px] text-gray-600 truncate">{session.branch}</div>
         )}
       </div>
-      <button
-        type="button"
-        aria-label={`Close session ${session.name}`}
-        title="Close session"
-        onClick={async (e) => {
-          e.stopPropagation()
-          await closeTerminalSession(session.id)
-          toast.success('Session closed')
-        }}
-        className="opacity-0 group-hover/session:opacity-100 focus:opacity-100 text-gray-500 hover:text-red-400 p-0.5 rounded hover:bg-white/[0.08] transition-colors shrink-0"
-      >
-        <X size={12} strokeWidth={2} />
-      </button>
+      {!isRenaming && (
+        <button
+          type="button"
+          aria-label={`Close session ${session.name}`}
+          title="Close session"
+          onClick={async (e) => {
+            e.stopPropagation()
+            await closeTerminalSession(session.id)
+            toast.success('Session closed')
+          }}
+          className="opacity-0 group-hover/session:opacity-100 focus:opacity-100 text-gray-500 hover:text-red-400 p-0.5 rounded hover:bg-white/[0.08] transition-colors shrink-0"
+        >
+          <X size={12} strokeWidth={2} />
+        </button>
+      )}
     </button>
   )
 }

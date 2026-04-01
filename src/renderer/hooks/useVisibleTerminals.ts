@@ -3,7 +3,7 @@ import { useShallow } from 'zustand/react/shallow'
 import { useAppStore } from '../stores'
 import { MAIN_WORKTREE_SENTINEL } from '../stores/types'
 
-export function useVisibleTerminals(): string[] {
+export function useVisibleTerminals(): { orderedIds: string[]; minimizedIds: string[] } {
   const {
     terminals,
     activeProject,
@@ -13,6 +13,7 @@ export function useVisibleTerminals(): string[] {
     sortMode,
     statusFilter,
     terminalOrder,
+    minimizedTerminals,
     setVisibleTerminalIds
   } = useAppStore(
     useShallow((s) => ({
@@ -24,6 +25,7 @@ export function useVisibleTerminals(): string[] {
       sortMode: s.sortMode,
       statusFilter: s.statusFilter,
       terminalOrder: s.terminalOrder,
+      minimizedTerminals: s.minimizedTerminals,
       setVisibleTerminalIds: s.setVisibleTerminalIds
     }))
   )
@@ -35,46 +37,55 @@ export function useVisibleTerminals(): string[] {
     )
   }, [projects, activeWorkspace])
 
-  const orderedIds = useMemo(
-    () =>
-      Array.from(terminals.entries())
-        .filter(([, t]) => {
-          if (activeProject && t.session.projectName !== activeProject) return false
-          if (!activeProject && workspaceProjects && !workspaceProjects.has(t.session.projectName))
-            return false
-          if (activeWorktreePath) {
-            if (activeWorktreePath === MAIN_WORKTREE_SENTINEL) {
-              if (t.session.worktreePath) return false
-            } else if (t.session.worktreePath !== activeWorktreePath) return false
+  const { orderedIds, minimizedIds } = useMemo(() => {
+    const filtered = Array.from(terminals.entries())
+      .filter(([, t]) => {
+        if (activeProject && t.session.projectName !== activeProject) return false
+        if (!activeProject && workspaceProjects && !workspaceProjects.has(t.session.projectName))
+          return false
+        if (activeWorktreePath) {
+          if (activeWorktreePath === MAIN_WORKTREE_SENTINEL) {
+            if (t.session.worktreePath) return false
+          } else if (t.session.worktreePath !== activeWorktreePath) return false
+        }
+        if (statusFilter !== 'all' && t.status !== statusFilter) return false
+        return true
+      })
+      .sort(([aId, aState], [bId, bState]) => {
+        switch (sortMode) {
+          case 'created':
+            return bState.session.createdAt - aState.session.createdAt
+          case 'recent':
+            return bState.lastOutputTimestamp - aState.lastOutputTimestamp
+          case 'manual':
+          default: {
+            const ia = terminalOrder.indexOf(aId)
+            const ib = terminalOrder.indexOf(bId)
+            return (ia === -1 ? Infinity : ia) - (ib === -1 ? Infinity : ib)
           }
-          if (statusFilter !== 'all' && t.status !== statusFilter) return false
-          return true
-        })
-        .sort(([aId, aState], [bId, bState]) => {
-          switch (sortMode) {
-            case 'created':
-              return bState.session.createdAt - aState.session.createdAt
-            case 'recent':
-              return bState.lastOutputTimestamp - aState.lastOutputTimestamp
-            case 'manual':
-            default: {
-              const ia = terminalOrder.indexOf(aId)
-              const ib = terminalOrder.indexOf(bId)
-              return (ia === -1 ? Infinity : ia) - (ib === -1 ? Infinity : ib)
-            }
-          }
-        })
-        .map(([id]) => id),
-    [
-      terminals,
-      activeProject,
-      activeWorktreePath,
-      workspaceProjects,
-      statusFilter,
-      sortMode,
-      terminalOrder
-    ]
-  )
+        }
+      })
+
+    const ordered: string[] = []
+    const minimized: string[] = []
+    for (const [id] of filtered) {
+      if (minimizedTerminals.has(id)) {
+        minimized.push(id)
+      } else {
+        ordered.push(id)
+      }
+    }
+    return { orderedIds: ordered, minimizedIds: minimized }
+  }, [
+    terminals,
+    activeProject,
+    activeWorktreePath,
+    workspaceProjects,
+    statusFilter,
+    sortMode,
+    terminalOrder,
+    minimizedTerminals
+  ])
 
   useEffect(() => {
     setVisibleTerminalIds(orderedIds)
@@ -84,5 +95,5 @@ export function useVisibleTerminals(): string[] {
     }
   }, [orderedIds, setVisibleTerminalIds])
 
-  return orderedIds
+  return { orderedIds, minimizedIds }
 }
