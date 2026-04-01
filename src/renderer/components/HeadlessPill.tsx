@@ -131,14 +131,16 @@ export function HeadlessPill({ session }: Props) {
 
   // Resolve task status
   const taskMeta = task ? TASK_STATUS_META[task.status] : null
+  const hasTag = !!(WfIcon && session.workflowName) || !!(!session.workflowId && taskMeta && task)
 
   return (
     <div
-      className={`inline-flex items-center gap-1.5 rounded-md border bg-[#1a1a1e] px-2.5 py-1
+      className={`inline-flex rounded-md border bg-[#1a1a1e] px-2.5 py-1
                    cursor-pointer transition-[border-color,box-shadow,opacity] select-none
                    hover:border-white/[0.12]
                    ${borderClass} ${opacityClass}
-                   ${expanded ? 'flex-col !items-stretch w-[320px]' : ''}`}
+                   ${hasTag || expanded ? 'flex-col !items-stretch' : 'items-center gap-1.5'}
+                   ${expanded ? 'w-[320px]' : ''}`}
       onClick={() => setExpanded(!expanded)}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
