@@ -117,13 +117,19 @@ export function useLaunchSettings() {
     }
     setLoadingBranches(true)
     setRemoteBranches([])
-    window.api.listBranches(activeProjectPath).then((result) => {
-      setLocalBranches(result.local)
-      setCurrentBranch(result.current)
-      setSelectedBranch(result.current || '')
-      setIsGitRepo(result.isGitRepo)
-      setLoadingBranches(false)
-    })
+    window.api
+      .listBranches(activeProjectPath)
+      .then((result) => {
+        setLocalBranches(result.local)
+        setCurrentBranch(result.current)
+        setSelectedBranch(result.current || '')
+        setIsGitRepo(result.isGitRepo)
+      })
+      .catch(() => {
+        setLocalBranches([])
+        setIsGitRepo(false)
+      })
+      .finally(() => setLoadingBranches(false))
   }, [activeProjectPath])
 
   useEffect(() => {

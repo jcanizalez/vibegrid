@@ -375,8 +375,8 @@ function useCommands(
             addTerminal(session)
           }
         })
-        // Worktree variant — only for git repos
-        if (gitRepoStatus[project.path] !== false) {
+        // Worktree variant — only for confirmed git repos
+        if (gitRepoStatus[project.path] === true) {
           commands.push({
             id: `quicklaunch:${agent.type}:${project.name}:worktree`,
             label: `${agent.displayName} on ${project.name} (worktree)`,
@@ -514,14 +514,17 @@ export function CommandPalette() {
       const localProjects = (config?.projects ?? []).filter((p) =>
         getProjectHostIds(p).includes('local')
       )
-      Promise.all(
+      Promise.allSettled(
         localProjects.map(async (p) => {
           const isRepo = await window.api.isGitRepo(p.path)
           return [p.path, isRepo] as const
         })
-      )
-        .then((entries) => setGitRepoStatus(Object.fromEntries(entries)))
-        .catch(() => {})
+      ).then((results) => {
+        const entries = results.map((r, i) =>
+          r.status === 'fulfilled' ? r.value : ([localProjects[i].path, false] as const)
+        )
+        setGitRepoStatus(Object.fromEntries(entries))
+      })
     }
   }, [isOpen, config?.projects])
 

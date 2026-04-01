@@ -60,6 +60,7 @@ class HeadlessManager extends EventEmitter {
         effectiveBranch = result.branch
       } else {
         log.warn(`[headless] skipping worktree for non-git project: ${payload.projectPath}`)
+        payload.useWorktree = false
       }
     } else if (payload.branch) {
       if (isGitRepo(payload.projectPath)) {
