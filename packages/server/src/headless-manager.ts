@@ -93,7 +93,8 @@ class HeadlessManager extends EventEmitter {
       cwd: effectivePath,
       env,
       stdio: ['pipe', 'pipe', 'pipe'],
-      windowsHide: true
+      windowsHide: true,
+      shell: process.platform === 'win32'
     })
 
     // Close stdin immediately so the process doesn't hang waiting for input
@@ -164,6 +165,16 @@ class HeadlessManager extends EventEmitter {
       log.error(`[headless] process ${id} error:`, err.message)
       this.appendOutput(id, `Error: ${err.message}\n`)
       this.emit('client-message', IPC.HEADLESS_DATA, { id, data: `Error: ${err.message}\n` })
+
+      // Mark session as exited so workflow steps detect the failure
+      const sess = this.sessions.get(id)
+      if (sess && sess.status === 'running') {
+        sess.status = 'exited'
+        sess.exitCode = 1
+        sess.endedAt = Date.now()
+        this.processes.delete(id)
+        this.emit('client-message', IPC.HEADLESS_EXIT, { id, exitCode: 1 })
+      }
     })
 
     return session

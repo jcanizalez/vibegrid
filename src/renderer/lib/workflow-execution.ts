@@ -320,6 +320,11 @@ async function executeNode(
         ...(exitCode !== 0 && { error: `Exit code ${exitCode}` })
       })
       persistExecution(workflow.id, execution)
+
+      // Reset task back to todo on failure so it can be retried
+      if (exitCode !== 0 && resolvedTaskId) {
+        useAppStore.getState().reopenTask(resolvedTaskId)
+      }
     } finally {
       removeDataListener()
       removeExitListener()
