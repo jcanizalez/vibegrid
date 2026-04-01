@@ -5,6 +5,7 @@ import { getDisplayName } from '../../lib/terminal-display'
 import { useSidebarResize } from './useSidebarResize'
 import { SidebarHeader } from './SidebarHeader'
 import { ProjectsSection } from './ProjectsSection'
+import { FlatSessionsSection } from './FlatSessionsSection'
 import { WorkflowsSection } from './WorkflowsSection'
 import { ArchivedSessionsSection } from './ArchivedSessionsSection'
 import { SidebarFooter } from './SidebarFooter'
@@ -17,6 +18,7 @@ export function ProjectSidebar() {
   const isSidebarOpen = useAppStore((s) => s.isSidebarOpen)
   const toggleSidebar = useAppStore((s) => s.toggleSidebar)
   const loadArchivedSessions = useAppStore((s) => s.loadArchivedSessions)
+  const sidebarViewMode = useAppStore((s) => s.sidebarViewMode)
   const isMobile = useIsMobile()
 
   const { sidebarWidth, isResizingState, isCollapsed, handleResizeStart, handleResizeDoubleClick } =
@@ -122,16 +124,24 @@ export function ProjectSidebar() {
       <SidebarHeader isCollapsed={isCollapsed} />
 
       <div className={`flex-1 overflow-auto space-y-0.5 ${isCollapsed ? 'px-1.5' : 'px-3'}`}>
-        <ProjectsSection
-          isCollapsed={isCollapsed}
-          workspaceProjects={workspaceProjects}
-          projectTerminals={projectTerminals}
-          worktreeSessionCounts={worktreeSessionCounts}
-          mainRepoSessionCounts={mainRepoSessionCounts}
-          workspaceTerminalCount={workspaceTerminalCount}
-          worktreeSessions={worktreeSessions}
-          mainRepoSessions={mainRepoSessions}
-        />
+        {sidebarViewMode === 'sessions-flat' ? (
+          <FlatSessionsSection
+            isCollapsed={isCollapsed}
+            workspaceProjectNames={workspaceProjectNames}
+            workspaceTerminalCount={workspaceTerminalCount}
+          />
+        ) : (
+          <ProjectsSection
+            isCollapsed={isCollapsed}
+            workspaceProjects={workspaceProjects}
+            projectTerminals={projectTerminals}
+            worktreeSessionCounts={worktreeSessionCounts}
+            mainRepoSessionCounts={mainRepoSessionCounts}
+            workspaceTerminalCount={workspaceTerminalCount}
+            worktreeSessions={worktreeSessions}
+            mainRepoSessions={mainRepoSessions}
+          />
+        )}
 
         <WorkflowsSection isCollapsed={isCollapsed} workspaceWorkflows={workspaceWorkflows} />
 

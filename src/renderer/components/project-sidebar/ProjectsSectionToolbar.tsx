@@ -22,9 +22,10 @@ const WORKTREE_SORT_OPTIONS: { value: WorktreeSortMode; label: string }[] = [
 ]
 
 const VIEW_MODE_OPTIONS: { value: SidebarViewMode; label: string }[] = [
-  { value: 'worktrees', label: 'Worktrees' },
-  { value: 'worktrees-sessions', label: 'Worktrees & sessions' },
-  { value: 'sessions', label: 'Sessions' }
+  { value: 'worktrees', label: 'Projects > Worktrees' },
+  { value: 'worktrees-sessions', label: 'Projects > Worktrees > Sessions' },
+  { value: 'sessions', label: 'Projects > Sessions' },
+  { value: 'sessions-flat', label: 'Sessions (Flat)' }
 ]
 
 const WORKTREE_FILTER_OPTIONS: { value: WorktreeFilter; label: string }[] = [
@@ -121,7 +122,7 @@ export function ProjectsSectionToolbar() {
             ))}
           </div>
 
-          {viewMode !== 'sessions' && (
+          {viewMode !== 'sessions' && viewMode !== 'sessions-flat' && (
             <div className="py-1.5 border-t border-white/[0.06]">
               <div className="px-3 py-1 text-[10px] text-gray-500 uppercase tracking-wider">
                 Filter
@@ -137,21 +138,23 @@ export function ProjectsSectionToolbar() {
             </div>
           )}
 
-          <div className="py-1.5 border-t border-white/[0.06]">
-            <div className="px-3 py-1 text-[10px] text-gray-500 uppercase tracking-wider">
-              Sort projects
+          {viewMode !== 'sessions-flat' && (
+            <div className="py-1.5 border-t border-white/[0.06]">
+              <div className="px-3 py-1 text-[10px] text-gray-500 uppercase tracking-wider">
+                Sort projects
+              </div>
+              {PROJECT_SORT_OPTIONS.map((opt) => (
+                <OptionRow
+                  key={opt.value}
+                  selected={projectSort === opt.value}
+                  label={opt.label}
+                  onClick={() => setProjectSort(opt.value)}
+                />
+              ))}
             </div>
-            {PROJECT_SORT_OPTIONS.map((opt) => (
-              <OptionRow
-                key={opt.value}
-                selected={projectSort === opt.value}
-                label={opt.label}
-                onClick={() => setProjectSort(opt.value)}
-              />
-            ))}
-          </div>
+          )}
 
-          {viewMode !== 'sessions' && (
+          {viewMode !== 'sessions' && viewMode !== 'sessions-flat' && (
             <div className="py-1.5 border-t border-white/[0.06]">
               <div className="px-3 py-1 text-[10px] text-gray-500 uppercase tracking-wider">
                 Sort worktrees
