@@ -20,10 +20,12 @@ export function FlatSessionsSection({
   const setActiveProject = useAppStore((s) => s.setActiveProject)
 
   const sessions = useMemo(() => {
-    const list: (SidebarSessionInfo & { projectName: string })[] = []
+    const effectiveProject =
+      activeProject && workspaceProjectNames.has(activeProject) ? activeProject : null
+    const list: (SidebarSessionInfo & { projectName: string; lastActivity: number })[] = []
     for (const [id, t] of terminals) {
       if (!workspaceProjectNames.has(t.session.projectName)) continue
-      if (activeProject && t.session.projectName !== activeProject) continue
+      if (effectiveProject && t.session.projectName !== effectiveProject) continue
       list.push({
         id,
         name: getDisplayName(t.session),
@@ -32,14 +34,11 @@ export function FlatSessionsSection({
         branch: t.session.branch,
         isWorktree: t.session.isWorktree,
         worktreePath: t.session.worktreePath,
-        projectName: t.session.projectName
+        projectName: t.session.projectName,
+        lastActivity: t.lastOutputTimestamp
       })
     }
-    list.sort((a, b) => {
-      const aT = terminals.get(a.id)?.lastOutputTimestamp ?? 0
-      const bT = terminals.get(b.id)?.lastOutputTimestamp ?? 0
-      return bT - aT
-    })
+    list.sort((a, b) => b.lastActivity - a.lastActivity)
     return list
   }, [terminals, workspaceProjectNames, activeProject])
 
