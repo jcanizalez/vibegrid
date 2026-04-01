@@ -9,6 +9,7 @@ import {
 } from '../lib/terminal-registry'
 import { InlineRename } from './InlineRename'
 import { TerminalContextMenu } from './TerminalContextMenu'
+import { Pencil } from 'lucide-react'
 
 const MIN_HEIGHT = 120
 const MAX_HEIGHT_RATIO = 0.7
@@ -151,7 +152,7 @@ export function TerminalPanel() {
         {tabs.map((tab) => (
           <div
             key={tab.id}
-            className={`flex items-center gap-1.5 px-2.5 h-[26px] rounded text-[11px] cursor-pointer transition-colors select-none
+            className={`group/tab flex items-center gap-1.5 px-2.5 h-[26px] rounded text-[11px] cursor-pointer transition-colors select-none
               ${
                 activeTab === tab.id
                   ? 'bg-white/[0.1] text-gray-200'
@@ -183,7 +184,29 @@ export function TerminalPanel() {
                 className="text-[11px] w-[80px]"
               />
             ) : (
-              <span>{tab.title}</span>
+              <>
+                <span>{tab.title}</span>
+                <span
+                  role="button"
+                  tabIndex={0}
+                  aria-label="Rename tab"
+                  title="Rename"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setRenamingTabId(tab.id)
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      setRenamingTabId(tab.id)
+                    }
+                  }}
+                  className="opacity-0 group-hover/tab:opacity-100 text-gray-500 hover:text-gray-300 transition-opacity shrink-0 cursor-pointer"
+                >
+                  <Pencil size={9} />
+                </span>
+              </>
             )}
             <button
               className="ml-1 opacity-0 group-hover:opacity-100 hover:text-red-400 transition-opacity"
