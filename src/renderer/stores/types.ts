@@ -33,7 +33,7 @@ export type TaskStatusFilter = 'all' | 'todo' | 'in_progress' | 'in_review' | 'd
 export type ProjectSortMode = 'manual' | 'name' | 'recent'
 export type WorktreeSortMode = 'name' | 'recent'
 export type WorktreeFilter = 'all' | 'active'
-export type SidebarViewMode = 'worktrees' | 'worktrees-sessions' | 'sessions'
+export type SidebarViewMode = 'worktrees' | 'worktrees-sessions' | 'sessions' | 'sessions-flat'
 export type PanelTab = 'changes' | 'all-files'
 
 export interface TerminalState {
