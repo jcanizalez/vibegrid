@@ -65,9 +65,6 @@ export function InlineRename({ value, onCommit, onCancel, className }: Props) {
         userInteractedRef.current = true
         setText(e.target.value)
       }}
-      onFocus={() => {
-        userInteractedRef.current = true
-      }}
       onBlur={handleBlur}
       onKeyDown={handleKeyDown}
       className={`bg-white/[0.06] border border-white/[0.15] rounded px-1.5 py-0.5
