@@ -22,7 +22,9 @@ import {
   IPC,
   WidgetAgentInfo,
   PermissionRequestInfo,
-  SessionEventType
+  SessionEventType,
+  RemoteHost,
+  getProjectRemoteHostId
 } from '@vibegrid/shared/types'
 import * as gitUtils from './git-utils'
 import { listDir, readFileContent } from './file-utils'
@@ -191,45 +193,88 @@ export function registerAllMethods(): void {
   registerMethod('sessions:clear', () => sessionManager.clear())
   registerMethod('sessions:getRecent', (projectPath) => getRecentSessions(projectPath))
 
-  // Git
+  // Resolve remote host by ID
+  function resolveRemoteHostById(hostId: string): RemoteHost | undefined {
+    const cfg = configManager.loadConfig()
+    return cfg.remoteHosts?.find((h) => h.id === hostId)
+  }
+
+  // Git — resolve remote host for project or worktree paths
+  function resolveRemoteHost(projectPath: string): RemoteHost | undefined {
+    const cfg = configManager.loadConfig()
+    const project = cfg.projects.find((p) => p.path === projectPath)
+    if (!project) return undefined
+    const remoteId = getProjectRemoteHostId(project)
+    if (!remoteId) return undefined
+    return cfg.remoteHosts?.find((h) => h.id === remoteId)
+  }
+
+  /** Resolve remote host from any path (project root or worktree subdirectory). */
+  function resolveRemoteHostByPath(anyPath: string): RemoteHost | undefined {
+    const cfg = configManager.loadConfig()
+    for (const project of cfg.projects) {
+      if (anyPath === project.path || anyPath.startsWith(project.path + '/')) {
+        const remoteId = getProjectRemoteHostId(project)
+        if (!remoteId) return undefined
+        return cfg.remoteHosts?.find((h) => h.id === remoteId)
+      }
+      const parentDir = project.path.replace(/\/[^/]+$/, '')
+      if (anyPath.startsWith(parentDir + '/.vibegrid-worktrees/')) {
+        const remoteId = getProjectRemoteHostId(project)
+        if (!remoteId) return undefined
+        return cfg.remoteHosts?.find((h) => h.id === remoteId)
+      }
+    }
+    return undefined
+  }
+
   registerMethod('git:isGitRepo', (projectPath) => gitUtils.isGitRepo(projectPath))
   registerMethod('git:listBranches', (projectPath) => {
-    const isRepo = gitUtils.isGitRepo(projectPath)
+    const remote = resolveRemoteHost(projectPath)
+    const isRepo = remote || gitUtils.isGitRepo(projectPath)
     return {
-      local: isRepo ? gitUtils.listBranches(projectPath) : [],
-      current: isRepo ? gitUtils.getGitBranch(projectPath) : null,
-      isGitRepo: isRepo
+      local: isRepo ? gitUtils.listBranches(projectPath, remote) : [],
+      current: isRepo ? gitUtils.getGitBranch(projectPath, remote) : null,
+      isGitRepo: !!isRepo
     }
   })
-  registerMethod('git:listRemoteBranches', (projectPath) =>
-    gitUtils.listRemoteBranches(projectPath)
-  )
-  registerMethod('git:createWorktree', ({ projectPath, branch, worktreeName }) =>
-    gitUtils.createWorktree(projectPath, branch, worktreeName)
-  )
-  registerMethod('git:removeWorktree', ({ projectPath, worktreePath, force }) =>
-    gitUtils.removeWorktree(projectPath, worktreePath, force)
-  )
+  registerMethod('git:listRemoteBranches', (projectPath) => {
+    const remote = resolveRemoteHost(projectPath)
+    return gitUtils.listRemoteBranches(projectPath, remote)
+  })
+  registerMethod('git:createWorktree', ({ projectPath, branch, worktreeName }) => {
+    const remote = resolveRemoteHost(projectPath)
+    return gitUtils.createWorktree(projectPath, branch, worktreeName, remote)
+  })
+  registerMethod('git:removeWorktree', ({ projectPath, worktreePath, force }) => {
+    const remote = resolveRemoteHost(projectPath)
+    return gitUtils.removeWorktree(projectPath, worktreePath, force, remote)
+  })
   registerMethod('git:checkoutBranch', ({ cwd, branch }) => {
-    const result = gitUtils.checkoutBranch(cwd, branch)
+    const remote = resolveRemoteHostByPath(cwd)
+    const result = gitUtils.checkoutBranch(cwd, branch, remote)
     if (result.ok) {
       ptyManager.updateSessionsForWorktree(cwd, { branch })
       headlessManager.updateSessionsForWorktree(cwd, { branch })
     }
     return result
   })
-  registerMethod('git:getWorktreeBranch', (worktreePath) => gitUtils.getGitBranch(worktreePath))
+  registerMethod('git:getWorktreeBranch', (worktreePath) => {
+    const remote = resolveRemoteHostByPath(worktreePath)
+    return gitUtils.getGitBranch(worktreePath, remote)
+  })
   registerMethod('git:renameWorktreeBranch', ({ worktreePath, newBranch }) => {
-    const result = gitUtils.renameWorktreeBranch(worktreePath, newBranch)
+    const remote = resolveRemoteHostByPath(worktreePath)
+    const result = gitUtils.renameWorktreeBranch(worktreePath, newBranch, remote)
     if (result) {
-      // Propagate the new branch name to all sessions using this worktree
       ptyManager.updateSessionsForWorktree(worktreePath, { branch: newBranch })
       headlessManager.updateSessionsForWorktree(worktreePath, { branch: newBranch })
     }
     return result
   })
   registerMethod('git:renameWorktree', ({ worktreePath, newName }) => {
-    const result = gitUtils.renameWorktree(worktreePath, newName)
+    const remote = resolveRemoteHostByPath(worktreePath)
+    const result = gitUtils.renameWorktree(worktreePath, newName, remote)
     if (result) {
       ptyManager.updateSessionsForWorktree(worktreePath, {
         worktreePath: result.newPath,
@@ -242,8 +287,14 @@ export function registerAllMethods(): void {
     }
     return result
   })
-  registerMethod('git:worktreeDirty', (worktreePath) => gitUtils.isWorktreeDirty(worktreePath))
-  registerMethod('git:listWorktrees', (projectPath) => gitUtils.listWorktrees(projectPath))
+  registerMethod('git:worktreeDirty', (worktreePath) => {
+    const remote = resolveRemoteHostByPath(worktreePath)
+    return gitUtils.isWorktreeDirty(worktreePath, remote)
+  })
+  registerMethod('git:listWorktrees', (projectPath) => {
+    const remote = resolveRemoteHost(projectPath)
+    return gitUtils.listWorktrees(projectPath, remote)
+  })
 
   registerMethod('worktree:activeSessions', (worktreePath: string) => {
     const pty = ptyManager.getActiveSessionsForWorktree(worktreePath)
@@ -253,13 +304,26 @@ export function registerAllMethods(): void {
       sessionIds: [...pty.sessionIds, ...headless.sessionIds]
     }
   })
-  registerMethod('git:getBranch', (cwd) => gitUtils.getGitBranch(cwd))
-  registerMethod('git:diffStat', (cwd) => gitUtils.getGitDiffStat(cwd))
-  registerMethod('git:diffFull', (cwd) => gitUtils.getGitDiffFull(cwd))
-  registerMethod('git:commit', ({ cwd, message, includeUnstaged }) =>
-    gitUtils.gitCommit(cwd, message, includeUnstaged)
-  )
-  registerMethod('git:push', (cwd) => gitUtils.gitPush(cwd))
+  registerMethod('git:getBranch', (cwd) => {
+    const remote = resolveRemoteHostByPath(cwd)
+    return gitUtils.getGitBranch(cwd, remote)
+  })
+  registerMethod('git:diffStat', (cwd) => {
+    const remote = resolveRemoteHostByPath(cwd)
+    return gitUtils.getGitDiffStat(cwd, remote)
+  })
+  registerMethod('git:diffFull', (cwd) => {
+    const remote = resolveRemoteHostByPath(cwd)
+    return gitUtils.getGitDiffFull(cwd, remote)
+  })
+  registerMethod('git:commit', ({ cwd, message, includeUnstaged }) => {
+    const remote = resolveRemoteHostByPath(cwd)
+    return gitUtils.gitCommit(cwd, message, includeUnstaged, remote)
+  })
+  registerMethod('git:push', (cwd) => {
+    const remote = resolveRemoteHostByPath(cwd)
+    return gitUtils.gitPush(cwd, remote)
+  })
 
   // Scheduler
   registerMethod('scheduler:getLog', (workflowId) => scheduleLogManager.getEntries(workflowId))
@@ -360,10 +424,14 @@ export function registerAllMethods(): void {
   registerMethod('credential:getEncryptedKey', (id) => dbGetSSHKey(id))
 
   // File explorer
-  registerMethod('file:listDir', (dirPath) => listDir(dirPath))
-  registerMethod('file:readContent', ({ filePath, maxBytes }) =>
-    readFileContent(filePath, maxBytes)
-  )
+  registerMethod('file:listDir', ({ dirPath, remoteHostId }) => {
+    const remote = remoteHostId ? resolveRemoteHostById(remoteHostId) : undefined
+    return listDir(dirPath, remote)
+  })
+  registerMethod('file:readContent', ({ filePath, maxBytes, remoteHostId }) => {
+    const remote = remoteHostId ? resolveRemoteHostById(remoteHostId) : undefined
+    return readFileContent(filePath, maxBytes, remote)
+  })
 
   // SSH
   registerMethod('ssh:testConnection', (host) => testSshConnection(host))

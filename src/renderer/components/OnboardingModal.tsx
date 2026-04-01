@@ -73,10 +73,10 @@ const ESSENTIAL_SHORTCUTS = [
 const EXPLORE_ITEMS: {
   icon: React.ComponentType<{ size?: number; className?: string }>
   label: string
-  category: 'notifications' | 'hosts' | 'appearance' | 'agents'
+  category: 'notifications' | 'ssh' | 'appearance' | 'agents'
 }[] = [
   { icon: Bell, label: 'Enable notifications & sounds', category: 'notifications' },
-  { icon: Monitor, label: 'Set up remote hosts (SSH)', category: 'hosts' },
+  { icon: Monitor, label: 'Set up remote hosts (SSH)', category: 'ssh' },
   { icon: Palette, label: 'Customize appearance', category: 'appearance' },
   { icon: Settings, label: 'Configure agent commands', category: 'agents' }
 ]
@@ -601,7 +601,7 @@ function StepReady() {
   const setSettingsOpen = useAppStore((s) => s.setSettingsOpen)
   const setSettingsCategory = useAppStore((s) => s.setSettingsCategory)
 
-  const openSettings = (category: 'notifications' | 'hosts' | 'appearance' | 'agents') => {
+  const openSettings = (category: 'notifications' | 'ssh' | 'appearance' | 'agents') => {
     closeAndOpen(() => {
       setSettingsCategory(category)
       setSettingsOpen(true)

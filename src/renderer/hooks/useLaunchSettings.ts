@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useAppStore } from '../stores'
-import { AgentType, getProjectHostIds } from '../../shared/types'
+import { AgentType } from '../../shared/types'
 import { useShallow } from 'zustand/react/shallow'
 
 export type WorktreeMode = 'project-root' | 'existing' | 'new'
@@ -18,7 +18,6 @@ const STORAGE_KEY = 'vibegrid:lastLaunchSettings'
 interface SavedSettings {
   project?: string
   agent?: AgentType
-  host?: string
 }
 
 function loadSaved(): SavedSettings {
@@ -43,7 +42,6 @@ export function useLaunchSettings() {
   const [saved] = useState(loadSaved)
   const [selectedAgent, setSelectedAgent] = useState<AgentType>(saved.agent || defaultAgent)
   const [selectedProject, setSelectedProject] = useState(saved.project || '')
-  const [selectedHost, setSelectedHost] = useState(saved.host || 'local')
   const [localBranches, setLocalBranches] = useState<string[]>([])
   const [remoteBranches, setRemoteBranches] = useState<string[]>([])
   const [currentBranch, setCurrentBranch] = useState<string | null>(null)
@@ -63,8 +61,6 @@ export function useLaunchSettings() {
   >([])
   const branchInputRef = useRef<HTMLInputElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
-
-  const remoteHosts = config?.remoteHosts || []
 
   // Validate saved project exists in config
   useEffect(() => {
@@ -243,21 +239,8 @@ export function useLaunchSettings() {
     [allBranches, branchFilter]
   )
 
-  // Filtered projects by host
-  const filteredProjects = (config?.projects ?? []).filter((p) =>
-    getProjectHostIds(p).includes(selectedHost)
-  )
-
-  const handleHostChange = useCallback(
-    (hostId: string) => {
-      setSelectedHost(hostId)
-      if (selectedProject) {
-        const proj = config?.projects.find((p) => p.name === selectedProject)
-        if (proj && !getProjectHostIds(proj).includes(hostId)) setSelectedProject('')
-      }
-    },
-    [selectedProject, config?.projects]
-  )
+  // All projects (no host filtering — remotes are project-level now)
+  const filteredProjects = config?.projects ?? []
 
   const handleProjectChange = useCallback((projectName: string) => {
     setSelectedProject(projectName)
@@ -288,8 +271,8 @@ export function useLaunchSettings() {
   }, [currentBranch])
 
   const persist = useCallback(() => {
-    persistSettings({ project: selectedProject, agent: selectedAgent, host: selectedHost })
-  }, [selectedProject, selectedAgent, selectedHost])
+    persistSettings({ project: selectedProject, agent: selectedAgent })
+  }, [selectedProject, selectedAgent])
 
   const firstProject = config?.projects?.[0]?.name || ''
 
@@ -297,7 +280,6 @@ export function useLaunchSettings() {
     const s = loadSaved()
     setSelectedAgent(s.agent || defaultAgent)
     setSelectedProject(s.project || activeProject || firstProject)
-    setSelectedHost(s.host || 'local')
     setRemoteBranches([])
     setBranchFilter('')
     setBranchWarning(null)
@@ -317,8 +299,6 @@ export function useLaunchSettings() {
     setSelectedAgent,
     selectedProject,
     setSelectedProject: handleProjectChange,
-    selectedHost,
-    setSelectedHost: handleHostChange,
     selectedBranch,
     setSelectedBranch,
     branchFilter,
@@ -339,7 +319,6 @@ export function useLaunchSettings() {
     activeProjectPath,
     filteredBranches,
     filteredProjects,
-    remoteHosts,
     handleFetchRemotes,
     handleSelectWorktree,
     handleSelectProjectRoot,

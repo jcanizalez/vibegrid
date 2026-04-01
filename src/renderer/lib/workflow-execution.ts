@@ -8,7 +8,8 @@ import {
   ScriptConfig,
   ConditionConfig,
   ConditionOperator,
-  TaskConfig
+  TaskConfig,
+  getProjectRemoteHostId
 } from '../../shared/types'
 import { getTriggerNode } from './workflow-helpers'
 import { resolveTemplateVars, StepOutputs } from './template-vars'
@@ -324,6 +325,9 @@ async function executeNode(
       removeExitListener()
     }
   } else {
+    const cfg = useAppStore.getState().config
+    const proj = cfg?.projects.find((p) => p.name === config.projectName)
+    const remoteHostId = proj ? getProjectRemoteHostId(proj) : undefined
     const session = await window.api.createTerminal({
       agentType: config.agentType,
       projectName: config.projectName,
@@ -335,7 +339,8 @@ async function executeNode(
       initialPrompt,
       promptDelayMs: config.promptDelayMs,
       taskId: resolvedTaskId,
-      args: config.args
+      args: config.args,
+      remoteHostId
     })
     useAppStore.getState().addTerminal(session)
 
