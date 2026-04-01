@@ -9,6 +9,7 @@ import { TerminalInstance } from './TerminalInstance'
 import { PromptLauncher } from './PromptLauncher'
 import { InlineRename } from './InlineRename'
 import { CardContextMenu } from './CardContextMenu'
+import { MinimizedPill } from './MinimizedPill'
 import { TabStatusBar } from './TabStatusBar'
 import { getDisplayName, getBranchLabel } from '../lib/terminal-display'
 import { closeTerminalSession } from '../lib/terminal-close'
@@ -101,7 +102,7 @@ function PlusDropdown({
 /* ── TabView ─────────────────────────────────────────────────── */
 
 export function TabView() {
-  const orderedIds = useVisibleTerminals()
+  const { orderedIds, minimizedIds } = useVisibleTerminals()
   const terminals = useAppStore((s) => s.terminals)
   const activeTabId = useAppStore((s) => s.activeTabId)
   const setActiveTabId = useAppStore((s) => s.setActiveTabId)
@@ -243,7 +244,7 @@ export function TabView() {
 
   /* ── Empty state ───────────────────────────────────────────── */
 
-  if (orderedIds.length === 0) {
+  if (orderedIds.length === 0 && minimizedIds.length === 0) {
     return (
       <div className="h-full overflow-auto p-4">
         {isFiltered ? (
@@ -271,10 +272,47 @@ export function TabView() {
     )
   }
 
+  if (orderedIds.length === 0 && minimizedIds.length > 0) {
+    return (
+      <div className="flex flex-col h-full overflow-hidden">
+        <div className="p-4">
+          <div className="flex items-center gap-2 mb-2 px-1">
+            <span className="text-[11px] font-medium text-gray-500 uppercase tracking-wider">
+              Minimized
+            </span>
+            <span className="text-[10px] text-gray-600">{minimizedIds.length}</span>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {minimizedIds.map((id) => (
+              <MinimizedPill key={id} terminalId={id} />
+            ))}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   const activeTerminal = activeTabId ? terminals.get(activeTabId) : null
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
+      {/* Minimized pills */}
+      {minimizedIds.length > 0 && (
+        <div className="shrink-0 px-3 py-2 border-b border-white/[0.06]">
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="text-[10px] font-medium text-gray-500 uppercase tracking-wider">
+              Minimized
+            </span>
+            <span className="text-[10px] text-gray-600">{minimizedIds.length}</span>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {minimizedIds.map((id) => (
+              <MinimizedPill key={id} terminalId={id} />
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Tab bar */}
       <div
         className="shrink-0 flex items-center gap-0.5 px-2 py-1.5 border-b border-white/[0.06] overflow-x-auto"

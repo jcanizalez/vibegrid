@@ -68,7 +68,6 @@ export const AgentCard = memo(
       selectedId,
       setSelected,
       setFocused,
-      isMinimized,
       toggleMinimized,
       isRenaming,
       setRenamingTerminalId,
@@ -85,7 +84,6 @@ export const AgentCard = memo(
         selectedId: s.selectedTerminalId,
         setSelected: s.setSelectedTerminal,
         setFocused: s.setFocusedTerminal,
-        isMinimized: s.minimizedTerminals.has(terminalId),
         toggleMinimized: s.toggleMinimized,
         isRenaming: s.renamingTerminalId === terminalId,
         setRenamingTerminalId: s.setRenamingTerminalId,
@@ -142,7 +140,6 @@ export const AgentCard = memo(
                    }`}
         style={{
           background: '#1a1a1e',
-          ...(isMinimized ? { alignSelf: 'start' } : {}),
           ...(isIdlePinned ? { opacity: 0.55 } : {})
         }}
         transition={{ type: 'spring', stiffness: 300, damping: 25 }}
@@ -196,9 +193,6 @@ export const AgentCard = memo(
                         ? assignedTask.title
                         : getDisplayName(terminal.session)}
                   </span>
-                  {isMinimized && assignedTask && (
-                    <ListTodo size={10} className="text-violet-400 shrink-0" strokeWidth={2} />
-                  )}
                   <button
                     onClick={(e) => {
                       e.stopPropagation()
@@ -233,7 +227,7 @@ export const AgentCard = memo(
                   )}
                 </div>
               )}
-              {!isMinimized && assignedTask && (
+              {assignedTask && (
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
@@ -305,59 +299,57 @@ export const AgentCard = memo(
           </div>
         </div>
 
-        {/* Terminal — collapsible via minimize */}
-        {!isMinimized && (
-          <div className="relative flex-1 min-h-0" style={{ background: '#141416' }}>
-            {!isFocused && <TerminalInstance terminalId={terminalId} isFocused={isSelected} />}
-            {isFocused && (
-              <div className="flex items-center justify-center h-full text-gray-600 text-xs">
-                Expanded
-              </div>
-            )}
-            {!isFocused && terminal.lastOutputTimestamp === 0 && (
+        {/* Terminal */}
+        <div className="relative flex-1 min-h-0" style={{ background: '#141416' }}>
+          {!isFocused && <TerminalInstance terminalId={terminalId} isFocused={isSelected} />}
+          {isFocused && (
+            <div className="flex items-center justify-center h-full text-gray-600 text-xs">
+              Expanded
+            </div>
+          )}
+          {!isFocused && terminal.lastOutputTimestamp === 0 && (
+            <div
+              className="absolute inset-0 p-3 space-y-2 pointer-events-none"
+              style={{ background: '#141416' }}
+            >
+              <div className="h-3 w-3/4 rounded bg-white/[0.04] animate-pulse" />
               <div
-                className="absolute inset-0 p-3 space-y-2 pointer-events-none"
-                style={{ background: '#141416' }}
-              >
-                <div className="h-3 w-3/4 rounded bg-white/[0.04] animate-pulse" />
-                <div
-                  className="h-3 w-1/2 rounded bg-white/[0.04] animate-pulse"
-                  style={{ animationDelay: '0.15s' }}
-                />
-                <div
-                  className="h-3 w-5/6 rounded bg-white/[0.04] animate-pulse"
-                  style={{ animationDelay: '0.3s' }}
-                />
-                <div
-                  className="h-3 w-2/3 rounded bg-white/[0.04] animate-pulse"
-                  style={{ animationDelay: '0.45s' }}
-                />
-              </div>
-            )}
-            {!isFocused && showScrollBtn && (
-              <button
-                className="absolute bottom-2 right-2 w-8 h-8 flex items-center justify-center
+                className="h-3 w-1/2 rounded bg-white/[0.04] animate-pulse"
+                style={{ animationDelay: '0.15s' }}
+              />
+              <div
+                className="h-3 w-5/6 rounded bg-white/[0.04] animate-pulse"
+                style={{ animationDelay: '0.3s' }}
+              />
+              <div
+                className="h-3 w-2/3 rounded bg-white/[0.04] animate-pulse"
+                style={{ animationDelay: '0.45s' }}
+              />
+            </div>
+          )}
+          {!isFocused && showScrollBtn && (
+            <button
+              className="absolute bottom-2 right-2 w-8 h-8 flex items-center justify-center
                            rounded bg-white/[0.08] hover:bg-white/[0.15] active:bg-white/[0.2]
                            text-gray-400 hover:text-white transition-colors z-10"
-                onClick={handleScrollToBottom}
-                title="Scroll to bottom"
-              >
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                  <path
-                    d="M6 2.5V9.5M3 7L6 10L9 7"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </button>
-            )}
-          </div>
-        )}
+              onClick={handleScrollToBottom}
+              title="Scroll to bottom"
+            >
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <path
+                  d="M6 2.5V9.5M3 7L6 10L9 7"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+          )}
+        </div>
 
         {/* Resize handle */}
-        {!isMinimized && <RowResizeHandle />}
+        <RowResizeHandle />
 
         {/* Shortcut badge */}
         {typeof index === 'number' && index < 9 && (
