@@ -25,6 +25,7 @@ interface Props {
   index?: number
   isDragTarget?: boolean
   onDragStart?: (terminalId: string, e: React.PointerEvent) => void
+  flexible?: boolean
 }
 
 function RowResizeHandle() {
@@ -59,7 +60,7 @@ function RowResizeHandle() {
 
 export const AgentCard = memo(
   forwardRef<HTMLDivElement, Props>(function AgentCard(
-    { terminalId, index, isDragTarget, onDragStart },
+    { terminalId, index, isDragTarget, onDragStart, flexible },
     ref
   ) {
     const {
@@ -125,10 +126,11 @@ export const AgentCard = memo(
     return (
       <motion.div
         ref={ref}
-        layout
-        layoutId={terminalId}
+        layout={!flexible}
+        layoutId={flexible ? undefined : terminalId}
         className={`relative rounded-lg border overflow-hidden flex flex-col
                    transition-colors
+                   ${flexible ? 'h-full' : ''}
                    ${
                      isFocused
                        ? 'border-blue-500/60 ring-1 ring-blue-500/30'
@@ -158,7 +160,7 @@ export const AgentCard = memo(
         <div className="flex items-center gap-2 px-3 py-2 border-b border-white/[0.04] shrink-0">
           {/* Drag handle + info — double-click to expand */}
           <div
-            className={`flex-1 min-w-0 flex items-center gap-2 cursor-text ${onDragStart ? 'drag-handle' : ''}`}
+            className={`flex-1 min-w-0 flex items-center gap-2 cursor-text ${onDragStart || flexible ? 'drag-handle' : ''}`}
             onDoubleClick={handleExpand}
             onPointerDown={onDragStart ? (e) => onDragStart(terminalId, e) : undefined}
           >
@@ -350,7 +352,7 @@ export const AgentCard = memo(
         </div>
 
         {/* Resize handle */}
-        <RowResizeHandle />
+        {!flexible && <RowResizeHandle />}
 
         {/* Shortcut badge */}
         {typeof index === 'number' && index < 9 && (
