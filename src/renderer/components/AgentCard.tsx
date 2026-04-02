@@ -160,7 +160,7 @@ export const AgentCard = memo(
         <div className="flex items-center gap-2 px-3 py-2 border-b border-white/[0.04] shrink-0">
           {/* Drag handle + info — double-click to expand */}
           <div
-            className={`flex-1 min-w-0 flex items-center gap-2 cursor-text ${onDragStart ? 'drag-handle' : ''}`}
+            className={`flex-1 min-w-0 flex items-center gap-2 cursor-text ${onDragStart || flexible ? 'drag-handle' : ''}`}
             onDoubleClick={handleExpand}
             onPointerDown={onDragStart ? (e) => onDragStart(terminalId, e) : undefined}
           >
