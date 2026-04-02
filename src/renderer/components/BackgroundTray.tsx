@@ -62,12 +62,8 @@ export function BackgroundTray({ headlessSessions, minimizedIds, variant, hasIte
         </div>
       </button>
 
-      {/* Collapsible content */}
-      <div
-        className={`overflow-hidden transition-all duration-200 ease-in-out ${
-          collapsed ? 'max-h-0 opacity-0' : 'max-h-[132px] opacity-100'
-        }`}
-      >
+      {/* Collapsible content — unmounted when collapsed to stop timers and remove from tab order */}
+      {!collapsed && (
         <div className={`flex max-h-[120px] overflow-y-auto ${hasBoth ? 'gap-4' : ''}`}>
           {/* Headless group */}
           {headlessCount > 0 && (
@@ -104,7 +100,7 @@ export function BackgroundTray({ headlessSessions, minimizedIds, variant, hasIte
             </div>
           )}
         </div>
-      </div>
+      )}
 
       {/* Bottom divider */}
       {hasItemsBelow && !collapsed && <div className="h-px bg-white/[0.06] mt-4" />}

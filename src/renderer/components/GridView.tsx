@@ -12,14 +12,12 @@ import { PromptLauncher } from './PromptLauncher'
 import { GridContextMenu } from './GridContextMenu'
 import { AgentIcon } from './AgentIcon'
 import { useVisibleTerminals } from '../hooks/useVisibleTerminals'
+import { useFilteredHeadless } from '../hooks/useFilteredHeadless'
 import { useIsMobile } from '../hooks/useIsMobile'
 import { resolveActiveProject } from '../lib/session-utils'
 import { getDisplayName, getBranchLabel } from '../lib/terminal-display'
-import { HeadlessSession } from '../../shared/types'
 import type { TerminalState, FlexibleLayoutRect } from '../stores/types'
 import { GitBranch, FolderGit2 } from 'lucide-react'
-
-const EMPTY_HEADLESS: HeadlessSession[] = []
 
 interface DragState {
   draggingId: string
@@ -43,31 +41,7 @@ export const GridView = memo(function GridView() {
       rowHeight: s.rowHeight
     }))
   )
-  const headlessSessions = useAppStore((s) => s.headlessSessions)
-  const showHeadless = useAppStore((s) => s.config?.defaults?.showHeadlessAgents !== false)
-  const activeProject = useAppStore((s) => s.activeProject)
-  const activeWorkspace = useAppStore((s) => s.activeWorkspace)
-  const projects = useAppStore((s) => s.config?.projects)
-
-  const workspaceProjects = useMemo(() => {
-    if (!projects) return null
-    return new Set(
-      projects.filter((p) => (p.workspaceId ?? 'personal') === activeWorkspace).map((p) => p.name)
-    )
-  }, [projects, activeWorkspace])
-
-  const filteredHeadless = useMemo(() => {
-    if (!showHeadless || headlessSessions.length === 0) return EMPTY_HEADLESS
-    return headlessSessions.filter((s) => {
-      if (activeProject && s.projectName !== activeProject) return false
-      if (!activeProject && workspaceProjects && !workspaceProjects.has(s.projectName)) return false
-      if (statusFilter !== 'all') {
-        const mapped = s.status === 'running' ? 'running' : s.exitCode !== 0 ? 'error' : 'idle'
-        if (mapped !== statusFilter) return false
-      }
-      return true
-    })
-  }, [headlessSessions, showHeadless, activeProject, workspaceProjects, statusFilter])
+  const filteredHeadless = useFilteredHeadless()
 
   const [dragState, setDragState] = useState<DragState | null>(null)
   const [dropTargetIndex, setDropTargetIndex] = useState<number | null>(null)

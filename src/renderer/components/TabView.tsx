@@ -1,9 +1,10 @@
-import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { motion } from 'framer-motion'
 import { useAppStore } from '../stores'
 import { getProjectRemoteHostId } from '../../shared/types'
 import { useVisibleTerminals } from '../hooks/useVisibleTerminals'
+import { useFilteredHeadless } from '../hooks/useFilteredHeadless'
 import { AgentIcon } from './AgentIcon'
 import { TerminalInstance } from './TerminalInstance'
 import { PromptLauncher } from './PromptLauncher'
@@ -108,31 +109,7 @@ export function TabView() {
   const sortMode = useAppStore((s) => s.sortMode)
   const reorderTerminals = useAppStore((s) => s.reorderTerminals)
   const tasks = useAppStore((s) => s.config?.tasks)
-  const headlessSessions = useAppStore((s) => s.headlessSessions)
-  const showHeadless = useAppStore((s) => s.config?.defaults?.showHeadlessAgents !== false)
-  const activeProject = useAppStore((s) => s.activeProject)
-  const activeWorkspace = useAppStore((s) => s.activeWorkspace)
-  const projects = useAppStore((s) => s.config?.projects)
-
-  const workspaceProjects = useMemo(() => {
-    if (!projects) return null
-    return new Set(
-      projects.filter((p) => (p.workspaceId ?? 'personal') === activeWorkspace).map((p) => p.name)
-    )
-  }, [projects, activeWorkspace])
-
-  const filteredHeadless = useMemo(() => {
-    if (!showHeadless || headlessSessions.length === 0) return []
-    return headlessSessions.filter((s) => {
-      if (activeProject && s.projectName !== activeProject) return false
-      if (!activeProject && workspaceProjects && !workspaceProjects.has(s.projectName)) return false
-      if (statusFilter !== 'all') {
-        const mapped = s.status === 'running' ? 'running' : s.exitCode !== 0 ? 'error' : 'idle'
-        if (mapped !== statusFilter) return false
-      }
-      return true
-    })
-  }, [headlessSessions, showHeadless, activeProject, workspaceProjects, statusFilter])
+  const filteredHeadless = useFilteredHeadless()
 
   const [contextMenu, setContextMenu] = useState<{
     terminalId: string
