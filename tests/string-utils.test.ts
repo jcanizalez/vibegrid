@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { displayNameFromPrompt } from '../packages/shared/src/string-utils'
+import { displayNameFromPrompt } from '@vibegrid/shared/string-utils'
 
 describe('displayNameFromPrompt', () => {
   it('returns short prompt as-is', () => {
@@ -40,7 +40,7 @@ describe('displayNameFromPrompt', () => {
     expect(result).toMatch(/\u2026$/)
   })
 
-  it('returns empty string for whitespace-only input', () => {
-    expect(displayNameFromPrompt('   \n\t  ')).toBe('')
+  it('returns undefined for whitespace-only input', () => {
+    expect(displayNameFromPrompt('   \n\t  ')).toBeUndefined()
   })
 })

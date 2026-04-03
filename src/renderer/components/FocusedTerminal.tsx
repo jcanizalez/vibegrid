@@ -141,8 +141,8 @@ export function FocusedTerminal() {
             )}
           </div>
 
-          <BrowseFilesButton terminalId={focusedId} />
-          <GitChangesIndicator terminalId={focusedId} />
+          {!isMobile && <BrowseFilesButton terminalId={focusedId} />}
+          {!isMobile && <GitChangesIndicator terminalId={focusedId} />}
 
           <StatusBadge status={terminal.status} />
 
