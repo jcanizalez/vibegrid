@@ -715,6 +715,22 @@ class PtyManager extends EventEmitter {
     if (session && session.statusSource !== 'hooks') {
       session.statusSource = 'hooks'
       log.info(`[pty] session ${id} promoted to hook-based status`)
+
+      // Re-arm idle timer with the longer hook timeout so the old short timer
+      // doesn't prematurely mark the session idle during the transition.
+      const existingTimer = this.idleTimers.get(id)
+      if (existingTimer) {
+        clearTimeout(existingTimer)
+        this.idleTimers.set(
+          id,
+          setTimeout(() => {
+            this.idleTimers.delete(id)
+            if (session.status === 'running') {
+              this.updateSessionStatus(id, 'idle')
+            }
+          }, IDLE_TIMEOUT_HOOKS_MS)
+        )
+      }
     }
   }
 

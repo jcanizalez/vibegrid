@@ -51,7 +51,7 @@ export function captureAgentSessionId(agentType: AgentType, cwd: string): string
         row = db
           .prepare(
             `SELECT id FROM sessions
-             WHERE lower(replace(cwd, '\\', '/')) = ?
+             WHERE rtrim(lower(replace(cwd, '\\', '/')), '/') = ?
              ORDER BY updated_at DESC LIMIT 1`
           )
           .get(normalized) as typeof row
@@ -62,7 +62,7 @@ export function captureAgentSessionId(agentType: AgentType, cwd: string): string
           .prepare(
             `SELECT id FROM threads
              WHERE archived = 0
-               AND lower(replace(cwd, '\\', '/')) = ?
+               AND rtrim(lower(replace(cwd, '\\', '/')), '/') = ?
              ORDER BY updated_at DESC LIMIT 1`
           )
           .get(normalized) as typeof row
@@ -73,7 +73,7 @@ export function captureAgentSessionId(agentType: AgentType, cwd: string): string
           .prepare(
             `SELECT id FROM session
              WHERE time_archived IS NULL
-               AND lower(replace(directory, '\\', '/')) = ?
+               AND rtrim(lower(replace(directory, '\\', '/')), '/') = ?
              ORDER BY time_updated DESC LIMIT 1`
           )
           .get(normalized) as typeof row
