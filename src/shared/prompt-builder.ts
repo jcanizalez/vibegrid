@@ -1,1 +1,1 @@
-export * from '@vibegrid/shared/prompt-builder'
+export * from '@vorn/shared/prompt-builder'

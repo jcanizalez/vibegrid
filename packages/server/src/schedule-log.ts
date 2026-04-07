@@ -1,4 +1,4 @@
-import { ScheduleLogEntry } from '@vibegrid/shared/types'
+import { ScheduleLogEntry } from '@vorn/shared/types'
 import {
   addScheduleLogEntry as dbAddEntry,
   getScheduleLogEntries as dbGetEntries,

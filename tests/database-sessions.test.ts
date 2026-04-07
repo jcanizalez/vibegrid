@@ -15,7 +15,7 @@ import {
   getPreviousSessions,
   clearSessions
 } from '../packages/server/src/database'
-import type { TerminalSession } from '@vibegrid/shared/types'
+import type { TerminalSession } from '@vorn/shared/types'
 
 let teardown: () => void
 

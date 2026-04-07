@@ -4241,86 +4241,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@vibegrid/desktop@workspace:packages/desktop":
-  version: 0.0.0-use.local
-  resolution: "@vibegrid/desktop@workspace:packages/desktop"
-  dependencies:
-    "@types/ws": "npm:^8.18.1"
-    "@vibegrid/shared": "workspace:*"
-    electron: "npm:^41.1.1"
-    electron-log: "npm:^5.4.3"
-    electron-updater: "npm:^6.8.3"
-    electron-vite: "npm:^5.0.0"
-    typescript: "npm:^5.6.0"
-    ws: "npm:^8.18.2"
-  languageName: unknown
-  linkType: soft
-
-"@vibegrid/mcp@workspace:packages/mcp":
-  version: 0.0.0-use.local
-  resolution: "@vibegrid/mcp@workspace:packages/mcp"
-  dependencies:
-    "@modelcontextprotocol/sdk": "npm:^1.28.0"
-    "@vibegrid/server": "workspace:*"
-    "@vibegrid/shared": "workspace:*"
-    libsql: "npm:^0.5.22"
-    pino: "npm:^10.3.1"
-    tsup: "npm:^8.5.0"
-    tsx: "npm:^4.19.4"
-    typescript: "npm:^5.6.0"
-    ws: "npm:^8.18.0"
-    zod: "npm:^3.23.0"
-  bin:
-    mcp: dist/index.js
-    vibegrid-mcp: dist/index.js
-  languageName: unknown
-  linkType: soft
-
-"@vibegrid/server@workspace:*, @vibegrid/server@workspace:packages/server":
-  version: 0.0.0-use.local
-  resolution: "@vibegrid/server@workspace:packages/server"
-  dependencies:
-    "@fastify/static": "npm:^9.0.0"
-    "@fastify/websocket": "npm:^11.0.2"
-    "@modelcontextprotocol/sdk": "npm:^1.27.1"
-    "@types/node-cron": "npm:^3.0.11"
-    "@types/ws": "npm:^8.18.1"
-    "@vibegrid/shared": "workspace:*"
-    fastify: "npm:^5.3.3"
-    libsql: "npm:^0.5.22"
-    node-cron: "npm:^3.0.3"
-    node-pty: "npm:1.2.0-beta.12"
-    pino: "npm:^10.3.1"
-    tsup: "npm:^8.5.0"
-    tsx: "npm:^4.19.4"
-    typescript: "npm:^5.6.0"
-    zod: "npm:^4.3.6"
-  languageName: unknown
-  linkType: soft
-
-"@vibegrid/shared@workspace:*, @vibegrid/shared@workspace:packages/shared":
-  version: 0.0.0-use.local
-  resolution: "@vibegrid/shared@workspace:packages/shared"
-  languageName: unknown
-  linkType: soft
-
-"@vibegrid/web@workspace:packages/web":
-  version: 0.0.0-use.local
-  resolution: "@vibegrid/web@workspace:packages/web"
-  dependencies:
-    "@types/react": "npm:^19.2.14"
-    "@types/react-dom": "npm:^19"
-    "@vibegrid/shared": "workspace:*"
-    "@vitejs/plugin-react": "npm:^4.3.0"
-    autoprefixer: "npm:^10.4.0"
-    postcss: "npm:^8.4.0"
-    tailwindcss: "npm:^3.4.0"
-    typescript: "npm:^5.6.0"
-    vite: "npm:^5.4.0"
-    vite-plugin-pwa: "npm:^1.2.0"
-  languageName: unknown
-  linkType: soft
-
 "@vitejs/plugin-react@npm:^4.3.0":
   version: 4.7.0
   resolution: "@vitejs/plugin-react@npm:4.7.0"
@@ -4442,6 +4362,86 @@ __metadata:
   checksum: 10c0/222afbdef4f680a554bb6c3d946a4a879a441ebfb8597295cb7554d295e0e2624f3d4c2920b5767bbb8961a9f8a16756270ffc84032f5ea432cdce080ccab050
   languageName: node
   linkType: hard
+
+"@vorn/desktop@workspace:packages/desktop":
+  version: 0.0.0-use.local
+  resolution: "@vorn/desktop@workspace:packages/desktop"
+  dependencies:
+    "@types/ws": "npm:^8.18.1"
+    "@vorn/shared": "workspace:*"
+    electron: "npm:^41.1.1"
+    electron-log: "npm:^5.4.3"
+    electron-updater: "npm:^6.8.3"
+    electron-vite: "npm:^5.0.0"
+    typescript: "npm:^5.6.0"
+    ws: "npm:^8.18.2"
+  languageName: unknown
+  linkType: soft
+
+"@vorn/mcp@workspace:packages/mcp":
+  version: 0.0.0-use.local
+  resolution: "@vorn/mcp@workspace:packages/mcp"
+  dependencies:
+    "@modelcontextprotocol/sdk": "npm:^1.28.0"
+    "@vorn/server": "workspace:*"
+    "@vorn/shared": "workspace:*"
+    libsql: "npm:^0.5.22"
+    pino: "npm:^10.3.1"
+    tsup: "npm:^8.5.0"
+    tsx: "npm:^4.19.4"
+    typescript: "npm:^5.6.0"
+    ws: "npm:^8.18.0"
+    zod: "npm:^3.23.0"
+  bin:
+    mcp: dist/index.js
+    vorn-mcp: dist/index.js
+  languageName: unknown
+  linkType: soft
+
+"@vorn/server@workspace:*, @vorn/server@workspace:packages/server":
+  version: 0.0.0-use.local
+  resolution: "@vorn/server@workspace:packages/server"
+  dependencies:
+    "@fastify/static": "npm:^9.0.0"
+    "@fastify/websocket": "npm:^11.0.2"
+    "@modelcontextprotocol/sdk": "npm:^1.27.1"
+    "@types/node-cron": "npm:^3.0.11"
+    "@types/ws": "npm:^8.18.1"
+    "@vorn/shared": "workspace:*"
+    fastify: "npm:^5.3.3"
+    libsql: "npm:^0.5.22"
+    node-cron: "npm:^3.0.3"
+    node-pty: "npm:1.2.0-beta.12"
+    pino: "npm:^10.3.1"
+    tsup: "npm:^8.5.0"
+    tsx: "npm:^4.19.4"
+    typescript: "npm:^5.6.0"
+    zod: "npm:^4.3.6"
+  languageName: unknown
+  linkType: soft
+
+"@vorn/shared@workspace:*, @vorn/shared@workspace:packages/shared":
+  version: 0.0.0-use.local
+  resolution: "@vorn/shared@workspace:packages/shared"
+  languageName: unknown
+  linkType: soft
+
+"@vorn/web@workspace:packages/web":
+  version: 0.0.0-use.local
+  resolution: "@vorn/web@workspace:packages/web"
+  dependencies:
+    "@types/react": "npm:^19.2.14"
+    "@types/react-dom": "npm:^19"
+    "@vitejs/plugin-react": "npm:^4.3.0"
+    "@vorn/shared": "workspace:*"
+    autoprefixer: "npm:^10.4.0"
+    postcss: "npm:^8.4.0"
+    tailwindcss: "npm:^3.4.0"
+    typescript: "npm:^5.6.0"
+    vite: "npm:^5.4.0"
+    vite-plugin-pwa: "npm:^1.2.0"
+  languageName: unknown
+  linkType: soft
 
 "@xmldom/xmldom@npm:^0.8.8":
   version: 0.8.11
@@ -12732,80 +12732,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"vibegrid@workspace:.":
-  version: 0.0.0-use.local
-  resolution: "vibegrid@workspace:."
-  dependencies:
-    "@electron/rebuild": "npm:^4.0.3"
-    "@eslint/js": "npm:^10.0.1"
-    "@modelcontextprotocol/sdk": "npm:1.28.0"
-    "@testing-library/dom": "npm:^10.4.1"
-    "@testing-library/jest-dom": "npm:^6.9.1"
-    "@testing-library/react": "npm:^16.3.2"
-    "@testing-library/user-event": "npm:^14.6.1"
-    "@tiptap/core": "npm:3.20.4"
-    "@tiptap/extension-code-block": "npm:^3.20.1"
-    "@tiptap/extension-code-block-lowlight": "npm:^3.20.1"
-    "@tiptap/extension-link": "npm:^3.20.5"
-    "@tiptap/extension-list": "npm:3.20.4"
-    "@tiptap/extension-placeholder": "npm:^3.20.1"
-    "@tiptap/extension-task-item": "npm:^3.20.1"
-    "@tiptap/extension-task-list": "npm:3.20.4"
-    "@tiptap/extensions": "npm:^3.22.0"
-    "@tiptap/pm": "npm:3.22.0"
-    "@tiptap/react": "npm:^3.20.1"
-    "@tiptap/starter-kit": "npm:^3.20.1"
-    "@tiptap/suggestion": "npm:^3.20.1"
-    "@types/d3-hierarchy": "npm:^3.1.7"
-    "@types/node-cron": "npm:^3.0.11"
-    "@types/qrcode": "npm:^1.5.6"
-    "@types/react": "npm:^19.2.14"
-    "@types/react-dom": "npm:^19"
-    "@vitejs/plugin-react": "npm:^4.3.0"
-    "@vitest/coverage-v8": "npm:4.1.0"
-    "@xterm/addon-canvas": "npm:^0.7.0"
-    "@xterm/addon-fit": "npm:^0.11.0"
-    "@xterm/addon-web-links": "npm:0.12.0"
-    "@xterm/addon-webgl": "npm:^0.19.0"
-    "@xterm/xterm": "npm:^5.5.0"
-    autoprefixer: "npm:^10.4.0"
-    electron: "npm:^41.1.1"
-    electron-builder: "npm:^26.8.1"
-    electron-log: "npm:^5.4.3"
-    electron-updater: "npm:^6.8.3"
-    electron-vite: "npm:^5.0.0"
-    eslint: "npm:^10.0.3"
-    eslint-config-prettier: "npm:^10.1.8"
-    eslint-plugin-react-hooks: "npm:^7.0.1"
-    eslint-plugin-react-refresh: "npm:^0.5.2"
-    framer-motion: "npm:^12.36.0"
-    jsdom: "npm:^29.0.0"
-    libsql: "npm:^0.5.22"
-    lint-staged: "npm:^16.3.3"
-    lowlight: "npm:^3.3.0"
-    lucide-react: "npm:1.7.0"
-    node-cron: "npm:^3.0.3"
-    node-gyp: "npm:^12.2.0"
-    node-pty: "npm:1.2.0-beta.12"
-    postcss: "npm:^8.4.0"
-    prettier: "npm:^3.8.1"
-    qrcode: "npm:^1.5.4"
-    react: "npm:^19.2.4"
-    react-dom: "npm:^19.2.4"
-    react-grid-layout: "npm:^2.2.3"
-    shiki: "npm:^4.0.2"
-    simple-git-hooks: "npm:^2.13.1"
-    tailwindcss: "npm:^3.4.0"
-    typescript: "npm:^5.6.0"
-    typescript-eslint: "npm:^8.57.0"
-    vite: "npm:6"
-    vitest: "npm:4.1.0"
-    ws: "npm:^8.18.2"
-    zod: "npm:^4.3.6"
-    zustand: "npm:^5.0.0"
-  languageName: unknown
-  linkType: soft
-
 "vite-plugin-pwa@npm:^1.2.0":
   version: 1.2.0
   resolution: "vite-plugin-pwa@npm:1.2.0"
@@ -13043,6 +12969,80 @@ __metadata:
   checksum: 10c0/48048e4391e4e8190aa12b1c868bef4ad8d346214631b4506e0dc1f3241ecb8bcb24f296c38a7d98eae712a042375ae209da4b35165db38f9a9bc79a3a9e2a04
   languageName: node
   linkType: hard
+
+"vorn@workspace:.":
+  version: 0.0.0-use.local
+  resolution: "vorn@workspace:."
+  dependencies:
+    "@electron/rebuild": "npm:^4.0.3"
+    "@eslint/js": "npm:^10.0.1"
+    "@modelcontextprotocol/sdk": "npm:1.28.0"
+    "@testing-library/dom": "npm:^10.4.1"
+    "@testing-library/jest-dom": "npm:^6.9.1"
+    "@testing-library/react": "npm:^16.3.2"
+    "@testing-library/user-event": "npm:^14.6.1"
+    "@tiptap/core": "npm:3.20.4"
+    "@tiptap/extension-code-block": "npm:^3.20.1"
+    "@tiptap/extension-code-block-lowlight": "npm:^3.20.1"
+    "@tiptap/extension-link": "npm:^3.20.5"
+    "@tiptap/extension-list": "npm:3.20.4"
+    "@tiptap/extension-placeholder": "npm:^3.20.1"
+    "@tiptap/extension-task-item": "npm:^3.20.1"
+    "@tiptap/extension-task-list": "npm:3.20.4"
+    "@tiptap/extensions": "npm:^3.22.0"
+    "@tiptap/pm": "npm:3.22.0"
+    "@tiptap/react": "npm:^3.20.1"
+    "@tiptap/starter-kit": "npm:^3.20.1"
+    "@tiptap/suggestion": "npm:^3.20.1"
+    "@types/d3-hierarchy": "npm:^3.1.7"
+    "@types/node-cron": "npm:^3.0.11"
+    "@types/qrcode": "npm:^1.5.6"
+    "@types/react": "npm:^19.2.14"
+    "@types/react-dom": "npm:^19"
+    "@vitejs/plugin-react": "npm:^4.3.0"
+    "@vitest/coverage-v8": "npm:4.1.0"
+    "@xterm/addon-canvas": "npm:^0.7.0"
+    "@xterm/addon-fit": "npm:^0.11.0"
+    "@xterm/addon-web-links": "npm:0.12.0"
+    "@xterm/addon-webgl": "npm:^0.19.0"
+    "@xterm/xterm": "npm:^5.5.0"
+    autoprefixer: "npm:^10.4.0"
+    electron: "npm:^41.1.1"
+    electron-builder: "npm:^26.8.1"
+    electron-log: "npm:^5.4.3"
+    electron-updater: "npm:^6.8.3"
+    electron-vite: "npm:^5.0.0"
+    eslint: "npm:^10.0.3"
+    eslint-config-prettier: "npm:^10.1.8"
+    eslint-plugin-react-hooks: "npm:^7.0.1"
+    eslint-plugin-react-refresh: "npm:^0.5.2"
+    framer-motion: "npm:^12.36.0"
+    jsdom: "npm:^29.0.0"
+    libsql: "npm:^0.5.22"
+    lint-staged: "npm:^16.3.3"
+    lowlight: "npm:^3.3.0"
+    lucide-react: "npm:1.7.0"
+    node-cron: "npm:^3.0.3"
+    node-gyp: "npm:^12.2.0"
+    node-pty: "npm:1.2.0-beta.12"
+    postcss: "npm:^8.4.0"
+    prettier: "npm:^3.8.1"
+    qrcode: "npm:^1.5.4"
+    react: "npm:^19.2.4"
+    react-dom: "npm:^19.2.4"
+    react-grid-layout: "npm:^2.2.3"
+    shiki: "npm:^4.0.2"
+    simple-git-hooks: "npm:^2.13.1"
+    tailwindcss: "npm:^3.4.0"
+    typescript: "npm:^5.6.0"
+    typescript-eslint: "npm:^8.57.0"
+    vite: "npm:6"
+    vitest: "npm:4.1.0"
+    ws: "npm:^8.18.2"
+    zod: "npm:^4.3.6"
+    zustand: "npm:^5.0.0"
+  languageName: unknown
+  linkType: soft
 
 "w3c-keyname@npm:^2.2.0":
   version: 2.2.8

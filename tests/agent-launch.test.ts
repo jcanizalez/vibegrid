@@ -9,8 +9,8 @@ import {
   buildHeadlessLaunchLine,
   buildHeadlessSpawnArgs
 } from '../packages/server/src/agent-launch'
-import { DEFAULT_AGENT_COMMANDS } from '@vibegrid/shared/agent-defaults'
-import type { AgentType, CreateTerminalPayload } from '@vibegrid/shared/types'
+import { DEFAULT_AGENT_COMMANDS } from '@vorn/shared/agent-defaults'
+import type { AgentType, CreateTerminalPayload } from '@vorn/shared/types'
 
 const env = { PATH: '/usr/bin' }
 const cmds = DEFAULT_AGENT_COMMANDS

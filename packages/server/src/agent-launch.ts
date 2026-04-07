@@ -4,8 +4,8 @@ import {
   AgentCommandConfig,
   CreateTerminalPayload,
   supportsExactSessionResume
-} from '@vibegrid/shared/types'
-import { DEFAULT_AGENT_COMMANDS } from '@vibegrid/shared/agent-defaults'
+} from '@vorn/shared/types'
+import { DEFAULT_AGENT_COMMANDS } from '@vorn/shared/agent-defaults'
 import { shellEscape } from './process-utils'
 
 function commandExists(cmd: string, env: Record<string, string>): boolean {
