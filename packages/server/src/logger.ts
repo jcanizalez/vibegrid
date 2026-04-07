@@ -6,6 +6,6 @@ import pino from 'pino'
 //
 // Uses pino.destination() instead of transport workers — the server is bundled
 // via tsup so transport targets like 'pino/file' can't resolve at runtime.
-const log = pino({ level: process.env.VITEST ? 'silent' : 'info' }, pino.destination(2))
+const log = pino({ level: process.env.VITEST ? 'silent' : 'info' }, process.stderr)
 
 export default log
