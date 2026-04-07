@@ -25,7 +25,7 @@ import {
   SessionEventType,
   RemoteHost,
   getProjectRemoteHostId
-} from '@vibegrid/shared/types'
+} from '@vorn/shared/types'
 import * as gitUtils from './git-utils'
 import { listDir, readFileContent } from './file-utils'
 import {
@@ -219,7 +219,7 @@ export function registerAllMethods(): void {
         return cfg.remoteHosts?.find((h) => h.id === remoteId)
       }
       const parentDir = project.path.replace(/\/[^/]+$/, '')
-      if (anyPath.startsWith(parentDir + '/.vibegrid-worktrees/')) {
+      if (anyPath.startsWith(parentDir + '/.vorn-worktrees/')) {
         const remoteId = getProjectRemoteHostId(project)
         if (!remoteId) return undefined
         return cfg.remoteHosts?.find((h) => h.id === remoteId)

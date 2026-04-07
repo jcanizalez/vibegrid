@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest'
 import WebSocket from 'ws'
-import type { RpcResponse } from '@vibegrid/shared/protocol'
+import type { RpcResponse } from '@vorn/shared/protocol'
 
 // Mock native modules that require compilation
 vi.mock('node-pty', () => ({

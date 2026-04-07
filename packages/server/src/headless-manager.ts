@@ -8,8 +8,8 @@ import {
   CreateTerminalPayload,
   HeadlessSession,
   IPC
-} from '@vibegrid/shared/types'
-import { displayNameFromPrompt } from '@vibegrid/shared/string-utils'
+} from '@vorn/shared/types'
+import { displayNameFromPrompt } from '@vorn/shared/string-utils'
 import {
   getGitBranch,
   checkoutBranch,
@@ -19,7 +19,7 @@ import {
 } from './git-utils'
 import { getSafeEnv } from './process-utils'
 import { buildHeadlessSpawnArgs } from './agent-launch'
-import { DEFAULT_AGENT_COMMANDS } from '@vibegrid/shared/agent-defaults'
+import { DEFAULT_AGENT_COMMANDS } from '@vorn/shared/agent-defaults'
 import log from './logger'
 
 const MAX_OUTPUT_LINES = 1000

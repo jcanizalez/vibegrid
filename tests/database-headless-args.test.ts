@@ -9,8 +9,8 @@ vi.mock('node:fs', async (importOriginal) => {
 })
 
 import { initTestDatabase, saveConfig, loadConfig } from '../packages/server/src/database'
-import { DEFAULT_AGENT_COMMANDS } from '@vibegrid/shared/agent-defaults'
-import type { AppConfig } from '@vibegrid/shared/types'
+import { DEFAULT_AGENT_COMMANDS } from '@vorn/shared/agent-defaults'
+import type { AppConfig } from '@vorn/shared/types'
 
 let teardown: () => void
 

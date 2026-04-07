@@ -1,5 +1,5 @@
 {
-  "name": "@vibegrid/web",
+  "name": "@vorn/web",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -9,7 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@vibegrid/shared": "workspace:*"
+    "@vorn/shared": "workspace:*"
   },
   "devDependencies": {
     "@types/react": "^19.2.14",
