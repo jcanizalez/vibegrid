@@ -1,11 +1,9 @@
 import pino from 'pino'
 
-const log = pino({
-  level: process.env.VITEST ? 'silent' : 'info',
-  // Always write to stderr so the main process can capture via electron-log.
-  // Previously production used the default (stdout), but nothing reads stdout
-  // after the initial port banner — so all server logs were silently dropped.
-  transport: { target: 'pino/file', options: { destination: 2 } }
-})
+// Write to stderr so the main process can capture via electron-log.
+// Uses process.stderr directly — pino.destination(2) uses SonicBoom which
+// crashes in Electron's utilityProcess, and transport workers can't resolve
+// targets like 'pino/file' in the tsup bundle.
+const log = pino({ level: process.env.VITEST ? 'silent' : 'info' }, process.stderr)
 
 export default log
