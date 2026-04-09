@@ -49,11 +49,18 @@ beforeEach(() => {
 })
 
 describe('resolveResumeSessionId', () => {
-  it('returns hookSessionId immediately when present', async () => {
+  it('returns agentSessionId immediately when present', async () => {
+    const session = makeSession({ agentSessionId: 'claude-abc' })
+    const result = await resolveResumeSessionId(session)
+    expect(result).toBe('claude-abc')
+    expect(mockGetRecentSessions).not.toHaveBeenCalled()
+  })
+
+  it('ignores hookSessionId for resume (VibeGrid-internal, not a real agent session ID)', async () => {
     const session = makeSession({ hookSessionId: 'hook-abc' })
     const result = await resolveResumeSessionId(session)
-    expect(result).toBe('hook-abc')
-    expect(mockGetRecentSessions).not.toHaveBeenCalled()
+    // hookSessionId alone should NOT be used — falls through to history scan
+    expect(result).toBeUndefined()
   })
 
   it('returns exact-match sessionId from recent sessions', async () => {

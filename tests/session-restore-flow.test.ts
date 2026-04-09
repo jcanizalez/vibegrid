@@ -48,18 +48,25 @@ beforeEach(() => {
   mockGetRecentSessions.mockResolvedValue([])
 })
 
-describe('session restore flow: Claude with hookSessionId', () => {
-  it('hookSessionId is used as resumeSessionId without scanning history', async () => {
-    const session = makeSession({ hookSessionId: 'exact-uuid-123' })
+describe('session restore flow: Claude with agentSessionId', () => {
+  it('agentSessionId is used as resumeSessionId without scanning history', async () => {
+    const session = makeSession({ agentSessionId: 'exact-uuid-123' })
     const resumeId = await resolveResumeSessionId(session)
     expect(resumeId).toBe('exact-uuid-123')
-    // Should NOT have called getRecentSessions — hookSessionId was sufficient
+    // Should NOT have called getRecentSessions — agentSessionId was sufficient
     expect(mockGetRecentSessions).not.toHaveBeenCalled()
+  })
+
+  it('hookSessionId alone is NOT used for resume (VibeGrid-internal UUID)', async () => {
+    const session = makeSession({ hookSessionId: 'hook-only-uuid' })
+    const resumeId = await resolveResumeSessionId(session)
+    // hookSessionId is a VibeGrid routing UUID, not a real agent session ID
+    expect(resumeId).toBeUndefined()
   })
 
   it('buildRestorePayload passes resumeSessionId through', () => {
     const session = makeSession({
-      hookSessionId: 'exact-uuid-123',
+      agentSessionId: 'exact-uuid-123',
       displayName: 'my session',
       worktreePath: '/test/wt',
       isWorktree: true,
@@ -72,14 +79,14 @@ describe('session restore flow: Claude with hookSessionId', () => {
     expect(payload.branch).toBe('feat')
   })
 
-  it('buildAgentLaunchLine produces --resume with hookSessionId', () => {
+  it('buildAgentLaunchLine produces --resume with agentSessionId', () => {
     const payload = makePayload({ resumeSessionId: 'exact-uuid-123' })
     const line = buildAgentLaunchLine(payload, cmds, env)
     expect(line).toBe('claude --resume exact-uuid-123')
   })
 
-  it('full chain: hookSessionId → restore payload → launch line', async () => {
-    const session = makeSession({ hookSessionId: 'chain-uuid' })
+  it('full chain: agentSessionId → restore payload → launch line', async () => {
+    const session = makeSession({ agentSessionId: 'chain-uuid' })
 
     // Step 1: resolve
     const resumeId = await resolveResumeSessionId(session)

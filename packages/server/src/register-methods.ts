@@ -60,6 +60,8 @@ import { executeScript } from './script-runner'
 import { getTailscaleStatus, clearBinaryCache } from './tailscale'
 import { checkAndRebind } from './server-rebind'
 import { testSshConnection } from './process-utils'
+import { captureAgentSessionId } from './agent-session-capture'
+import { supportsExactSessionResume, supportsSessionIdPinning } from '@vornrun/shared/types'
 import log from './logger'
 
 const copilotInstallations = new Map<string, CopilotHookInstallation>()
@@ -580,6 +582,29 @@ export function registerAllMethods(): void {
       // (e.g. the agent CLI doesn't support hooks.json).
     }
 
+    // For agents without session ID pinning (copilot, codex, opencode), read
+    // the agent's own DB after it starts to capture the real session ID.
+    // This enables reliable --resume on next app restart.
+    if (
+      supportsExactSessionResume(payload.agentType) &&
+      !supportsSessionIdPinning(payload.agentType)
+    ) {
+      const captureSessionId = session.id
+      setTimeout(() => {
+        const s = ptyManager.getActiveSessions().find((t) => t.id === captureSessionId)
+        if (!s || s.agentSessionId) return
+        const cwd = s.worktreePath || s.projectPath
+        const capturedId = captureAgentSessionId(s.agentType, cwd)
+        if (capturedId) {
+          s.agentSessionId = capturedId
+          sessionManager.scheduleSave()
+          clientRegistry.broadcast(IPC.SESSION_UPDATED, s)
+          broadcastWidgetUpdate()
+          log.info(`[session] captured ${s.agentType} session ID: ${capturedId}`)
+        }
+      }, 5000)
+    }
+
     sessionManager.scheduleSave()
     broadcastWidgetUpdate()
   })
@@ -662,6 +687,8 @@ export function registerAllMethods(): void {
           hookServer.passthroughPermission(requestId)
           return
         }
+
+        ptyManager.promoteToHookStatus(terminalId)
 
         const session = ptyManager.getActiveSessions().find((s) => s.id === terminalId)
 

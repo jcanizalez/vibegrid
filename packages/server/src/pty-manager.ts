@@ -12,7 +12,8 @@ import {
   CreateTerminalPayload,
   IPC,
   TerminalSession,
-  RemoteHost
+  RemoteHost,
+  supportsSessionIdPinning
 } from '@vornrun/shared/types'
 import { displayNameFromPrompt } from '@vornrun/shared/string-utils'
 import {
@@ -208,19 +209,16 @@ class PtyManager extends EventEmitter {
       env: getSafeEnv()
     })
 
-    // Per-agent session ID strategy:
-    //   Claude:       generate UUID → pass --session-id for resume. hookSessionId stays
-    //                 unset until tryLink matches on SessionStart hook event.
-    //   Copilot:      UUID injected into hooks.json; forceLink sets hookSessionId
-    //   Codex/OpenCode: no CLI support for session ID pinning; relies on history fallback
-    //   Gemini:       no resume support (supportsExactSessionResume returns false)
-    let claudeSessionId: string | undefined
-    if (payload.agentType === 'claude') {
+    // Session ID pinning: agents that support it (supportsSessionIdPinning) get a
+    // UUID assigned on fresh launch via --session-id, enabling exact --resume later.
+    // Other agents rely on history-based fallback for resume.
+    let agentSessionId: string | undefined
+    if (supportsSessionIdPinning(payload.agentType)) {
       if (payload.resumeSessionId) {
-        claudeSessionId = payload.resumeSessionId
+        agentSessionId = payload.resumeSessionId
       } else {
-        claudeSessionId = crypto.randomUUID()
-        payload.sessionId = claudeSessionId
+        agentSessionId = crypto.randomUUID()
+        payload.sessionId = agentSessionId
       }
     }
 
@@ -250,7 +248,7 @@ class PtyManager extends EventEmitter {
       // when the first hook event actually arrives. This provides graceful
       // degradation: if hooks fail (uninstalled, port conflict, etc.), the
       // pattern-based fallback keeps working instead of leaving status stuck.
-      ...(claudeSessionId ? { claudeSessionId } : {})
+      ...(agentSessionId ? { agentSessionId } : {})
     }
     this.sessions.set(id, session)
     this.sessionOrder.push(id)
@@ -714,9 +712,28 @@ class PtyManager extends EventEmitter {
   /** Promote a session to hook-based status detection (disables pattern fallback). */
   promoteToHookStatus(id: string): void {
     const session = this.sessions.get(id)
-    if (session && session.statusSource !== 'hooks') {
+    if (!session) return
+
+    if (session.statusSource !== 'hooks') {
       session.statusSource = 'hooks'
       log.info(`[pty] session ${id} promoted to hook-based status`)
+    }
+
+    // Always re-arm idle timer with the longer hook timeout — even if already
+    // promoted — so that repeated hook events keep the timer fresh and the
+    // short pattern-based timer doesn't linger from before promotion.
+    const existingTimer = this.idleTimers.get(id)
+    if (existingTimer) {
+      clearTimeout(existingTimer)
+      this.idleTimers.set(
+        id,
+        setTimeout(() => {
+          this.idleTimers.delete(id)
+          if (session.status === 'running') {
+            this.updateSessionStatus(id, 'idle')
+          }
+        }, IDLE_TIMEOUT_HOOKS_MS)
+      )
     }
   }
 

@@ -250,7 +250,8 @@ function createSchema(): void {
       status_source TEXT,
       saved_at INTEGER,
       sort_order INTEGER NOT NULL DEFAULT 0,
-      worktree_name TEXT
+      worktree_name TEXT,
+      agent_session_id TEXT
     );
 
     CREATE TABLE IF NOT EXISTS schedule_log (
@@ -470,7 +471,12 @@ function migrateSchema(d: Database.Database): void {
       const sessionCols = d.prepare('PRAGMA table_info(sessions)').all() as Array<{
         name: string
       }>
-      if (!sessionCols.some((c) => c.name === 'claude_session_id')) {
+      // Skip adding claude_session_id if agent_session_id already exists
+      // (fresh DBs create agent_session_id directly via createSchema)
+      if (
+        !sessionCols.some((c) => c.name === 'claude_session_id') &&
+        !sessionCols.some((c) => c.name === 'agent_session_id')
+      ) {
         d.exec('ALTER TABLE sessions ADD COLUMN claude_session_id TEXT')
       }
       d.prepare(
@@ -478,6 +484,40 @@ function migrateSchema(d: Database.Database): void {
       ).run()
     })()
     log.info('[database] migrated schema to version 6 (claude session id)')
+  }
+
+  if (version < 7) {
+    d.transaction(() => {
+      const sessionCols = d.prepare('PRAGMA table_info(sessions)').all() as Array<{
+        name: string
+      }>
+      const hasOld = sessionCols.some((c) => c.name === 'claude_session_id')
+      const hasNew = sessionCols.some((c) => c.name === 'agent_session_id')
+      if (hasOld && !hasNew) {
+        try {
+          d.exec('ALTER TABLE sessions RENAME COLUMN claude_session_id TO agent_session_id')
+        } catch {
+          // SQLite < 3.25 fallback: add new column and copy data
+          d.exec('ALTER TABLE sessions ADD COLUMN agent_session_id TEXT')
+          d.exec('UPDATE sessions SET agent_session_id = claude_session_id')
+        }
+      } else if (hasOld && hasNew) {
+        // Both columns exist (e.g. fresh DB ran v6 before v7) — backfill any
+        // data from claude_session_id into agent_session_id so resume IDs
+        // aren't stranded, then drop the redundant column.
+        d.exec(
+          'UPDATE sessions SET agent_session_id = claude_session_id WHERE agent_session_id IS NULL AND claude_session_id IS NOT NULL'
+        )
+      } else if (!hasNew) {
+        d.exec('ALTER TABLE sessions ADD COLUMN agent_session_id TEXT')
+      }
+      d.prepare(
+        "INSERT OR REPLACE INTO schema_meta (key, value) VALUES ('schema_version', '7')"
+      ).run()
+    })()
+    log.info(
+      '[database] migrated schema to version 7 (rename claude_session_id → agent_session_id)'
+    )
   }
 }
 
@@ -516,7 +556,7 @@ function verifySchema(d: Database.Database): void {
         ddl: 'ALTER TABLE sessions ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0'
       },
       { column: 'worktree_name', ddl: 'ALTER TABLE sessions ADD COLUMN worktree_name TEXT' },
-      { column: 'claude_session_id', ddl: 'ALTER TABLE sessions ADD COLUMN claude_session_id TEXT' }
+      { column: 'agent_session_id', ddl: 'ALTER TABLE sessions ADD COLUMN agent_session_id TEXT' }
     ],
     agent_commands: [
       {
@@ -1459,7 +1499,7 @@ export function saveSessions(sessions: TerminalSession[]): void {
   const run = d.transaction(() => {
     d.prepare('DELETE FROM sessions').run()
     const insert = d.prepare(
-      `INSERT INTO sessions (id, agent_type, project_name, project_path, status, created_at, pid, display_name, branch, worktree_path, is_worktree, remote_host_id, remote_host_label, hook_session_id, status_source, saved_at, sort_order, worktree_name, claude_session_id)
+      `INSERT INTO sessions (id, agent_type, project_name, project_path, status, created_at, pid, display_name, branch, worktree_path, is_worktree, remote_host_id, remote_host_label, hook_session_id, status_source, saved_at, sort_order, worktree_name, agent_session_id)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     for (let i = 0; i < sessions.length; i++) {
@@ -1483,7 +1523,7 @@ export function saveSessions(sessions: TerminalSession[]): void {
         savedAt,
         i,
         s.worktreeName ?? null,
-        s.claudeSessionId ?? null
+        s.agentSessionId ?? null
       )
     }
   })
@@ -1510,7 +1550,7 @@ export function getPreviousSessions(): TerminalSession[] {
     status_source: string | null
     saved_at: number | null
     worktree_name: string | null
-    claude_session_id: string | null
+    agent_session_id: string | null
   }>
   return rows.map((r) => ({
     id: r.id,
@@ -1531,7 +1571,7 @@ export function getPreviousSessions(): TerminalSession[] {
       statusSource: r.status_source as TerminalSession['statusSource']
     }),
     ...(r.worktree_name != null && { worktreeName: r.worktree_name }),
-    ...(r.claude_session_id != null && { claudeSessionId: r.claude_session_id })
+    ...(r.agent_session_id != null && { agentSessionId: r.agent_session_id })
   }))
 }
 
