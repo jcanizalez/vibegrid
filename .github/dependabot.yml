@@ -5,6 +5,31 @@ updates:
     schedule:
       interval: 'weekly'
 
+  - package-ecosystem: 'npm'
+    directory: '/packages/web'
+    schedule:
+      interval: 'weekly'
+
+  - package-ecosystem: 'npm'
+    directory: '/packages/desktop'
+    schedule:
+      interval: 'weekly'
+
+  - package-ecosystem: 'npm'
+    directory: '/packages/server'
+    schedule:
+      interval: 'weekly'
+
+  - package-ecosystem: 'npm'
+    directory: '/packages/shared'
+    schedule:
+      interval: 'weekly'
+
+  - package-ecosystem: 'npm'
+    directory: '/packages/mcp'
+    schedule:
+      interval: 'weekly'
+
   - package-ecosystem: 'github-actions'
     directory: '/'
     schedule:

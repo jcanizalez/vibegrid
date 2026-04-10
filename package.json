@@ -107,5 +107,17 @@
     "typescript-eslint": "^8.57.0",
     "vite": "^7.3.2",
     "vitest": "4.1.0"
+  },
+  "resolutions": {
+    "serialize-javascript": "^7.0.5",
+    "@xmldom/xmldom": "^0.9.9",
+    "hono": "^4.12.12",
+    "@hono/node-server": "^1.19.13",
+    "lodash": "^4.18.1",
+    "flatted": "^3.4.2",
+    "tar": "^7.5.13",
+    "path-to-regexp": "^8.4.2",
+    "picomatch": "^4.0.4",
+    "fastify": "^5.8.4"
   }
 }
