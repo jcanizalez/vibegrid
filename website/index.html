@@ -423,17 +423,6 @@
         z-index: 0;
       }
 
-      @media (max-width: 768px) {
-        .hero-vitruvian {
-          top: 8%;
-          width: min(78vw, 440px);
-          opacity: 0.22;
-        }
-        .hero-title {
-          font-size: clamp(4.5rem, 19vw, 6.5rem);
-        }
-      }
-
       /* Golden ratio spiral — decorative background */
       .hero-spiral {
         position: absolute;
@@ -491,6 +480,17 @@
         line-height: 0.85;
         margin-bottom: 24px;
         text-indent: 0.25em;
+      }
+
+      @media (max-width: 768px) {
+        .hero-vitruvian {
+          top: 8%;
+          width: min(78vw, 440px);
+          opacity: 0.22;
+        }
+        .hero-title {
+          font-size: clamp(4.5rem, 19vw, 6.5rem);
+        }
       }
 
       .hero-subtitle {
