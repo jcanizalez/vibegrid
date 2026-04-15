@@ -149,8 +149,7 @@ describe('port file delete (shutdown)', () => {
   })
 
   it('no-ops when file is already gone', () => {
-    // Should not throw
-    deletePortFileIfOwned(process.pid)
+    expect(() => deletePortFileIfOwned(process.pid)).not.toThrow()
   })
 })
 
