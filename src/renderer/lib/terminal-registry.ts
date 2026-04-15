@@ -1,4 +1,4 @@
-import { Terminal } from '@xterm/xterm'
+import { Terminal, type ITerminalAddon } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
 import '@xterm/xterm/css/xterm.css'
@@ -170,41 +170,32 @@ function createTerminalEntry(terminalId: string): TerminalEntry {
     return true
   })
 
-  // Try WebGL, fall back to canvas. Idempotent + detach-safe: bails if the
-  // terminal is destroyed, already has a live renderer, or has been detached
-  // while the dynamic import was in flight.
+  const mountAddon = (make: () => ITerminalAddon): void => {
+    // Re-check under the await — the terminal may have been destroyed or
+    // detached while the dynamic import was in flight, and a concurrent
+    // load may have already installed an addon.
+    const e = registry.get(terminalId)
+    if (!e || !e.currentContainer || e._gpuAddon) return
+    const addon = make()
+    term.loadAddon(addon)
+    e._gpuAddon = addon
+    term.refresh(0, term.rows - 1)
+  }
+  const loadCanvas = (): Promise<void> =>
+    import('@xterm/addon-canvas').then(({ CanvasAddon }) => mountAddon(() => new CanvasAddon()))
   const loadRenderer = (): void => {
     const current = registry.get(terminalId)
     if (!current || current._gpuAddon) return
     import('@xterm/addon-webgl')
       .then(({ WebglAddon }) => {
-        const e = registry.get(terminalId)
-        if (!e || !e.currentContainer || e._gpuAddon) return
         try {
-          const addon = new WebglAddon()
-          term.loadAddon(addon)
-          e._gpuAddon = addon
-          term.refresh(0, term.rows - 1)
+          mountAddon(() => new WebglAddon())
         } catch {
-          import('@xterm/addon-canvas').then(({ CanvasAddon }) => {
-            const e2 = registry.get(terminalId)
-            if (!e2 || !e2.currentContainer || e2._gpuAddon) return
-            const addon = new CanvasAddon()
-            term.loadAddon(addon)
-            e2._gpuAddon = addon
-            term.refresh(0, term.rows - 1)
-          })
+          loadCanvas()
         }
       })
       .catch(() => {
-        import('@xterm/addon-canvas').then(({ CanvasAddon }) => {
-          const e = registry.get(terminalId)
-          if (!e || !e.currentContainer || e._gpuAddon) return
-          const addon = new CanvasAddon()
-          term.loadAddon(addon)
-          e._gpuAddon = addon
-          term.refresh(0, term.rows - 1)
-        })
+        loadCanvas()
       })
   }
 
@@ -219,8 +210,6 @@ function createTerminalEntry(terminalId: string): TerminalEntry {
     currentContainer: null
   }
 
-  // Retained across pause/resume cycles — called whenever a detached
-  // terminal is re-attached so we can rebuild the GPU renderer.
   entry._loadRenderer = loadRenderer
 
   registry.set(terminalId, entry)
@@ -264,12 +253,9 @@ export function attachTerminal(terminalId: string, container: HTMLDivElement): T
     container.appendChild(termEl)
   }
   entry.currentContainer = container
-
-  // Resume the renderer if it was paused while detached.
   if (!entry._gpuAddon) {
     entry._loadRenderer?.()
   }
-
   return entry
 }
 
