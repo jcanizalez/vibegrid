@@ -94,11 +94,13 @@ export function TaskBoardView() {
     if (!task || task.status === newStatus) return
 
     if (newStatus === 'in_progress' && task.status === 'todo') {
-      // No direct terminal spawn: just transition status. The seeded
-      // "Default Task Workflow" (or any user workflow with a
-      // taskStatusChanged trigger) picks this up via
-      // fireTaskStatusChangedTrigger in the store and launches the agent.
-      startTask(taskId, undefined, undefined)
+      // No direct terminal spawn — just transition status and preserve the
+      // task's existing `assignedAgent` so the "Default Task Workflow"
+      // (or any user workflow with a taskStatusChanged trigger) can read it
+      // from context.task at run time. Using `startTask(..., undefined, ...)`
+      // here would wipe `assignedAgent`, breaking the "fromTask" resolution
+      // that's the whole point of this flow.
+      updateTask(taskId, { status: 'in_progress' })
     } else if (newStatus === 'in_review') {
       updateTask(taskId, { status: 'in_review', assignedSessionId: undefined })
     } else if (newStatus === 'done') {

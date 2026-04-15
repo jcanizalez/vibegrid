@@ -270,6 +270,25 @@ async function executeNode(
 
   const effectiveAgent = resolveEffectiveAgent(config, context, resolvedTask)
 
+  // Resolve project name/path from the triggering task when the node config
+  // leaves them blank. The seeded default task workflow does exactly this:
+  // it's project-agnostic in its static config and relies on the task's
+  // project at run time. Without this fallback, createHeadlessSession /
+  // createTerminal would receive `cwd: ''` and silently spawn in an
+  // undefined directory.
+  let effectiveProjectName = config.projectName
+  let effectiveProjectPath = config.projectPath
+  if (!effectiveProjectName || !effectiveProjectPath) {
+    const taskForProject = context?.task ?? resolvedTask
+    if (taskForProject) {
+      const proj = currentState.config?.projects.find((p) => p.name === taskForProject.projectName)
+      if (proj) {
+        effectiveProjectName = effectiveProjectName || proj.name
+        effectiveProjectPath = effectiveProjectPath || proj.path
+      }
+    }
+  }
+
   if (initialPrompt) {
     initialPrompt = resolveTemplateVars(initialPrompt, context, stepOutputs)
   }
@@ -320,8 +339,8 @@ async function executeNode(
     try {
       const headlessSession = await window.api.createHeadlessSession({
         agentType: effectiveAgent,
-        projectName: config.projectName,
-        projectPath: config.projectPath,
+        projectName: effectiveProjectName,
+        projectPath: effectiveProjectPath,
         displayName: config.displayName || node.label,
         branch,
         useWorktree,
@@ -377,12 +396,12 @@ async function executeNode(
     }
   } else {
     const cfg = useAppStore.getState().config
-    const proj = cfg?.projects.find((p) => p.name === config.projectName)
+    const proj = cfg?.projects.find((p) => p.name === effectiveProjectName)
     const remoteHostId = proj ? getProjectRemoteHostId(proj) : undefined
     const session = await window.api.createTerminal({
       agentType: effectiveAgent,
-      projectName: config.projectName,
-      projectPath: config.projectPath,
+      projectName: effectiveProjectName,
+      projectPath: effectiveProjectPath,
       displayName: config.displayName || node.label,
       branch,
       useWorktree,

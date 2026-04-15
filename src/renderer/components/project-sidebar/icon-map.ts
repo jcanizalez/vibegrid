@@ -18,7 +18,8 @@ import {
   Image,
   BookOpen,
   FlaskConical,
-  Rocket
+  Rocket,
+  Play
 } from 'lucide-react'
 
 export const ICON_MAP: Record<
@@ -44,5 +45,6 @@ export const ICON_MAP: Record<
   Image,
   BookOpen,
   FlaskConical,
-  Rocket
+  Rocket,
+  Play
 }
