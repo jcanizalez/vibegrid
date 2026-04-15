@@ -2,6 +2,7 @@ import js from '@eslint/js'
 import tseslint from 'typescript-eslint'
 import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
+import vitest from '@vitest/eslint-plugin'
 import prettier from 'eslint-config-prettier'
 
 export default tseslint.config(
@@ -48,18 +49,23 @@ export default tseslint.config(
   },
 
   {
-    files: ['tests/**/*.test.ts'],
+    files: ['tests/**/*.test.{ts,tsx}'],
+    plugins: { vitest },
     languageOptions: {
       globals: {
-        describe: 'readonly',
-        it: 'readonly',
-        expect: 'readonly',
-        beforeEach: 'readonly',
-        afterEach: 'readonly',
-        beforeAll: 'readonly',
-        afterAll: 'readonly',
-        vi: 'readonly'
+        ...vitest.environments.env.globals
       }
+    },
+    rules: {
+      // Core anti-fake-test guardrails. Keep these as errors so a PR can't
+      // merge a test that makes no assertions, a .only that silences the
+      // rest of the suite, a .skip, or two tests that shadow each other.
+      'vitest/expect-expect': 'error',
+      'vitest/no-focused-tests': 'error',
+      'vitest/no-disabled-tests': 'error',
+      'vitest/no-identical-title': 'error',
+      'vitest/no-commented-out-tests': 'error',
+      'vitest/valid-expect': 'error'
     }
   }
 )
