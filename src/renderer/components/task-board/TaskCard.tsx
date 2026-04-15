@@ -23,7 +23,6 @@ export function TaskCard({
   task,
   onEdit,
   onDelete,
-  onStart,
   onOpenSession,
   onComplete,
   onCancel,
@@ -36,7 +35,6 @@ export function TaskCard({
   task: TaskConfig
   onEdit: () => void
   onDelete: () => void
-  onStart: () => void
   onOpenSession?: () => void
   onComplete?: () => void
   onCancel?: () => void
@@ -69,7 +67,6 @@ export function TaskCard({
             >
               <KanbanCardMenu
                 status={task.status}
-                onStart={onStart}
                 onEdit={onEdit}
                 onDelete={onDelete}
                 onOpenSession={onOpenSession}
@@ -152,15 +149,6 @@ export function TaskCard({
         className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
         onClick={(e) => e.stopPropagation()}
       >
-        {task.status === 'todo' && (
-          <button
-            onClick={onStart}
-            className="p-1 text-gray-600 hover:text-green-400 rounded transition-colors"
-            title="Start task now"
-          >
-            <Play size={12} strokeWidth={2} />
-          </button>
-        )}
         {task.status === 'in_review' && onReviewDiff && (
           <button
             onClick={onReviewDiff}

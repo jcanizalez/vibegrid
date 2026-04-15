@@ -257,9 +257,18 @@ export type TriggerConfig =
   | TaskCreatedTriggerConfig
   | TaskStatusChangedTriggerConfig
 
+/**
+ * Agent type as used in a launchAgent workflow node. A concrete AgentType runs
+ * that specific agent; `'fromTask'` defers resolution to run time, reading
+ * `task.assignedAgent` from the trigger/queue/taskId context (falling back to
+ * `defaults.defaultAgent`). The workflow editor only allows `'fromTask'` when
+ * the node actually has a task in scope — see LaunchAgentConfigForm.
+ */
+export type LaunchAgentType = AgentType | 'fromTask'
+
 // Launch Agent action config
 export interface LaunchAgentConfig {
-  agentType: AgentType
+  agentType: LaunchAgentType
   projectName: string
   projectPath: string
   args?: string[]
@@ -413,6 +422,12 @@ export interface AppConfig {
     showHeadlessAgents?: boolean
     headlessRetentionMinutes?: number
     enableHoverPreview?: boolean
+    /**
+     * Set to `true` after the seeded "Default Task Workflow" has been inserted
+     * once. Ensures deleting the workflow sticks — we don't resurrect it on
+     * the next launch.
+     */
+    hasSeededDefaultTaskWorkflow?: boolean
   }
   projects: ProjectConfig[]
   agentCommands?: Partial<Record<AgentType, AgentCommandConfig>>

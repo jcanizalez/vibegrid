@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Check, ChevronDown, Bot } from 'lucide-react'
-import { AgentType } from '../../shared/types'
+import { Check, ChevronDown, Bot, ClipboardList } from 'lucide-react'
+import { AgentType, LaunchAgentType } from '../../shared/types'
 import { AgentIcon } from './AgentIcon'
 
 const AGENT_LABELS: Record<AgentType, string> = {
@@ -18,13 +18,15 @@ export function AgentPicker({
   onChange,
   installStatus,
   variant = 'compact',
-  allowNone = false
+  allowNone = false,
+  allowFromTask = false
 }: {
-  currentAgent: AgentType | null
-  onChange: (agent: AgentType | null) => void
+  currentAgent: LaunchAgentType | null
+  onChange: (agent: LaunchAgentType | null) => void
   installStatus: Record<AgentType, boolean>
   variant?: 'compact' | 'form'
   allowNone?: boolean
+  allowFromTask?: boolean
 }) {
   const [open, setOpen] = useState(false)
   const triggerRef = useRef<HTMLButtonElement>(null)
@@ -44,8 +46,8 @@ export function AgentPicker({
     setOpen(true)
   }
 
-  const handleSelect = (agent: AgentType | null) => {
-    if (agent && !installStatus[agent]) return
+  const handleSelect = (agent: LaunchAgentType | null) => {
+    if (agent && agent !== 'fromTask' && !installStatus[agent]) return
     setOpen(false)
     if (agent !== currentAgent) {
       onChange(agent)
@@ -83,13 +85,19 @@ export function AgentPicker({
             : 'flex items-center gap-1.5 hover:bg-white/[0.04] rounded px-1.5 py-0.5 -mx-1.5 transition-colors text-[12px] text-gray-300'
         }
       >
-        {currentAgent ? (
+        {currentAgent === 'fromTask' ? (
+          <ClipboardList size={14} className="text-blue-400" />
+        ) : currentAgent ? (
           <AgentIcon agentType={currentAgent} size={14} />
         ) : (
           <Bot size={14} className="text-gray-500" />
         )}
         <span className={`flex-1 text-left ${currentAgent ? '' : 'text-gray-600'}`}>
-          {currentAgent ? AGENT_LABELS[currentAgent] : 'Unassigned'}
+          {currentAgent === 'fromTask'
+            ? 'From Task'
+            : currentAgent
+              ? AGENT_LABELS[currentAgent]
+              : 'Unassigned'}
         </span>
         <ChevronDown size={11} className="text-gray-500" />
       </button>
@@ -123,6 +131,23 @@ export function AgentPicker({
                   <span className="flex-1 text-left italic">None</span>
                   {!currentAgent && <Check size={13} className="text-gray-400" />}
                 </button>
+              )}
+              {allowFromTask && (
+                <>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleSelect('fromTask')
+                    }}
+                    className="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs text-gray-300 hover:bg-white/[0.06] transition-colors"
+                    title="Resolved from the task's assigned agent at run time"
+                  >
+                    <ClipboardList size={14} className="text-blue-400" />
+                    <span className="flex-1 text-left">From Task</span>
+                    {currentAgent === 'fromTask' && <Check size={13} className="text-gray-400" />}
+                  </button>
+                  <div className="border-t border-white/[0.06] my-1" />
+                </>
               )}
               {agents.map((agent) => {
                 const installed = installStatus[agent]

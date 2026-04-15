@@ -71,7 +71,6 @@ export function LaunchAgentConfigForm({
 
   useEffect(() => {
     if (!config.projectPath || isRemote) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: reset when project/host changes
       setExistingWorktrees([])
       setIsGitRepo(true)
       return
@@ -106,6 +105,20 @@ export function LaunchAgentConfigForm({
   const hasBranch = !isRemote && !!(config.branch && config.branch.trim())
   const isHeadless = !!config.headless
 
+  const canUseFromTask = isTaskTrigger || promptSource === 'task' || promptSource === 'queue'
+  const defaultAgentFallback = useAppStore((s) => s.config?.defaults.defaultAgent) ?? 'claude'
+
+  // Auto-revert: if the user selected "From Task" and then removes the task
+  // context (switches trigger to schedule, switches prompt source to inline),
+  // replace the invalid value with a concrete default rather than leaving a
+  // stale config that can't resolve at run time.
+  useEffect(() => {
+    if (!canUseFromTask && config.agentType === 'fromTask') {
+      onChange({ ...config, agentType: defaultAgentFallback })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canUseFromTask])
+
   const contextVars = isTaskTrigger
     ? TEMPLATE_VARIABLES.filter(
         (v) =>
@@ -125,7 +138,14 @@ export function LaunchAgentConfigForm({
           onChange={(agent) => agent && onChange({ ...config, agentType: agent })}
           installStatus={installStatus}
           variant="form"
+          allowFromTask={canUseFromTask}
         />
+        {config.agentType === 'fromTask' && (
+          <p className="mt-1.5 text-[11px] text-gray-500 leading-snug">
+            Resolved at run time from the task&apos;s assigned agent. Falls back to the default
+            agent if the task has none.
+          </p>
+        )}
       </div>
 
       {/* Project */}

@@ -710,7 +710,7 @@ export function TaskDetailPanel() {
             <span className="text-gray-600 w-20 shrink-0">Agent</span>
             <AgentPicker
               currentAgent={formAssignedAgent}
-              onChange={setFormAssignedAgent}
+              onChange={(a) => setFormAssignedAgent(a === 'fromTask' ? null : a)}
               installStatus={agentInstallStatus}
               allowNone
             />

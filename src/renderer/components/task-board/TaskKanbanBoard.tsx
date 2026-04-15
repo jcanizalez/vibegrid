@@ -16,7 +16,6 @@ export function TaskKanbanBoard({
   allTasks,
   onEdit,
   onDelete,
-  onStart,
   onDrop,
   onOpenSession,
   onComplete,
@@ -30,7 +29,6 @@ export function TaskKanbanBoard({
   allTasks: TaskConfig[]
   onEdit: (task: TaskConfig) => void
   onDelete: (id: string) => void
-  onStart: (task: TaskConfig) => void
   onDrop: (taskId: string, newStatus: TaskStatus) => void
   onOpenSession: (task: TaskConfig) => (() => void) | undefined
   onComplete: (id: string) => void
@@ -145,7 +143,6 @@ export function TaskKanbanBoard({
                       task={task}
                       onEdit={() => onEdit(task)}
                       onDelete={() => onDelete(task.id)}
-                      onStart={() => onStart(task)}
                       onOpenSession={onOpenSession(task)}
                       onComplete={() => onComplete(task.id)}
                       onCancel={() => onCancel(task.id)}

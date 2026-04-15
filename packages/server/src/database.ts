@@ -25,6 +25,7 @@ import {
   SessionEventType
 } from '@vornrun/shared/types'
 import { DEFAULT_AGENT_COMMANDS } from '@vornrun/shared/agent-defaults'
+import { DEFAULT_TASK_WORKFLOW_ID, buildDefaultTaskWorkflow } from './default-workflows'
 
 const CONFIG_DIR = path.join(os.homedir(), '.vorn')
 const DB_PATH = path.join(CONFIG_DIR, 'vorn.db')
@@ -47,6 +48,7 @@ export function initDatabase(): void {
     db.pragma('journal_mode = WAL')
     db.pragma('foreign_keys = ON')
     createSchema()
+    seedSystemDefaults()
   } catch (err) {
     log.error('[database] Failed to open database:', err)
 
@@ -63,6 +65,60 @@ export function initDatabase(): void {
       throw err
     }
   }
+}
+
+/**
+ * Insert the seeded "Default Task Workflow" on first launch. Gated by the
+ * `hasSeededDefaultTaskWorkflow` defaults flag: once the user has seen (and
+ * possibly deleted) the seeded workflow, we never re-seed. This means delete
+ * sticks, and users upgrading from a pre-seed version will get it once.
+ *
+ * Exported so tests can exercise the seeding flow against an in-memory
+ * database via `initTestDatabase` without spinning up the full init path.
+ */
+export function seedSystemDefaults(): void {
+  const d = getDb()
+
+  const flagRow = d
+    .prepare("SELECT value FROM defaults WHERE key = 'hasSeededDefaultTaskWorkflow'")
+    .get() as { value: string } | undefined
+  if (flagRow) {
+    try {
+      if (JSON.parse(flagRow.value) === true) return
+    } catch {
+      // corrupted value — fall through and re-seed
+    }
+  }
+
+  // Safety net: skip if a workflow with the stable id already exists from a
+  // manual import or partial upgrade. Still set the flag so we don't retry.
+  const existing = d
+    .prepare('SELECT id FROM workflows WHERE id = ?')
+    .get(DEFAULT_TASK_WORKFLOW_ID) as { id: string } | undefined
+  if (!existing) {
+    const w = buildDefaultTaskWorkflow()
+    d.prepare(
+      `INSERT INTO workflows (id, name, icon, icon_color, nodes, edges, enabled, last_run_at, last_run_status, stagger_delay_ms, workspace_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(
+      w.id,
+      w.name,
+      w.icon,
+      w.iconColor,
+      JSON.stringify(w.nodes),
+      JSON.stringify(w.edges),
+      w.enabled ? 1 : 0,
+      w.lastRunAt ?? null,
+      w.lastRunStatus ?? null,
+      w.staggerDelayMs ?? null,
+      w.workspaceId ?? 'personal'
+    )
+    log.info(`[database] Seeded default task workflow (${DEFAULT_TASK_WORKFLOW_ID})`)
+  }
+
+  d.prepare(
+    "INSERT OR REPLACE INTO defaults (key, value) VALUES ('hasSeededDefaultTaskWorkflow', ?)"
+  ).run(JSON.stringify(true))
 }
 
 /**
@@ -101,6 +157,7 @@ function recoverCorruptDatabase(): void {
     db.pragma('journal_mode = WAL')
     db.pragma('foreign_keys = ON')
     createSchema()
+    seedSystemDefaults()
     log.info('[database] Successfully created fresh database after corruption recovery')
   } catch (freshErr) {
     log.error('[database] Failed to create fresh database after corruption:', freshErr)
@@ -667,6 +724,9 @@ function loadDefaults(d: Database.Database): AppConfig['defaults'] {
     }),
     ...(map.headlessRetentionMinutes !== undefined && {
       headlessRetentionMinutes: map.headlessRetentionMinutes as number
+    }),
+    ...(map.hasSeededDefaultTaskWorkflow !== undefined && {
+      hasSeededDefaultTaskWorkflow: map.hasSeededDefaultTaskWorkflow as boolean
     })
   }
 }

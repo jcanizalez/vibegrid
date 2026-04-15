@@ -1,4 +1,5 @@
 import {
+  AgentType,
   WorkflowDefinition,
   WorkflowNode,
   WorkflowExecution,
@@ -21,6 +22,32 @@ const runningWorkflows = new Set<string>()
 
 export interface ExecuteWorkflowOptions {
   source?: 'scheduler' | 'manual'
+}
+
+/**
+ * Resolve a launchAgent node's configured agent to a concrete AgentType,
+ * honoring the `'fromTask'` sentinel. Exported so it can be unit-tested
+ * without mounting the workflow engine.
+ *
+ * Precedence for `'fromTask'`:
+ *   1. `context.task.assignedAgent` — set when a task-based trigger fired.
+ *   2. `resolvedTask.assignedAgent` — set when the node pulled a task via
+ *      static `taskId` or `taskFromQueue`.
+ *   3. `defaults.defaultAgent` from user config.
+ *   4. `'claude'` as a final fallback.
+ */
+export function resolveEffectiveAgent(
+  config: LaunchAgentConfig,
+  context: WorkflowExecutionContext | undefined,
+  resolvedTask: TaskConfig | undefined
+): AgentType {
+  if (config.agentType !== 'fromTask') return config.agentType
+  return (
+    context?.task?.assignedAgent ??
+    resolvedTask?.assignedAgent ??
+    useAppStore.getState().config?.defaults.defaultAgent ??
+    'claude'
+  )
 }
 
 function resolveTaskContext(task: TaskConfig, fallbackBranch?: string, fallbackWorktree?: boolean) {
@@ -197,11 +224,27 @@ async function executeNode(
     useWorktree = undefined
   }
 
-  if (config.taskId) {
+  // Track the task we resolved so we can pass it to resolveEffectiveAgent later
+  // — covers the taskId / taskFromQueue paths. The trigger-driven path uses
+  // context.task instead.
+  let resolvedTask: TaskConfig | undefined
+
+  // Fall back to the trigger's task id when the node doesn't bind to one
+  // statically. This lets the seeded default task workflow stay task-agnostic
+  // in its static config while still pulling prompt/branch/worktree from
+  // whichever task fired the trigger.
+  const effectiveTaskId = config.taskId ?? context?.task?.id
+  if (effectiveTaskId) {
+    // Status check was previously locked to 'todo'. That's too tight for
+    // trigger-driven runs: by the time `taskStatusChanged` fires, the task is
+    // already in its target status (typically 'in_progress'). Accept any
+    // non-terminal status so both the legacy static-taskId path and the new
+    // trigger-driven path work.
     const task = (currentState.config?.tasks || []).find(
-      (t) => t.id === config.taskId && t.status === 'todo'
+      (t) => t.id === effectiveTaskId && t.status !== 'done' && t.status !== 'cancelled'
     )
     if (task) {
+      resolvedTask = task
       const ctx = resolveTaskContext(task, branch, useWorktree)
       initialPrompt = ctx.initialPrompt
       resolvedTaskId = ctx.resolvedTaskId
@@ -214,12 +257,34 @@ async function executeNode(
   } else if (config.taskFromQueue) {
     const task = currentState.getNextTask(config.projectName)
     if (task) {
+      resolvedTask = task
       const ctx = resolveTaskContext(task, branch, useWorktree)
       initialPrompt = ctx.initialPrompt
       resolvedTaskId = ctx.resolvedTaskId
       if (!existingWorktreePath) {
         branch = ctx.branch
         useWorktree = ctx.useWorktree
+      }
+    }
+  }
+
+  const effectiveAgent = resolveEffectiveAgent(config, context, resolvedTask)
+
+  // Resolve project name/path from the triggering task when the node config
+  // leaves them blank. The seeded default task workflow does exactly this:
+  // it's project-agnostic in its static config and relies on the task's
+  // project at run time. Without this fallback, createHeadlessSession /
+  // createTerminal would receive `cwd: ''` and silently spawn in an
+  // undefined directory.
+  let effectiveProjectName = config.projectName
+  let effectiveProjectPath = config.projectPath
+  if (!effectiveProjectName || !effectiveProjectPath) {
+    const taskForProject = context?.task ?? resolvedTask
+    if (taskForProject) {
+      const proj = currentState.config?.projects.find((p) => p.name === taskForProject.projectName)
+      if (proj) {
+        effectiveProjectName = effectiveProjectName || proj.name
+        effectiveProjectPath = effectiveProjectPath || proj.path
       }
     }
   }
@@ -273,9 +338,9 @@ async function executeNode(
 
     try {
       const headlessSession = await window.api.createHeadlessSession({
-        agentType: config.agentType,
-        projectName: config.projectName,
-        projectPath: config.projectPath,
+        agentType: effectiveAgent,
+        projectName: effectiveProjectName,
+        projectPath: effectiveProjectPath,
         displayName: config.displayName || node.label,
         branch,
         useWorktree,
@@ -303,7 +368,7 @@ async function executeNode(
       persistExecution(workflow.id, execution)
 
       if (resolvedTaskId) {
-        useAppStore.getState().startTask(resolvedTaskId, headlessSession.id, config.agentType)
+        useAppStore.getState().startTask(resolvedTaskId, headlessSession.id, effectiveAgent)
       }
 
       const exitCode = await exitPromise
@@ -331,12 +396,12 @@ async function executeNode(
     }
   } else {
     const cfg = useAppStore.getState().config
-    const proj = cfg?.projects.find((p) => p.name === config.projectName)
+    const proj = cfg?.projects.find((p) => p.name === effectiveProjectName)
     const remoteHostId = proj ? getProjectRemoteHostId(proj) : undefined
     const session = await window.api.createTerminal({
-      agentType: config.agentType,
-      projectName: config.projectName,
-      projectPath: config.projectPath,
+      agentType: effectiveAgent,
+      projectName: effectiveProjectName,
+      projectPath: effectiveProjectPath,
       displayName: config.displayName || node.label,
       branch,
       useWorktree,
@@ -350,7 +415,7 @@ async function executeNode(
     useAppStore.getState().addTerminal(session)
 
     if (resolvedTaskId) {
-      useAppStore.getState().startTask(resolvedTaskId, session.id, config.agentType)
+      useAppStore.getState().startTask(resolvedTaskId, session.id, effectiveAgent)
     }
 
     updateNodeState(execution, node.id, {

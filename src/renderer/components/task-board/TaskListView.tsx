@@ -9,7 +9,6 @@ export function TaskListView({
   sections,
   onEdit,
   onDelete,
-  onStart,
   onOpenSession,
   onComplete,
   onCancel,
@@ -22,7 +21,6 @@ export function TaskListView({
   sections: { status: TaskStatus; title: string; tasks: TaskConfig[]; emptyText: string }[]
   onEdit: (task: TaskConfig) => void
   onDelete: (id: string) => void
-  onStart: (task: TaskConfig) => void
   onOpenSession: (task: TaskConfig) => (() => void) | undefined
   onComplete: (id: string) => void
   onCancel: (id: string) => void
@@ -103,7 +101,6 @@ export function TaskListView({
                           task={task}
                           onEdit={() => onEdit(task)}
                           onDelete={() => onDelete(task.id)}
-                          onStart={() => onStart(task)}
                           onOpenSession={onOpenSession(task)}
                           onComplete={() => onComplete(task.id)}
                           onCancel={() => onCancel(task.id)}
