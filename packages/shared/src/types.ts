@@ -6,9 +6,22 @@ export function supportsExactSessionResume(agentType: AgentType): boolean {
   return agentType !== 'gemini'
 }
 
-/** Can we assign a session ID on fresh launch (e.g. --session-id)? */
+/** Can we pin a pre-generated session ID on fresh launch so we can --resume it later? */
 export function supportsSessionIdPinning(agentType: AgentType): boolean {
-  return agentType === 'claude'
+  return agentType === 'claude' || agentType === 'copilot'
+}
+
+/** CLI flag used to pin a pre-generated session ID on fresh launch. Only valid
+ *  when supportsSessionIdPinning(agentType) is true. */
+export function getSessionIdPinningFlag(agentType: AgentType): string {
+  switch (agentType) {
+    case 'claude':
+      return '--session-id'
+    case 'copilot':
+      return '--resume'
+    default:
+      throw new Error(`getSessionIdPinningFlag: ${agentType} does not support session ID pinning`)
+  }
 }
 
 export function getRecentSessionActivityLabel(agentType: AgentType): string {
@@ -425,7 +438,7 @@ export interface CreateTerminalPayload {
   projectName: string
   projectPath: string
   resumeSessionId?: string
-  /** Pre-generated agent session ID (used with --session-id for Claude) */
+  /** Pre-generated agent session ID to pin on fresh launch (claude, copilot) */
   sessionId?: string
   displayName?: string
   branch?: string
