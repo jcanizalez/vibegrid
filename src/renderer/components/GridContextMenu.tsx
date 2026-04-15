@@ -135,15 +135,15 @@ export function GridContextMenu({ position, onClose }: Props) {
           createSession(p, { branch: mainWt.branch, existingWorktreePath: mainWt.path })
       })
     }
-    for (const wt of nonMain) {
+    nonMain.forEach((wt, i) => {
       subs.push({
         iconElement: <FolderGit2 size={12} className="text-amber-400/70" />,
         label: formatLabel(wt),
         detail: formatDetail(wt.path),
-        onClick: () => createSession(p, { branch: wt.branch, existingWorktreePath: wt.path })
+        onClick: () => createSession(p, { branch: wt.branch, existingWorktreePath: wt.path }),
+        separator: i === 0 && mainWt !== undefined
       })
-    }
-    if (mainWt && nonMain.length > 0) subs[1].separator = true
+    })
     subs.push({
       iconElement: <Plus size={12} className="text-amber-400/70" />,
       label: 'New worktree',
