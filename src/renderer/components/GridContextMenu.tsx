@@ -3,9 +3,9 @@ import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Play, FolderGit2, Plus, ChevronRight } from 'lucide-react'
 import { useAppStore } from '../stores'
-import { getProjectRemoteHostId, type ProjectConfig } from '../../shared/types'
+import { type ProjectConfig } from '../../shared/types'
 import { ProjectIcon } from './project-sidebar/ProjectIcon'
-import { resolveActiveProject } from '../lib/session-utils'
+import { resolveActiveProject, createSessionFromProject } from '../lib/session-utils'
 import { useWorkspaceProjects } from '../hooks/useWorkspaceProjects'
 
 interface Props {
@@ -87,40 +87,21 @@ export function GridContextMenu({ position, onClose }: Props) {
   const project = resolveActiveProject()
   const terminals = useAppStore.getState().terminals
 
-  let activeWorktreeBranch: string | undefined
-  if (activeWorktreePath && project) {
-    const cachedWts = worktreeCache.get(project.path)
-    const activeWt = cachedWts?.find((wt) => wt.path === activeWorktreePath)
-    activeWorktreeBranch = activeWt?.branch
-  }
+  const activeWt =
+    activeWorktreePath && project
+      ? worktreeCache.get(project.path)?.find((wt) => wt.path === activeWorktreePath)
+      : undefined
 
-  const createSession = async (
+  const createSession = (
     p: ProjectConfig,
     opts: {
       branch?: string
       existingWorktreePath?: string
       useWorktree?: boolean
     } = {}
-  ) => {
+  ): Promise<void> => {
     onClose()
-    const state = useAppStore.getState()
-    const agentType = state.config?.defaults.defaultAgent || 'claude'
-    const remoteHostId = getProjectRemoteHostId(p)
-    let branch = opts.branch
-    if (opts.useWorktree && !branch) {
-      const branchResult = await window.api.listBranches(p.path)
-      branch = branchResult.current || 'main'
-    }
-    const session = await window.api.createTerminal({
-      agentType,
-      projectName: p.name,
-      projectPath: p.path,
-      branch,
-      existingWorktreePath: opts.existingWorktreePath,
-      useWorktree: opts.useWorktree,
-      remoteHostId
-    })
-    state.addTerminal(session)
+    return createSessionFromProject(p, opts)
   }
 
   // Returns null for non-git projects (whose worktreeCache entry is never
@@ -137,9 +118,10 @@ export function GridContextMenu({ position, onClose }: Props) {
     }
     const subs: SubmenuItem[] = nonMain.map((wt) => {
       const count = sessionCountByPath.get(wt.path) ?? 0
+      const label = wt.name === wt.branch ? wt.name : `${wt.name} (${wt.branch})`
       return {
         iconElement: <FolderGit2 size={12} className="text-amber-400/70" />,
-        label: wt.branch,
+        label,
         detail: count > 0 ? `${count} session${count > 1 ? 's' : ''}` : 'idle',
         onClick: () => createSession(p, { branch: wt.branch, existingWorktreePath: wt.path })
       }
@@ -157,8 +139,8 @@ export function GridContextMenu({ position, onClose }: Props) {
 
   if (project) {
     const quickLabel = activeWorktreePath
-      ? activeWorktreeBranch
-        ? `New session in ${project.name} on ${activeWorktreeBranch}`
+      ? activeWt
+        ? `New session in ${project.name} / ${activeWt.name}`
         : `New session in ${project.name} (worktree)`
       : `New session in ${project.name}`
 
@@ -173,7 +155,7 @@ export function GridContextMenu({ position, onClose }: Props) {
       onClick: () =>
         activeWorktreePath
           ? createSession(project, {
-              branch: activeWorktreeBranch,
+              branch: activeWt?.branch,
               existingWorktreePath: activeWorktreePath
             })
           : createSession(project)
