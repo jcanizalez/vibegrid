@@ -13,6 +13,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-python@v6
         with:
@@ -20,6 +22,9 @@ jobs:
 
       - name: Install Python setuptools
         run: pip install setuptools
+
+      - name: Install diff-cover
+        run: pip install diff-cover
 
       - uses: actions/setup-node@v6
         with:
@@ -41,7 +46,11 @@ jobs:
         run: yarn format:check
 
       - name: Test
-        run: yarn test
+        run: yarn test:coverage
+
+      - name: Enforce 80% patch coverage
+        if: github.event_name == 'pull_request'
+        run: diff-cover coverage/lcov.info --compare-branch=origin/${{ github.base_ref }} --fail-under=80
 
       - name: Verify server CJS bundle
         run: |
