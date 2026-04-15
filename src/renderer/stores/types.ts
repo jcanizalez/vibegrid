@@ -227,7 +227,12 @@ export interface TasksSlice {
   removeTask: (id: string) => void
   updateTask: (id: string, updates: Partial<TaskConfig>) => void
   reorderTask: (id: string, newOrder: number) => void
-  startTask: (id: string, sessionId: string, agentType: AgentType, worktreePath?: string) => void
+  startTask: (
+    id: string,
+    sessionId: string | undefined,
+    agentType: AgentType | undefined,
+    worktreePath?: string
+  ) => void
   completeTask: (id: string) => void
   reviewTask: (id: string) => void
   cancelTask: (id: string) => void

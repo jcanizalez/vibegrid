@@ -318,7 +318,7 @@ export function AddTaskDialog() {
               {/* Agent picker */}
               <AgentPicker
                 currentAgent={assignedAgent}
-                onChange={setAssignedAgent}
+                onChange={(a) => setAssignedAgent(a === 'fromTask' ? null : a)}
                 installStatus={agentInstallStatus}
                 allowNone
               />

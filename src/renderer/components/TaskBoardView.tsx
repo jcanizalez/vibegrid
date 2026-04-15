@@ -6,7 +6,6 @@ import {
   supportsExactSessionResume,
   getProjectRemoteHostId
 } from '../../shared/types'
-import { buildTaskPrompt } from '../../shared/prompt-builder'
 import { TaskKanbanBoard } from './task-board/TaskKanbanBoard'
 import { TaskListView } from './task-board/TaskListView'
 import { ListTodo } from 'lucide-react'
@@ -53,26 +52,6 @@ export function TaskBoardView() {
   const doneTasks = allTasks.filter((t) => t.status === 'done')
   const cancelledTasks = allTasks.filter((t) => t.status === 'cancelled')
 
-  const handleStartTask = async (task: TaskConfig) => {
-    const project = config?.projects.find((p) => p.name === task.projectName)
-    if (!project) return
-    const agentType = config?.defaults.defaultAgent || 'claude'
-    const siblingTasks = (config?.tasks || []).filter((t) => t.projectName === task.projectName)
-    const remoteHostId = getProjectRemoteHostId(project)
-    const session = await window.api.createTerminal({
-      agentType,
-      projectName: project.name,
-      projectPath: project.path,
-      branch: task.branch,
-      useWorktree: task.useWorktree,
-      initialPrompt: buildTaskPrompt({ task, project, siblingTasks }),
-      taskId: task.id,
-      remoteHostId
-    })
-    addTerminal(session)
-    startTask(task.id, session.id, agentType, session.worktreePath)
-  }
-
   const handleEdit = (task: TaskConfig) => {
     setSelectedTaskId(task.id)
   }
@@ -115,7 +94,11 @@ export function TaskBoardView() {
     if (!task || task.status === newStatus) return
 
     if (newStatus === 'in_progress' && task.status === 'todo') {
-      handleStartTask(task)
+      // No direct terminal spawn: just transition status. The seeded
+      // "Default Task Workflow" (or any user workflow with a
+      // taskStatusChanged trigger) picks this up via
+      // fireTaskStatusChangedTrigger in the store and launches the agent.
+      startTask(taskId, undefined, undefined)
     } else if (newStatus === 'in_review') {
       updateTask(taskId, { status: 'in_review', assignedSessionId: undefined })
     } else if (newStatus === 'done') {
@@ -194,7 +177,6 @@ export function TaskBoardView() {
               removeTask(id)
               toast.success('Task deleted')
             }}
-            onStart={handleStartTask}
             onDrop={handleKanbanDrop}
             onOpenSession={getOpenSessionHandler}
             onComplete={(id) => {
@@ -222,7 +204,6 @@ export function TaskBoardView() {
               removeTask(id)
               toast.success('Task deleted')
             }}
-            onStart={handleStartTask}
             onOpenSession={getOpenSessionHandler}
             onComplete={(id) => {
               completeTask(id)

@@ -1,7 +1,7 @@
 import { AgentIcon } from '../../AgentIcon'
 import type { LaunchAgentConfig, AgentType } from '../../../../shared/types'
 import { useAppStore } from '../../../stores'
-import { Server } from 'lucide-react'
+import { ClipboardList, Server } from 'lucide-react'
 
 interface Props {
   label: string
@@ -20,7 +20,10 @@ const AGENT_COLORS: Record<AgentType, string> = {
 }
 
 export function LaunchAgentNode({ label, config, selected, executionStatus, onClick }: Props) {
-  const agentColor = AGENT_COLORS[config.agentType] || '#6b7280'
+  const isFromTask = config.agentType === 'fromTask'
+  const agentColor = isFromTask
+    ? '#60a5fa'
+    : AGENT_COLORS[config.agentType as AgentType] || '#6b7280'
   const remoteHosts = useAppStore((s) => s.config?.remoteHosts)
   const remoteHost = config.remoteHostId
     ? remoteHosts?.find((h) => h.id === config.remoteHostId)
@@ -73,7 +76,11 @@ export function LaunchAgentNode({ label, config, selected, executionStatus, onCl
           className="w-8 h-8 rounded-md flex items-center justify-center"
           style={{ backgroundColor: `${agentColor}20` }}
         >
-          <AgentIcon agentType={config.agentType} size={16} />
+          {isFromTask ? (
+            <ClipboardList size={16} className="text-blue-400" />
+          ) : (
+            <AgentIcon agentType={config.agentType as AgentType} size={16} />
+          )}
         </div>
         <div className="min-w-0 flex-1">
           <div className="text-[13px] font-medium text-white truncate">{label}</div>

@@ -24,7 +24,6 @@ interface MenuItem {
 
 export function KanbanCardMenu({
   status,
-  onStart,
   onEdit,
   onDelete,
   onOpenSession,
@@ -35,7 +34,6 @@ export function KanbanCardMenu({
   sessionIsLive
 }: {
   status: TaskStatus
-  onStart: () => void
   onEdit: () => void
   onDelete: () => void
   onOpenSession?: () => void
@@ -98,14 +96,6 @@ export function KanbanCardMenu({
 
   const items: MenuItem[] = []
 
-  if (status === 'todo') {
-    items.push({
-      icon: Play,
-      label: 'Start task',
-      onClick: () => handleAction(onStart),
-      className: 'text-green-400'
-    })
-  }
   if (status === 'in_progress' && onOpenSession) {
     items.push({
       icon: sessionIsLive ? Terminal : Play,
