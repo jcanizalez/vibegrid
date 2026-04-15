@@ -99,13 +99,33 @@ describe('buildAgentLaunchLine', () => {
     expect(result).not.toContain('--session-id')
   })
 
-  it('does not add --session-id for non-Claude agents', () => {
+  it('pins fresh copilot session via --resume', () => {
     const result = buildAgentLaunchLine(
       makePayload({ agentType: 'copilot', sessionId: 'uuid-123' }),
       cmds,
       env
     )
+    expect(result).toBe('copilot --resume uuid-123')
     expect(result).not.toContain('--session-id')
+  })
+
+  it('prefers resumeSessionId over pinned sessionId for copilot', () => {
+    const result = buildAgentLaunchLine(
+      makePayload({ agentType: 'copilot', resumeSessionId: 'sess-1', sessionId: 'uuid-123' }),
+      cmds,
+      env
+    )
+    expect(result).toBe('copilot --resume sess-1')
+  })
+
+  it('does not add --session-id for non-pinning agents', () => {
+    const result = buildAgentLaunchLine(
+      makePayload({ agentType: 'codex', sessionId: 'uuid-123' }),
+      cmds,
+      env
+    )
+    expect(result).not.toContain('--session-id')
+    expect(result).not.toContain('--resume')
   })
 })
 

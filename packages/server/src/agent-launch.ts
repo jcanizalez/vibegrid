@@ -4,7 +4,8 @@ import {
   AgentCommandConfig,
   CreateTerminalPayload,
   supportsExactSessionResume,
-  supportsSessionIdPinning
+  supportsSessionIdPinning,
+  getSessionIdPinningFlag
 } from '@vornrun/shared/types'
 import { DEFAULT_AGENT_COMMANDS } from '@vornrun/shared/agent-defaults'
 import { shellEscape } from './process-utils'
@@ -77,14 +78,14 @@ export function buildAgentLaunchLine(
     }
   }
 
-  // For agents that support session ID pinning, assign the ID on fresh launch
-  // so we can reliably --resume later
+  // Pin the pre-generated ID on fresh launch so we know what to --resume later
+  // without reading the agent's private session store.
   if (
     !payload.resumeSessionId &&
     payload.sessionId &&
     supportsSessionIdPinning(payload.agentType)
   ) {
-    launchLine += ` --session-id ${payload.sessionId}`
+    launchLine += ` ${getSessionIdPinningFlag(payload.agentType)} ${payload.sessionId}`
   }
 
   if (payload.initialPrompt) {

@@ -17,22 +17,6 @@ afterEach(() => {
   fs.rmSync(tmpDir, { recursive: true, force: true })
 })
 
-function createCopilotDb(sessions: { id: string; cwd: string; updated_at: string }[]): string {
-  const dbPath = path.join(tmpDir, 'copilot-session-store.db')
-  const db = new Database(dbPath)
-  db.exec(`CREATE TABLE sessions (
-    id TEXT PRIMARY KEY,
-    cwd TEXT,
-    summary TEXT,
-    created_at TEXT DEFAULT (datetime('now')),
-    updated_at TEXT DEFAULT (datetime('now'))
-  )`)
-  const insert = db.prepare('INSERT INTO sessions (id, cwd, updated_at) VALUES (?, ?, ?)')
-  for (const s of sessions) insert.run(s.id, s.cwd, s.updated_at)
-  db.close()
-  return dbPath
-}
-
 function createCodexDb(
   threads: { id: string; cwd: string; updated_at: number; archived?: number }[]
 ): string {
@@ -84,44 +68,18 @@ function createOpenCodeDb(
 describe('captureAgentSessionId', () => {
   it('returns undefined for unsupported agent types', () => {
     expect(captureAgentSessionId('claude', '/any/path')).toBeUndefined()
+    expect(captureAgentSessionId('copilot', '/any/path')).toBeUndefined()
     expect(captureAgentSessionId('gemini', '/any/path')).toBeUndefined()
   })
 
   it('returns undefined when DB does not exist', () => {
     const fakePath = path.join(tmpDir, 'nonexistent.db')
-    expect(captureAgentSessionId('copilot', '/any/path', fakePath)).toBeUndefined()
+    expect(captureAgentSessionId('codex', '/any/path', fakePath)).toBeUndefined()
   })
 
   it('returns undefined for non-matching cwd', () => {
-    const dbPath = createCopilotDb([
-      { id: 'some-session', cwd: '/other/project', updated_at: '2026-04-01T00:00:00Z' }
-    ])
-    expect(captureAgentSessionId('copilot', '/my/project', dbPath)).toBeUndefined()
-  })
-})
-
-describe('copilot DB via captureAgentSessionId', () => {
-  it('reads most recent session by cwd', () => {
-    const dbPath = createCopilotDb([
-      { id: 'old-session', cwd: '/my/project', updated_at: '2026-01-01T00:00:00Z' },
-      { id: 'new-session', cwd: '/my/project', updated_at: '2026-04-01T00:00:00Z' },
-      { id: 'other-project', cwd: '/other/path', updated_at: '2026-04-02T00:00:00Z' }
-    ])
-    expect(captureAgentSessionId('copilot', '/my/project', dbPath)).toBe('new-session')
-  })
-
-  it('handles Windows backslash paths', () => {
-    const dbPath = createCopilotDb([
-      { id: 'win-session', cwd: 'C:\\Users\\dev\\project', updated_at: '2026-04-01T00:00:00Z' }
-    ])
-    expect(captureAgentSessionId('copilot', 'C:/Users/dev/project', dbPath)).toBe('win-session')
-  })
-
-  it('handles trailing slashes in cwd', () => {
-    const dbPath = createCopilotDb([
-      { id: 'trailing-slash', cwd: '/my/project/', updated_at: '2026-04-01T00:00:00Z' }
-    ])
-    expect(captureAgentSessionId('copilot', '/my/project', dbPath)).toBe('trailing-slash')
+    const dbPath = createCodexDb([{ id: 'some-thread', cwd: '/other/project', updated_at: 1000 }])
+    expect(captureAgentSessionId('codex', '/my/project', dbPath)).toBeUndefined()
   })
 })
 

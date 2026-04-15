@@ -7,8 +7,6 @@ import log from './logger'
 
 function getAgentDbPath(agentType: AgentType): string | undefined {
   switch (agentType) {
-    case 'copilot':
-      return path.join(os.homedir(), '.copilot', 'session-store.db')
     case 'codex':
       return path.join(os.homedir(), '.codex', 'state_5.sqlite')
     case 'opencode': {
@@ -55,16 +53,6 @@ export function captureAgentSessionId(
     let row: { id: string } | undefined
 
     switch (agentType) {
-      case 'copilot':
-        row = db
-          .prepare(
-            `SELECT id FROM sessions
-             WHERE rtrim(lower(replace(cwd, '\\', '/')), '/') = ?
-             ORDER BY updated_at DESC LIMIT 1`
-          )
-          .get(normalized) as typeof row
-        break
-
       case 'codex':
         row = db
           .prepare(
