@@ -7,6 +7,8 @@ interface TerminalEntry {
   term: Terminal
   fitAddon: FitAddon
   currentContainer: HTMLDivElement | null
+  persistentWrapper: HTMLDivElement | null
+  activeSlot: HTMLElement | null
   _loadRenderer?: (() => void) | null
   _gpuAddon?: { dispose(): void } | null
 }
@@ -213,7 +215,9 @@ function createTerminalEntry(terminalId: string): TerminalEntry {
   const entry: TerminalEntry = {
     term,
     fitAddon,
-    currentContainer: null
+    currentContainer: null,
+    persistentWrapper: null,
+    activeSlot: null
   }
 
   entry._loadRenderer = loadRenderer
@@ -226,7 +230,158 @@ function createTerminalEntry(terminalId: string): TerminalEntry {
     readyCallbacks.delete(terminalId)
   }
 
+  notifyRegistryChange()
+
   return entry
+}
+
+// ────────────────────────────────────────────────────────────────────
+// Persistent-host / slot API (PR A — no consumer wired up yet).
+//
+// The old model reparents the xterm DOM into whichever container is mounted
+// (TerminalInstance, ShellTerminal, etc). Reparenting interrupts the WebGL
+// context and produces flicker on focused ↔ grid switching.
+//
+// The new model: every xterm is opened into a "persistent wrapper" div that
+// lives in a singleton TerminalHost at the app root and never moves. Each
+// consumer renders a thin "slot" div; the host positions the wrapper to
+// overlay the active slot via fixed-position CSS. DOM never moves → no
+// flicker. The TerminalHost component (PR B) owns ResizeObserver and calls
+// syncTerminalOverlay on each observed rect change.
+// ────────────────────────────────────────────────────────────────────
+
+let hostRoot: HTMLElement | null = null
+const registryChangeListeners = new Set<() => void>()
+
+function notifyRegistryChange(): void {
+  for (const cb of registryChangeListeners) {
+    try {
+      cb()
+    } catch {
+      // listener threw — isolate to not block other subscribers
+    }
+  }
+}
+
+function ensurePersistentWrapper(entry: TerminalEntry, terminalId: string): HTMLDivElement {
+  if (entry.persistentWrapper) return entry.persistentWrapper
+  const wrapper = document.createElement('div')
+  wrapper.dataset.terminalId = terminalId
+  wrapper.style.position = 'fixed'
+  wrapper.style.top = '0'
+  wrapper.style.left = '0'
+  wrapper.style.width = '0'
+  wrapper.style.height = '0'
+  wrapper.style.visibility = 'hidden'
+  wrapper.style.pointerEvents = 'none'
+  entry.persistentWrapper = wrapper
+  if (hostRoot) {
+    hostRoot.appendChild(wrapper)
+    openIntoPersistentWrapper(entry)
+  }
+  return wrapper
+}
+
+function openIntoPersistentWrapper(entry: TerminalEntry): void {
+  if (entry.term.element) return
+  const wrapper = entry.persistentWrapper
+  if (!wrapper || !wrapper.parentElement) return
+  entry.term.open(wrapper)
+  entry._loadRenderer?.()
+}
+
+/**
+ * Attach the singleton TerminalHost's root element. Wrappers are appended
+ * here; passing null detaches (wrappers remain in the DOM until destroy).
+ */
+export function setHostRoot(root: HTMLElement | null): void {
+  hostRoot = root
+  if (!root) return
+  for (const entry of registry.values()) {
+    const wrapper = entry.persistentWrapper
+    if (wrapper && wrapper.parentElement !== root) {
+      root.appendChild(wrapper)
+      openIntoPersistentWrapper(entry)
+    }
+  }
+}
+
+/**
+ * Register a slot element for a terminal. The wrapper is created (lazily)
+ * and will track this slot's bounding rect via syncTerminalOverlay.
+ * Last-registered slot wins if multiple slots register for the same id.
+ */
+export function registerSlot(terminalId: string, slotEl: HTMLElement): void {
+  let entry = registry.get(terminalId)
+  if (!entry) entry = createTerminalEntry(terminalId)
+  entry.activeSlot = slotEl
+  ensurePersistentWrapper(entry, terminalId)
+  openIntoPersistentWrapper(entry)
+  syncTerminalOverlay(terminalId)
+}
+
+/**
+ * Unregister a slot. No-op if the current active slot is not this element
+ * (protects against out-of-order unmounts during rapid view swaps).
+ */
+export function unregisterSlot(terminalId: string, slotEl: HTMLElement): void {
+  const entry = registry.get(terminalId)
+  if (!entry || entry.activeSlot !== slotEl) return
+  entry.activeSlot = null
+  syncTerminalOverlay(terminalId)
+}
+
+export function getPersistentWrapper(terminalId: string): HTMLDivElement | null {
+  return registry.get(terminalId)?.persistentWrapper ?? null
+}
+
+/**
+ * Position the persistent wrapper to overlay the active slot. If no slot
+ * is active or the slot has zero dimensions, the wrapper is hidden via
+ * visibility (not display:none — xterm needs nonzero layout metrics).
+ */
+export function syncTerminalOverlay(terminalId: string): void {
+  const entry = registry.get(terminalId)
+  const wrapper = entry?.persistentWrapper
+  if (!entry || !wrapper) return
+  const slot = entry.activeSlot
+  if (!slot) {
+    wrapper.style.visibility = 'hidden'
+    wrapper.style.pointerEvents = 'none'
+    return
+  }
+  const rect = slot.getBoundingClientRect()
+  if (rect.width <= 0 || rect.height <= 0) {
+    wrapper.style.visibility = 'hidden'
+    wrapper.style.pointerEvents = 'none'
+    return
+  }
+  wrapper.style.top = `${rect.top}px`
+  wrapper.style.left = `${rect.left}px`
+  wrapper.style.width = `${rect.width}px`
+  wrapper.style.height = `${rect.height}px`
+  wrapper.style.visibility = 'visible'
+  wrapper.style.pointerEvents = 'auto'
+  if (entry.term.element) {
+    try {
+      entry.fitAddon.fit()
+      const { cols, rows } = entry.term
+      window.api.resizeTerminal({ id: terminalId, cols, rows })
+    } catch {
+      // fit can throw if wrapper has 0 dimensions
+    }
+  }
+}
+
+export function onRegistryChange(cb: () => void): () => void {
+  registryChangeListeners.add(cb)
+  return () => {
+    registryChangeListeners.delete(cb)
+  }
+}
+
+export function getRegisteredTerminalIds(): string[] {
+  return Array.from(registry.keys())
 }
 
 /**
@@ -418,8 +573,14 @@ export function destroyTerminal(terminalId: string): void {
     entry._gpuAddon = null
   }
   entry.term.dispose()
+  if (entry.persistentWrapper) {
+    entry.persistentWrapper.remove()
+    entry.persistentWrapper = null
+  }
+  entry.activeSlot = null
   registry.delete(terminalId)
   readyCallbacks.delete(terminalId)
+  notifyRegistryChange()
 }
 
 /**
