@@ -10,7 +10,7 @@ interface Props {
   terminalId: string
 }
 
-export function TabStatusBar({ terminalId }: Props) {
+export function SessionStatusBar({ terminalId }: Props) {
   const { terminal, assignedTask } = useAppStore(
     useShallow((s) => ({
       terminal: s.terminals.get(terminalId),

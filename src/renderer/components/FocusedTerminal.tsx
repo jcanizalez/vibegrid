@@ -3,12 +3,11 @@ import { motion } from 'framer-motion'
 import { useAppStore } from '../stores'
 import { TerminalInstance } from './TerminalInstance'
 import { AgentIcon } from './AgentIcon'
-import { StatusBadge } from './StatusBadge'
 import { InlineRename } from './InlineRename'
-import { OpenInButton } from './OpenInButton'
 import { Tooltip } from './Tooltip'
 import { ConfirmPopover } from './ConfirmPopover'
-import { GitChangesIndicator, BrowseFilesButton } from './GitChangesIndicator'
+import { SessionStatusBar } from './SessionStatusBar'
+import { StatusBadge } from './StatusBadge'
 import { MobileFontSizeControl } from './MobileFontSizeControl'
 import { MobileTerminalKeybar } from './MobileTerminalKeybar'
 import { getDisplayName, getBranchLabel } from '../lib/terminal-display'
@@ -16,7 +15,7 @@ import { closeTerminalSession } from '../lib/terminal-close'
 import { useTerminalScrollButton } from '../hooks/useTerminalScrollButton'
 import { useTerminalPinchZoom } from '../hooks/useTerminalPinchZoom'
 import { useIsMobile } from '../hooks/useIsMobile'
-import { GitBranch, FolderGit2, ArrowDown, Minimize2, X, Pencil } from 'lucide-react'
+import { ArrowDown, FolderGit2, GitBranch, Minimize2, X, Pencil } from 'lucide-react'
 
 const isMac = navigator.platform.toUpperCase().includes('MAC')
 const MOD = isMac ? '⌘' : 'Ctrl+'
@@ -130,29 +129,28 @@ export function FocusedTerminal() {
                 </button>
               </span>
             )}
-            {terminal.session.branch && (
-              <span className="flex items-center gap-1 ml-3">
+            {isMobile && terminal.session.branch && (
+              <span className="flex items-center gap-1 mt-0.5">
                 {terminal.session.isWorktree ? (
-                  <FolderGit2 size={12} className="text-amber-500" strokeWidth={1.5} />
+                  <FolderGit2 size={11} className="text-amber-500" strokeWidth={1.5} />
                 ) : (
-                  <GitBranch size={12} className="text-gray-600" strokeWidth={1.5} />
+                  <GitBranch size={11} className="text-gray-600" strokeWidth={1.5} />
                 )}
                 <span
-                  className={`text-[12px] font-mono ${terminal.session.isWorktree ? 'text-amber-400' : 'text-gray-500'}`}
+                  className={`text-[11px] font-mono truncate ${
+                    terminal.session.isWorktree ? 'text-amber-400' : 'text-gray-500'
+                  }`}
                 >
                   {getBranchLabel(terminal.session)}
                 </span>
                 {terminal.session.isWorktree && (
-                  <span className="text-[11px] text-amber-500/60 ml-1">worktree</span>
+                  <span className="text-[10px] text-amber-500/60">worktree</span>
                 )}
               </span>
             )}
           </div>
 
-          {!isMobile && <BrowseFilesButton terminalId={effectiveId} />}
-          {!isMobile && <GitChangesIndicator terminalId={effectiveId} />}
-
-          <StatusBadge status={terminal.status} />
+          {isMobile && <StatusBadge status={terminal.status} />}
 
           {/* Keyboard shortcut hints (desktop only) */}
           {!isMobile && (
@@ -175,7 +173,6 @@ export function FocusedTerminal() {
             </div>
           )}
 
-          {!isMobile && <OpenInButton projectPath={terminal.session.projectPath} />}
           {!isMobile && (
             <Tooltip label="Collapse to grid" position="bottom">
               <button
@@ -237,6 +234,8 @@ export function FocusedTerminal() {
             )}
           </div>
         </div>
+
+        {!isMobile && <SessionStatusBar terminalId={effectiveId} />}
 
         {/* Mobile: extended terminal keyboard bar (Termux-style) */}
         {isMobile && <MobileTerminalKeybar terminalId={effectiveId} />}
