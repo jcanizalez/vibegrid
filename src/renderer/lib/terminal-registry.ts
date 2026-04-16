@@ -6,9 +6,9 @@ import '@xterm/xterm/css/xterm.css'
 interface TerminalEntry {
   term: Terminal
   fitAddon: FitAddon
-  currentContainer: HTMLDivElement | null
   persistentWrapper: HTMLDivElement | null
   activeSlot: HTMLElement | null
+  lastAppliedRect: { top: number; left: number; width: number; height: number } | null
   _loadRenderer?: (() => void) | null
   _gpuAddon?: { dispose(): void } | null
 }
@@ -173,11 +173,11 @@ function createTerminalEntry(terminalId: string): TerminalEntry {
   })
 
   const mountAddon = (make: () => ITerminalAddon): void => {
-    // Re-check under the await — the terminal may have been destroyed or
-    // detached while the dynamic import was in flight, and a concurrent
-    // load may have already installed an addon.
+    // Re-check under the await — the terminal may have been destroyed
+    // while the dynamic import was in flight, and a concurrent load may
+    // have already installed an addon.
     const e = registry.get(terminalId)
-    if (!e || !e.currentContainer || e._gpuAddon) return
+    if (!e || !e.term.element || e._gpuAddon) return
     const addon = make()
     term.loadAddon(addon)
     e._gpuAddon = addon
@@ -215,9 +215,9 @@ function createTerminalEntry(terminalId: string): TerminalEntry {
   const entry: TerminalEntry = {
     term,
     fitAddon,
-    currentContainer: null,
     persistentWrapper: null,
-    activeSlot: null
+    activeSlot: null,
+    lastAppliedRect: null
   }
 
   entry._loadRenderer = loadRenderer
@@ -346,22 +346,45 @@ export function syncTerminalOverlay(terminalId: string): void {
   if (!entry || !wrapper) return
   const slot = entry.activeSlot
   if (!slot) {
-    wrapper.style.visibility = 'hidden'
-    wrapper.style.pointerEvents = 'none'
+    if (wrapper.style.visibility !== 'hidden') {
+      wrapper.style.visibility = 'hidden'
+      wrapper.style.pointerEvents = 'none'
+    }
+    entry.lastAppliedRect = null
     return
   }
   const rect = slot.getBoundingClientRect()
   if (rect.width <= 0 || rect.height <= 0) {
-    wrapper.style.visibility = 'hidden'
-    wrapper.style.pointerEvents = 'none'
+    if (wrapper.style.visibility !== 'hidden') {
+      wrapper.style.visibility = 'hidden'
+      wrapper.style.pointerEvents = 'none'
+    }
+    entry.lastAppliedRect = null
     return
   }
+  // Skip style writes + fit when the rect hasn't changed — this function
+  // runs on every animation frame for every terminal, so avoiding redundant
+  // style mutations is the difference between smooth 60fps and layout thrash.
+  const last = entry.lastAppliedRect
+  const unchanged =
+    last !== null &&
+    last.top === rect.top &&
+    last.left === rect.left &&
+    last.width === rect.width &&
+    last.height === rect.height
+  if (unchanged) return
   wrapper.style.top = `${rect.top}px`
   wrapper.style.left = `${rect.left}px`
   wrapper.style.width = `${rect.width}px`
   wrapper.style.height = `${rect.height}px`
   wrapper.style.visibility = 'visible'
   wrapper.style.pointerEvents = 'auto'
+  entry.lastAppliedRect = {
+    top: rect.top,
+    left: rect.left,
+    width: rect.width,
+    height: rect.height
+  }
   if (entry.term.element) {
     try {
       entry.fitAddon.fit()
@@ -385,75 +408,11 @@ export function getRegisteredTerminalIds(): string[] {
 }
 
 /**
- * Attach a terminal to a container. If the terminal doesn't exist yet,
- * it's created. If it's already attached elsewhere, its DOM is moved.
- */
-export function attachTerminal(terminalId: string, container: HTMLDivElement): TerminalEntry {
-  let entry = registry.get(terminalId)
-
-  if (!entry) {
-    entry = createTerminalEntry(terminalId)
-    // First time — open into this container
-    entry.term.open(container)
-    entry.currentContainer = container
-    // Load GPU renderer after open
-    entry._loadRenderer?.()
-    setTimeout(() => entry!.fitAddon.fit(), 0)
-    return entry
-  }
-
-  // Already exists — skip if already attached to the same container
-  if (entry.currentContainer === container) {
-    return entry
-  }
-
-  // Move the DOM element to a different container
-  const termEl = entry.term.element
-  if (termEl) {
-    container.innerHTML = ''
-    container.appendChild(termEl)
-  }
-  entry.currentContainer = container
-  if (!entry._gpuAddon) {
-    entry._loadRenderer?.()
-  }
-
-  // Fit synchronously so the terminal renders at the correct size on the very
-  // first paint in the new container. Without this, the caller's rAF-scheduled
-  // fit produces a visible frame at the old size before the resized frame lands,
-  // which shows up as a flicker when switching focused ↔ grid.
-  fitTerminal(terminalId)
-
-  return entry
-}
-
-/**
- * Detach a terminal from its current container (e.g. on component unmount).
- * Does NOT dispose the Terminal — it stays alive in the registry and its
- * buffer keeps receiving pty data. Releases the active renderer addon
- * (WebGL or canvas fallback) since there's no visible surface for it to
- * draw to. The renderer is rebuilt by attachTerminal on re-attach.
- */
-export function detachTerminal(terminalId: string, container: HTMLDivElement): void {
-  const entry = registry.get(terminalId)
-  if (!entry || entry.currentContainer !== container) return
-  entry.currentContainer = null
-  if (entry._gpuAddon) {
-    try {
-      entry._gpuAddon.dispose()
-    } catch {
-      // GL context may already be lost
-    }
-    entry._gpuAddon = null
-  }
-}
-
-/**
- * Fit the terminal to its current container and notify the pty of new size.
+ * Fit the terminal to its persistent wrapper and notify the pty of new size.
  */
 export function fitTerminal(terminalId: string, preState?: TerminalViewportState | null): void {
   const entry = registry.get(terminalId)
-  if (!entry || !entry.currentContainer) return
+  if (!entry || !entry.term.element) return
   // Only capture/restore viewport state if we were given one (e.g. after a DOM move).
   // Otherwise let xterm.js handle scroll naturally — it already auto-scrolls when at bottom
   // and holds position when the user has scrolled up.
@@ -613,11 +572,11 @@ export function getCurrentTerminalFontSize(): number {
 }
 
 /**
- * Re-fit all terminals that have a current container (i.e. are mounted).
+ * Re-fit all terminals that are currently overlaying an active slot.
  * Used when the virtual keyboard changes viewport geometry.
  */
 export function fitAllTerminals(): void {
   for (const [id, entry] of registry) {
-    if (entry.currentContainer) fitTerminal(id)
+    if (entry.activeSlot) fitTerminal(id)
   }
 }
