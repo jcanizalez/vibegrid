@@ -2,7 +2,8 @@ import { useState, useMemo, useCallback, useEffect } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { useAppStore } from '../../stores'
 import { Tooltip } from '../Tooltip'
-import { toast } from '../Toast'
+import { withProgressToast } from '../../lib/progress-toast'
+import { createSessionFromProject } from '../../lib/session-utils'
 import { ProjectIcon } from './ProjectIcon'
 import { ProjectContextMenu } from './ProjectContextMenu'
 import { WorktreeItem } from './WorktreeItem'
@@ -49,7 +50,6 @@ export function ProjectItem({
   const setActiveWorktreePath = useAppStore((s) => s.setActiveWorktreePath)
   const worktreeCache = useAppStore((s) => s.worktreeCache)
   const loadWorktrees = useAppStore((s) => s.loadWorktrees)
-  const addTerminal = useAppStore((s) => s.addTerminal)
   const config = useAppStore((s) => s.config)
   const setEditingProject = useAppStore((s) => s.setEditingProject)
   const setAddProjectDialogOpen = useAppStore((s) => s.setAddProjectDialogOpen)
@@ -59,6 +59,9 @@ export function ProjectItem({
 
   const [isExpanded, setIsExpanded] = useState(defaultExpanded)
   const [openMenu, setOpenMenu] = useState(false)
+  const [creatingSession, setCreatingSession] = useState(false)
+  const [creatingWorktree, setCreatingWorktree] = useState(false)
+  const [creatingMainSession, setCreatingMainSession] = useState(false)
   const [collapsedBranches, setCollapsedBranches] = useState<Set<string>>(new Set())
   const isRemoteProject = !!getProjectRemoteHostId(project)
   const [isGitRepo, setIsGitRepo] = useState(isRemoteProject)
@@ -222,24 +225,17 @@ export function ProjectItem({
                 <Tooltip label="New session" position="right">
                   <button
                     type="button"
-                    onClick={async (e) => {
+                    disabled={creatingSession}
+                    onClick={(e) => {
                       e.stopPropagation()
-                      try {
-                        const agentType = config?.defaults.defaultAgent || 'claude'
-                        const remoteHostId = getProjectRemoteHostId(project)
-                        const session = await window.api.createTerminal({
-                          agentType,
-                          projectName: project.name,
-                          projectPath: project.path,
-                          remoteHostId
-                        })
-                        addTerminal(session)
-                      } catch (err) {
-                        const msg = err instanceof Error ? err.message : String(err)
-                        toast.error(msg || 'Failed to create session')
-                      }
+                      if (creatingSession) return
+                      setCreatingSession(true)
+                      void withProgressToast(
+                        { loading: 'Starting session…', success: 'Session started' },
+                        () => createSessionFromProject(project)
+                      ).finally(() => setCreatingSession(false))
                     }}
-                    className="text-gray-500 hover:text-white p-0.5 rounded hover:bg-white/[0.08] transition-colors"
+                    className="text-gray-500 hover:text-white p-0.5 rounded hover:bg-white/[0.08] transition-colors disabled:opacity-50"
                   >
                     <Plus size={14} strokeWidth={2} />
                   </button>
@@ -248,19 +244,25 @@ export function ProjectItem({
                   <Tooltip label="New worktree" position="right">
                     <button
                       type="button"
-                      onClick={async (e) => {
+                      disabled={creatingWorktree}
+                      onClick={(e) => {
                         e.stopPropagation()
+                        if (creatingWorktree) return
                         const name = generateWorktreeName()
-                        try {
-                          await window.api.createWorktree(project.path, 'main', name)
-                          loadWorktrees(project.path, true)
-                          if (!isExpanded) setIsExpanded(true)
-                        } catch (err) {
-                          const msg = err instanceof Error ? err.message : String(err)
-                          toast.error(msg || 'Failed to create worktree')
-                        }
+                        setCreatingWorktree(true)
+                        void withProgressToast(
+                          {
+                            loading: 'Creating worktree…',
+                            success: `Worktree "${name}" created`
+                          },
+                          async () => {
+                            await window.api.createWorktree(project.path, 'main', name)
+                            loadWorktrees(project.path, true)
+                            if (!isExpanded) setIsExpanded(true)
+                          }
+                        ).finally(() => setCreatingWorktree(false))
                       }}
-                      className="text-gray-500 hover:text-white p-0.5 rounded hover:bg-white/[0.08] transition-colors"
+                      className="text-gray-500 hover:text-white p-0.5 rounded hover:bg-white/[0.08] transition-colors disabled:opacity-50"
                     >
                       <FolderGit2 size={14} strokeWidth={1.5} className="text-amber-400/70" />
                     </button>
@@ -368,20 +370,17 @@ export function ProjectItem({
                         <Tooltip label="New session" position="right">
                           <button
                             type="button"
-                            onClick={async (e) => {
+                            disabled={creatingMainSession}
+                            onClick={(e) => {
                               e.stopPropagation()
-                              const agentType = config?.defaults.defaultAgent || 'claude'
-                              const remoteHostId = getProjectRemoteHostId(project)
-                              const session = await window.api.createTerminal({
-                                agentType,
-                                projectName: project.name,
-                                projectPath: project.path,
-                                branch: mainWt.branch,
-                                remoteHostId
-                              })
-                              addTerminal(session)
+                              if (creatingMainSession) return
+                              setCreatingMainSession(true)
+                              void withProgressToast(
+                                { loading: 'Starting session…', success: 'Session started' },
+                                () => createSessionFromProject(project, { branch: mainWt.branch })
+                              ).finally(() => setCreatingMainSession(false))
                             }}
-                            className="text-gray-500 hover:text-white p-0.5 rounded hover:bg-white/[0.08] transition-colors"
+                            className="text-gray-500 hover:text-white p-0.5 rounded hover:bg-white/[0.08] transition-colors disabled:opacity-50"
                           >
                             <Plus size={14} strokeWidth={2} />
                           </button>

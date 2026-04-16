@@ -1,14 +1,14 @@
 /* eslint-disable react-refresh/only-export-components */
 import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Check, X, AlertTriangle, Info } from 'lucide-react'
+import { Check, X, AlertTriangle, Info, Loader2 } from 'lucide-react'
 import { useIsMobile } from '../hooks/useIsMobile'
 
 /* ------------------------------------------------------------------ */
 /*  Toast store — lightweight, no Zustand dependency                  */
 /* ------------------------------------------------------------------ */
 
-type ToastType = 'success' | 'error' | 'warning' | 'info'
+type ToastType = 'success' | 'error' | 'warning' | 'info' | 'loading'
 
 interface Toast {
   id: string
@@ -17,28 +17,77 @@ interface Toast {
   duration?: number
 }
 
+const DEFAULT_DURATIONS: Record<ToastType, number> = {
+  success: 2500,
+  error: 4000,
+  warning: 3500,
+  info: 2500,
+  loading: Number.POSITIVE_INFINITY
+}
+
 let listeners: Array<(toasts: Toast[]) => void> = []
 let toasts: Toast[] = []
+const dismissTimers = new Map<string, ReturnType<typeof setTimeout>>()
 
 function notify() {
   listeners.forEach((fn) => fn([...toasts]))
 }
 
-export function toast(message: string, type: ToastType = 'success', duration = 2500) {
-  const id = crypto.randomUUID()
-  toasts = [...toasts, { id, message, type, duration }]
-  notify()
+function clearDismissTimer(id: string) {
+  const existing = dismissTimers.get(id)
+  if (existing) {
+    clearTimeout(existing)
+    dismissTimers.delete(id)
+  }
+}
 
-  setTimeout(() => {
+function scheduleDismiss(id: string, duration: number) {
+  clearDismissTimer(id)
+  if (!Number.isFinite(duration)) return
+  const handle = setTimeout(() => {
+    dismissTimers.delete(id)
     toasts = toasts.filter((t) => t.id !== id)
     notify()
   }, duration)
+  dismissTimers.set(id, handle)
+}
+
+export function toast(
+  message: string,
+  type: ToastType = 'success',
+  duration: number = DEFAULT_DURATIONS[type]
+): string {
+  const id = crypto.randomUUID()
+  toasts = [...toasts, { id, message, type, duration }]
+  notify()
+  scheduleDismiss(id, duration)
+  return id
 }
 
 toast.success = (msg: string) => toast(msg, 'success')
 toast.error = (msg: string) => toast(msg, 'error', 4000)
 toast.warning = (msg: string) => toast(msg, 'warning', 3500)
 toast.info = (msg: string) => toast(msg, 'info')
+toast.loading = (msg: string) => toast(msg, 'loading')
+
+toast.update = (id: string, message: string, type: ToastType): string => {
+  const existing = toasts.find((t) => t.id === id)
+  if (!existing) {
+    // Toast was dismissed manually — fall back to a fresh one so feedback isn't lost
+    return toast(message, type)
+  }
+  const duration = DEFAULT_DURATIONS[type]
+  toasts = toasts.map((t) => (t.id === id ? { ...t, message, type, duration } : t))
+  notify()
+  scheduleDismiss(id, duration)
+  return id
+}
+
+toast.dismiss = (id: string): void => {
+  clearDismissTimer(id)
+  toasts = toasts.filter((t) => t.id !== id)
+  notify()
+}
 
 /* ------------------------------------------------------------------ */
 /*  Icons & colors per type                                           */
@@ -71,6 +120,12 @@ const TOAST_STYLES: Record<
     bg: 'bg-blue-500/10',
     border: 'border-blue-500/20',
     text: 'text-blue-400'
+  },
+  loading: {
+    icon: Loader2,
+    bg: 'bg-white/[0.05]',
+    border: 'border-white/10',
+    text: 'text-gray-300'
   }
 }
 
@@ -90,8 +145,7 @@ export function ToastContainer() {
   }, [])
 
   const dismiss = useCallback((id: string) => {
-    toasts = toasts.filter((t) => t.id !== id)
-    notify()
+    toast.dismiss(id)
   }, [])
 
   return (
@@ -129,7 +183,11 @@ export function ToastContainer() {
                   : { background: 'rgba(26, 26, 30, 0.92)' }
               }
             >
-              <Icon size={15} strokeWidth={2.5} className={`shrink-0 ${style.text}`} />
+              <Icon
+                size={15}
+                strokeWidth={2.5}
+                className={`shrink-0 ${style.text} ${t.type === 'loading' ? 'animate-spin' : ''}`}
+              />
               <span className="text-sm text-gray-200 flex-1">{t.message}</span>
               <button
                 onClick={() => dismiss(t.id)}

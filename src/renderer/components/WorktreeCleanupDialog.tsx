@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { FolderGit2, Trash2, FolderOpen, AlertTriangle, Loader2 } from 'lucide-react'
+import { FolderGit2, Trash2, FolderOpen, AlertTriangle } from 'lucide-react'
 import { useAppStore } from '../stores'
+import { withProgressToast } from '../lib/progress-toast'
 
 interface WorktreeCleanupInfo {
   id: string
@@ -43,8 +44,6 @@ function useExplicitDeleteSubscription(cb: ExplicitDeleteCallback): void {
 export function WorktreeCleanupDialog() {
   const [pending, setPending] = useState<WorktreeCleanupInfo | null>(null)
   const [explicitDelete, setExplicitDelete] = useState<ExplicitDeleteInfo | null>(null)
-  const [removing, setRemoving] = useState(false)
-  const [removeError, setRemoveError] = useState(false)
   const [dirtyState, setDirtyState] = useState<DirtyState>('checking')
   const checkIdRef = useRef(0)
 
@@ -57,8 +56,6 @@ export function WorktreeCleanupDialog() {
   const checkDirty = useCallback((worktreePath: string) => {
     const id = ++checkIdRef.current
     setDirtyState('checking')
-    setRemoveError(false)
-    setRemoving(false)
     window.api
       .isWorktreeDirty(worktreePath)
       .then((dirty) => {
@@ -95,35 +92,36 @@ export function WorktreeCleanupDialog() {
     setExplicitDelete(null)
   }
 
-  const handleRemove = async (): Promise<void> => {
+  const handleRemove = (): void => {
     if (!activePath || !activeProjectPath) return
-    setRemoving(true)
-    setRemoveError(false)
-    try {
-      if (explicitDelete && explicitDelete.sessionIds.length > 0) {
-        await Promise.all(
-          explicitDelete.sessionIds.flatMap((sid) => [
-            window.api.killTerminal(sid).catch(() => {}),
-            window.api.killHeadlessSession(sid).catch(() => {})
-          ])
-        )
-        // Brief delay for processes to release file locks
-        await new Promise((r) => setTimeout(r, 500))
-      }
+    const projectPath = activeProjectPath
+    const worktreePath = activePath
+    const force = dirtyState === 'dirty' || dirtyState === 'unknown'
+    const sessionIds = explicitDelete?.sessionIds ?? []
+    handleClose()
 
-      const force = dirtyState === 'dirty' || dirtyState === 'unknown'
-      const removed = await window.api.removeWorktree(activeProjectPath, activePath, force)
-      if (removed) {
-        useAppStore.getState().loadWorktrees(activeProjectPath, true)
-        handleClose()
-      } else {
-        setRemoveError(true)
+    void withProgressToast(
+      {
+        loading:
+          sessionIds.length > 0 ? 'Closing sessions & removing worktree…' : 'Removing worktree…',
+        success: 'Worktree removed'
+      },
+      async () => {
+        if (sessionIds.length > 0) {
+          await Promise.all(
+            sessionIds.flatMap((sid) => [
+              window.api.killTerminal(sid).catch(() => {}),
+              window.api.killHeadlessSession(sid).catch(() => {})
+            ])
+          )
+          // Brief delay for processes to release file locks
+          await new Promise((r) => setTimeout(r, 500))
+        }
+        const removed = await window.api.removeWorktree(projectPath, worktreePath, force)
+        if (!removed) throw new Error('Failed to remove worktree')
+        useAppStore.getState().loadWorktrees(projectPath, true)
       }
-    } catch {
-      setRemoveError(true)
-    } finally {
-      setRemoving(false)
-    }
+    )
   }
 
   const showWarning = dirtyState === 'dirty' || dirtyState === 'unknown'
@@ -194,13 +192,6 @@ export function WorktreeCleanupDialog() {
               </div>
             )}
 
-            {/* Remove error */}
-            {removeError && (
-              <div className="mx-5 mb-2 px-3 py-2 bg-red-500/[0.08] border border-red-500/20 rounded-lg">
-                <p className="text-[11px] text-red-300">Failed to remove worktree.</p>
-              </div>
-            )}
-
             <div className="px-5 py-3 border-t border-white/[0.06] flex justify-end gap-2">
               <button
                 onClick={handleClose}
@@ -218,7 +209,7 @@ export function WorktreeCleanupDialog() {
               </button>
               <button
                 onClick={handleRemove}
-                disabled={removing || dirtyState === 'checking'}
+                disabled={dirtyState === 'checking'}
                 className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg transition-colors
                            disabled:opacity-50 ${
                              showWarning || (dialogMode === 'explicit-delete' && sessionCount > 0)
@@ -226,23 +217,14 @@ export function WorktreeCleanupDialog() {
                                : 'text-red-400 bg-red-500/[0.08] hover:bg-red-500/[0.15]'
                            }`}
               >
-                {removing ? (
-                  <>
-                    <Loader2 size={12} className="animate-spin" />
-                    {sessionCount > 0 ? 'Closing sessions...' : 'Removing...'}
-                  </>
-                ) : (
-                  <>
-                    <Trash2 size={12} />
-                    {dirtyState === 'checking'
-                      ? 'Checking...'
-                      : dialogMode === 'explicit-delete' && sessionCount > 0
-                        ? 'Close sessions & remove'
-                        : showWarning
-                          ? 'Remove anyway'
-                          : 'Remove'}
-                  </>
-                )}
+                <Trash2 size={12} />
+                {dirtyState === 'checking'
+                  ? 'Checking...'
+                  : dialogMode === 'explicit-delete' && sessionCount > 0
+                    ? 'Close sessions & remove'
+                    : showWarning
+                      ? 'Remove anyway'
+                      : 'Remove'}
               </button>
             </div>
           </motion.div>

@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { FolderGit2, GitBranch, ChevronRight, Plus, Pencil, Trash2, Check, X } from 'lucide-react'
 import { useAppStore } from '../../stores'
-import { getProjectRemoteHostId } from '../../../shared/types'
 import { Tooltip } from '../Tooltip'
 import { toast } from '../Toast'
+import { withProgressToast } from '../../lib/progress-toast'
+import { createSessionFromProject } from '../../lib/session-utils'
 import { requestWorktreeDelete } from '../WorktreeCleanupDialog'
 import type { WorktreeInfo } from '../../stores/types'
 
@@ -28,10 +29,11 @@ export function WorktreeItem({
   sessionsExpanded?: boolean
   onToggleSessionsExpanded?: () => void
 }) {
-  const addTerminal = useAppStore((s) => s.addTerminal)
   const config = useAppStore((s) => s.config)
   const [renaming, setRenaming] = useState(false)
   const [renameValue, setRenameValue] = useState('')
+  const [creatingSession, setCreatingSession] = useState(false)
+  const [removing, setRemoving] = useState(false)
 
   const wt = worktree
 
@@ -140,22 +142,24 @@ export function WorktreeItem({
           <Tooltip label="New session" position="right">
             <button
               type="button"
-              onClick={async (e) => {
+              disabled={creatingSession}
+              onClick={(e) => {
                 e.stopPropagation()
-                const agentType = config?.defaults.defaultAgent || 'claude'
-                const proj = config?.projects.find((p) => p.name === projectName)
-                const remoteHostId = proj ? getProjectRemoteHostId(proj) : undefined
-                const session = await window.api.createTerminal({
-                  agentType,
-                  projectName,
-                  projectPath,
-                  branch: wt.branch,
-                  existingWorktreePath: wt.path,
-                  remoteHostId
-                })
-                addTerminal(session)
+                if (creatingSession) return
+                setCreatingSession(true)
+                void withProgressToast(
+                  { loading: 'Starting session…', success: 'Session started' },
+                  async () => {
+                    const proj = config?.projects.find((p) => p.name === projectName)
+                    if (!proj) throw new Error(`Project "${projectName}" not found`)
+                    await createSessionFromProject(proj, {
+                      branch: wt.branch,
+                      existingWorktreePath: wt.path
+                    })
+                  }
+                ).finally(() => setCreatingSession(false))
               }}
-              className="text-gray-500 hover:text-white p-0.5 rounded hover:bg-white/[0.08] transition-colors"
+              className="text-gray-500 hover:text-white p-0.5 rounded hover:bg-white/[0.08] transition-colors disabled:opacity-50"
             >
               <Plus size={14} strokeWidth={2} />
             </button>
@@ -176,8 +180,10 @@ export function WorktreeItem({
           <Tooltip label="Remove worktree" position="right">
             <button
               type="button"
+              disabled={removing}
               onClick={async (e) => {
                 e.stopPropagation()
+                if (removing) return
                 const { count, sessionIds } = await window.api.getWorktreeActiveSessions(wt.path)
                 if (count > 0 || wt.isDirty) {
                   requestWorktreeDelete({
@@ -186,16 +192,18 @@ export function WorktreeItem({
                     sessionIds
                   })
                 } else {
-                  const removed = await window.api.removeWorktree(projectPath, wt.path, false)
-                  if (removed) {
-                    toast.success('Worktree removed')
-                    onWorktreesChanged()
-                  } else {
-                    toast.error('Failed to remove worktree')
-                  }
+                  setRemoving(true)
+                  void withProgressToast(
+                    { loading: 'Removing worktree…', success: 'Worktree removed' },
+                    async () => {
+                      const removed = await window.api.removeWorktree(projectPath, wt.path, false)
+                      if (!removed) throw new Error('Failed to remove worktree')
+                      onWorktreesChanged()
+                    }
+                  ).finally(() => setRemoving(false))
                 }
               }}
-              className="text-gray-500 hover:text-red-400 p-0.5 rounded hover:bg-white/[0.08] transition-colors"
+              className="text-gray-500 hover:text-red-400 p-0.5 rounded hover:bg-white/[0.08] transition-colors disabled:opacity-50"
             >
               <Trash2 size={14} strokeWidth={2} />
             </button>
