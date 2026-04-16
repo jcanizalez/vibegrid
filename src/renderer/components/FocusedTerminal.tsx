@@ -16,9 +16,7 @@ import { useTerminalScrollButton } from '../hooks/useTerminalScrollButton'
 import { useTerminalPinchZoom } from '../hooks/useTerminalPinchZoom'
 import { useIsMobile } from '../hooks/useIsMobile'
 import { ArrowDown, FolderGit2, GitBranch, Minimize2, X, Pencil } from 'lucide-react'
-
-const isMac = navigator.platform.toUpperCase().includes('MAC')
-const MOD = isMac ? '⌘' : 'Ctrl+'
+import { MOD } from '../lib/platform'
 
 export function FocusedTerminal() {
   const focusedId = useAppStore((s) => s.focusedTerminalId)
@@ -132,9 +130,9 @@ export function FocusedTerminal() {
             {isMobile && terminal.session.branch && (
               <span className="flex items-center gap-1 mt-0.5">
                 {terminal.session.isWorktree ? (
-                  <FolderGit2 size={11} className="text-amber-500" strokeWidth={1.5} />
+                  <FolderGit2 size={11} className="text-amber-500 shrink-0" strokeWidth={1.5} />
                 ) : (
-                  <GitBranch size={11} className="text-gray-600" strokeWidth={1.5} />
+                  <GitBranch size={11} className="text-gray-600 shrink-0" strokeWidth={1.5} />
                 )}
                 <span
                   className={`text-[11px] font-mono truncate ${
@@ -144,7 +142,12 @@ export function FocusedTerminal() {
                   {getBranchLabel(terminal.session)}
                 </span>
                 {terminal.session.isWorktree && (
-                  <span className="text-[10px] text-amber-500/60">worktree</span>
+                  <>
+                    <GitBranch size={10} className="text-gray-600 shrink-0" strokeWidth={1.5} />
+                    <span className="text-[10px] font-mono text-gray-500 truncate">
+                      {terminal.session.branch}
+                    </span>
+                  </>
                 )}
               </span>
             )}
@@ -152,29 +155,8 @@ export function FocusedTerminal() {
 
           {isMobile && <StatusBadge status={terminal.status} />}
 
-          {/* Keyboard shortcut hints (desktop only) */}
           {!isMobile && (
-            <div className="flex items-center gap-2 text-[10px] text-gray-600 mx-1">
-              <span className="flex items-center gap-0.5">
-                <kbd className="px-1 py-0.5 rounded bg-white/[0.06] text-gray-500 font-mono">
-                  {MOD}W
-                </kbd>
-                collapse
-              </span>
-              <span className="flex items-center gap-0.5">
-                <kbd className="px-1 py-0.5 rounded bg-white/[0.06] text-gray-500 font-mono">
-                  {MOD}[
-                </kbd>
-                <kbd className="px-1 py-0.5 rounded bg-white/[0.06] text-gray-500 font-mono">
-                  {MOD}]
-                </kbd>
-                cycle
-              </span>
-            </div>
-          )}
-
-          {!isMobile && (
-            <Tooltip label="Collapse to grid" position="bottom">
+            <Tooltip label="Collapse to grid" shortcut={`${MOD}W`} position="bottom">
               <button
                 type="button"
                 onClick={handleContract}

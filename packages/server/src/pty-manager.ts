@@ -171,9 +171,13 @@ class PtyManager extends EventEmitter {
 
     if (payload.existingWorktreePath && fs.existsSync(payload.existingWorktreePath)) {
       effectivePath = payload.existingWorktreePath
-      worktreePath = payload.existingWorktreePath
-      worktreeName = payload.worktreeName || extractWorktreeName(payload.existingWorktreePath)
       effectiveBranch = payload.branch
+      const isMainWorktree =
+        normalizePath(payload.existingWorktreePath) === normalizePath(payload.projectPath)
+      if (!isMainWorktree) {
+        worktreePath = payload.existingWorktreePath
+        worktreeName = payload.worktreeName || extractWorktreeName(payload.existingWorktreePath)
+      }
     } else if ((payload.useWorktree || payload.existingWorktreePath) && payload.branch) {
       if (isGitRepo(payload.projectPath)) {
         if (payload.existingWorktreePath) {

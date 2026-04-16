@@ -1,10 +1,9 @@
-import { useState, useCallback } from 'react'
 import { useAppStore } from '../stores'
 import { MAIN_WORKTREE_SENTINEL } from '../stores/types'
 import type { WorktreeInfo } from '../stores/types'
 import { ChevronRight, GitBranch, ChevronDown } from 'lucide-react'
 import { BranchPicker } from './BranchPicker'
-import { toast } from './Toast'
+import { useBranchSwitcher } from '../hooks/useBranchSwitcher'
 
 const EMPTY_WORKTREES: WorktreeInfo[] = []
 
@@ -13,7 +12,6 @@ export function ToolbarBreadcrumb() {
   const activeWorktreePath = useAppStore((s) => s.activeWorktreePath)
   const setActiveWorktreePath = useAppStore((s) => s.setActiveWorktreePath)
   const worktreeCache = useAppStore((s) => s.worktreeCache)
-  const loadWorktrees = useAppStore((s) => s.loadWorktrees)
   const projects = useAppStore((s) => s.config?.projects)
 
   const project = projects?.find((p) => p.name === activeProject)
@@ -29,29 +27,13 @@ export function ToolbarBreadcrumb() {
 
   const worktreeName = isMainWorktree ? null : activeWorktree?.name
   const branchName = activeWorktree?.branch
-  const branchCwd = isMainWorktree ? projectPath : activeWorktreePath
+  const branchCwd = isMainWorktree ? projectPath : (activeWorktreePath ?? undefined)
 
-  const [showBranchPicker, setShowBranchPicker] = useState(false)
-  const [isSwitching, setIsSwitching] = useState(false)
-
-  const handleBranchSelect = useCallback(
-    async (branch: string) => {
-      if (!branchCwd || !projectPath || branch === branchName || isSwitching) return
-      setIsSwitching(true)
-      try {
-        const result = await window.api.checkoutBranch(branchCwd, branch)
-        if (result.ok) {
-          loadWorktrees(projectPath, true)
-        } else {
-          toast.error(result.error || `Failed to checkout '${branch}'`)
-        }
-      } finally {
-        setIsSwitching(false)
-        setShowBranchPicker(false)
-      }
-    },
-    [branchCwd, projectPath, branchName, isSwitching, loadWorktrees]
-  )
+  const { showPicker, togglePicker, closePicker, isSwitching, selectBranch } = useBranchSwitcher({
+    projectPath,
+    branchCwd,
+    branchName
+  })
 
   if (!activeProject) return null
 
@@ -78,23 +60,21 @@ export function ToolbarBreadcrumb() {
               <ChevronRight size={10} className="text-gray-600 shrink-0 mx-0.5" />
               <div className="relative shrink-0">
                 <button
-                  onClick={() => setShowBranchPicker(!showBranchPicker)}
+                  onClick={togglePicker}
                   className={`flex items-center gap-1 transition-colors rounded px-1 -mx-1 ${
-                    showBranchPicker
-                      ? 'text-white bg-white/[0.08]'
-                      : 'text-white hover:bg-white/[0.06]'
+                    showPicker ? 'text-white bg-white/[0.08]' : 'text-white hover:bg-white/[0.06]'
                   } ${isSwitching ? 'opacity-50' : ''}`}
                 >
                   <GitBranch size={11} className="text-gray-500 shrink-0" />
                   <span className="truncate max-w-[120px]">{branchName}</span>
                   <ChevronDown size={10} className="text-gray-500 shrink-0" />
                 </button>
-                {showBranchPicker && (
+                {showPicker && (
                   <BranchPicker
                     projectPath={projectPath}
                     currentBranch={branchName}
-                    onSelect={handleBranchSelect}
-                    onClose={() => setShowBranchPicker(false)}
+                    onSelect={selectBranch}
+                    onClose={closePicker}
                   />
                 )}
               </div>

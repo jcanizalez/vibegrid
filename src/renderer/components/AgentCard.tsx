@@ -24,8 +24,8 @@ import {
 import { toast } from './Toast'
 import { Tooltip } from './Tooltip'
 import { ConfirmPopover } from './ConfirmPopover'
+import { isMac, MOD } from '../lib/platform'
 
-const isMac = navigator.platform.toUpperCase().includes('MAC')
 // On touch devices, always show action buttons (no hover available)
 const isTouchDevice = typeof window !== 'undefined' && window.matchMedia('(hover: none)').matches
 
@@ -312,7 +312,7 @@ export const AgentCard = memo(
           {/* Expand + Minimize + Close — appear on hover, right of git */}
           {cardHovered && (
             <div className="flex items-center gap-0.5">
-              <Tooltip label="Expand" position="top">
+              <Tooltip label="Expand" shortcut={`${MOD}O`} position="top">
                 <button
                   onClick={(e) => {
                     e.stopPropagation()

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, within, act } from '@testing-library/react'
+import { render, screen, within, act, fireEvent, waitFor } from '@testing-library/react'
 import '@testing-library/jest-dom/vitest'
 import type { ReactNode } from 'react'
 
@@ -70,7 +70,10 @@ Object.defineProperty(window, 'api', {
     saveConfig: vi.fn(),
     notifyWidgetStatus: vi.fn(),
     getGitDiffStat: vi.fn().mockResolvedValue(null),
-    createTerminal: vi.fn()
+    createTerminal: vi.fn(),
+    listBranches: vi.fn().mockResolvedValue({ local: [], remote: [] }),
+    listRemoteBranches: vi.fn().mockResolvedValue([]),
+    checkoutBranch: vi.fn().mockResolvedValue({ ok: true })
   },
   writable: true
 })
@@ -133,7 +136,25 @@ describe('SessionStatusBar (homologated bottom bar)', () => {
     expect(container).toBeEmptyDOMElement()
   })
 
-  it('renders worktree label for worktree sessions', () => {
+  it('opens BranchPicker and switches branches via the dropdown', async () => {
+    const listBranches = vi.fn().mockResolvedValue({ local: ['main', 'feature-x'], remote: [] })
+    const checkoutBranch = vi.fn().mockResolvedValue({ ok: true })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(window.api as any).listBranches = listBranches
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(window.api as any).checkoutBranch = checkoutBranch
+
+    render(<SessionStatusBar terminalId="term-1" />)
+    const branchButton = screen.getByRole('button', { name: /main/ })
+    fireEvent.click(branchButton)
+
+    const featureEntry = await screen.findByText('feature-x')
+    fireEvent.click(featureEntry)
+
+    await waitFor(() => expect(checkoutBranch).toHaveBeenCalledWith('/tmp/vorn', 'feature-x'))
+  })
+
+  it('renders worktree name and branch name for worktree sessions', () => {
     const terminals = new Map()
     terminals.set('wt-1', {
       id: 'wt-1',
@@ -142,6 +163,7 @@ describe('SessionStatusBar (homologated bottom bar)', () => {
         id: 'wt-1',
         branch: 'feature-x',
         isWorktree: true,
+        worktreeName: 'feature-x-wt',
         worktreePath: '/tmp/wt/feature-x'
       },
       status: 'running' as const,
@@ -151,7 +173,9 @@ describe('SessionStatusBar (homologated bottom bar)', () => {
       useAppStore.setState({ terminals })
     })
     render(<SessionStatusBar terminalId="wt-1" />)
-    expect(screen.getByText('worktree')).toBeInTheDocument()
+    expect(screen.getByText('feature-x-wt')).toBeInTheDocument()
+    expect(screen.getByText('feature-x')).toBeInTheDocument()
+    expect(screen.queryByText('worktree')).not.toBeInTheDocument()
   })
 })
 
@@ -218,7 +242,7 @@ describe('FocusedTerminal on mobile keeps branch + StatusBadge in the title bar'
     expect(screen.queryByTestId('git-changes')).not.toBeInTheDocument()
   })
 
-  it('renders the "worktree" label on mobile for worktree sessions', () => {
+  it('renders worktree name and branch name on mobile for worktree sessions', () => {
     mockIsMobile = true
     const terminals = new Map()
     terminals.set('wt-1', {
@@ -228,6 +252,7 @@ describe('FocusedTerminal on mobile keeps branch + StatusBadge in the title bar'
         id: 'wt-1',
         branch: 'feature-x',
         isWorktree: true,
+        worktreeName: 'feature-x-wt',
         worktreePath: '/tmp/wt/feature-x'
       },
       status: 'running' as const,
@@ -237,6 +262,8 @@ describe('FocusedTerminal on mobile keeps branch + StatusBadge in the title bar'
       useAppStore.setState({ terminals, focusedTerminalId: 'wt-1' })
     })
     render(<FocusedTerminal />)
-    expect(screen.getByText('worktree')).toBeInTheDocument()
+    expect(screen.getByText('feature-x-wt')).toBeInTheDocument()
+    expect(screen.getByText('feature-x')).toBeInTheDocument()
+    expect(screen.queryByText('worktree')).not.toBeInTheDocument()
   })
 })
