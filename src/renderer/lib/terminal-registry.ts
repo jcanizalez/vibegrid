@@ -1,4 +1,4 @@
-import { Terminal } from '@xterm/xterm'
+import { Terminal, type ITerminalAddon } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
 import '@xterm/xterm/css/xterm.css'
@@ -170,34 +170,38 @@ function createTerminalEntry(terminalId: string): TerminalEntry {
     return true
   })
 
-  // Try WebGL, fall back to canvas (loaded after open())
+  const mountAddon = (make: () => ITerminalAddon): void => {
+    // Re-check under the await — the terminal may have been destroyed or
+    // detached while the dynamic import was in flight, and a concurrent
+    // load may have already installed an addon.
+    const e = registry.get(terminalId)
+    if (!e || !e.currentContainer || e._gpuAddon) return
+    const addon = make()
+    term.loadAddon(addon)
+    e._gpuAddon = addon
+    term.refresh(0, term.rows - 1)
+  }
+  // Terminal fallback — if even canvas fails to load, there's no further
+  // fallback, so swallow the error here instead of propagating an unhandled
+  // rejection up through the WebGL error paths.
+  const loadCanvas = (): void => {
+    import('@xterm/addon-canvas')
+      .then(({ CanvasAddon }) => mountAddon(() => new CanvasAddon()))
+      .catch(() => {})
+  }
   const loadRenderer = (): void => {
+    const current = registry.get(terminalId)
+    if (!current || current._gpuAddon) return
     import('@xterm/addon-webgl')
       .then(({ WebglAddon }) => {
-        if (!registry.has(terminalId)) return // terminal already destroyed
         try {
-          const addon = new WebglAddon()
-          term.loadAddon(addon)
-          const e = registry.get(terminalId)
-          if (e) e._gpuAddon = addon
+          mountAddon(() => new WebglAddon())
         } catch {
-          import('@xterm/addon-canvas').then(({ CanvasAddon }) => {
-            if (!registry.has(terminalId)) return
-            const addon = new CanvasAddon()
-            term.loadAddon(addon)
-            const e = registry.get(terminalId)
-            if (e) e._gpuAddon = addon
-          })
+          loadCanvas()
         }
       })
       .catch(() => {
-        import('@xterm/addon-canvas').then(({ CanvasAddon }) => {
-          if (!registry.has(terminalId)) return
-          const addon = new CanvasAddon()
-          term.loadAddon(addon)
-          const e = registry.get(terminalId)
-          if (e) e._gpuAddon = addon
-        })
+        loadCanvas()
       })
   }
 
@@ -212,7 +216,6 @@ function createTerminalEntry(terminalId: string): TerminalEntry {
     currentContainer: null
   }
 
-  // Store a flag so we only load renderer once after first open
   entry._loadRenderer = loadRenderer
 
   registry.set(terminalId, entry)
@@ -240,7 +243,6 @@ export function attachTerminal(terminalId: string, container: HTMLDivElement): T
     entry.currentContainer = container
     // Load GPU renderer after open
     entry._loadRenderer?.()
-    entry._loadRenderer = null
     setTimeout(() => entry!.fitAddon.fit(), 0)
     return entry
   }
@@ -257,18 +259,30 @@ export function attachTerminal(terminalId: string, container: HTMLDivElement): T
     container.appendChild(termEl)
   }
   entry.currentContainer = container
-
+  if (!entry._gpuAddon) {
+    entry._loadRenderer?.()
+  }
   return entry
 }
 
 /**
  * Detach a terminal from its current container (e.g. on component unmount).
- * Does NOT dispose — the terminal stays alive in the registry.
+ * Does NOT dispose the Terminal — it stays alive in the registry and its
+ * buffer keeps receiving pty data. Releases the active renderer addon
+ * (WebGL or canvas fallback) since there's no visible surface for it to
+ * draw to. The renderer is rebuilt by attachTerminal on re-attach.
  */
 export function detachTerminal(terminalId: string, container: HTMLDivElement): void {
   const entry = registry.get(terminalId)
-  if (entry && entry.currentContainer === container) {
-    entry.currentContainer = null
+  if (!entry || entry.currentContainer !== container) return
+  entry.currentContainer = null
+  if (entry._gpuAddon) {
+    try {
+      entry._gpuAddon.dispose()
+    } catch {
+      // GL context may already be lost
+    }
+    entry._gpuAddon = null
   }
 }
 
