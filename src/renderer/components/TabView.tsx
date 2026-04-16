@@ -11,7 +11,7 @@ import { PromptLauncher } from './PromptLauncher'
 import { InlineRename } from './InlineRename'
 import { CardContextMenu } from './CardContextMenu'
 import { BackgroundTray } from './BackgroundTray'
-import { TabStatusBar } from './TabStatusBar'
+import { SessionStatusBar } from './SessionStatusBar'
 import { getDisplayName, getBranchLabel } from '../lib/terminal-display'
 import { closeTerminalSession } from '../lib/terminal-close'
 import { resolveActiveProject } from '../lib/session-utils'
@@ -522,7 +522,7 @@ export function TabView() {
       </div>
 
       {/* Status bar */}
-      {activeTabId && activeTerminal && <TabStatusBar terminalId={activeTabId} />}
+      {activeTabId && activeTerminal && <SessionStatusBar terminalId={activeTabId} />}
 
       {/* Context menu */}
       {contextMenu && (
