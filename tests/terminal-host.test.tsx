@@ -86,8 +86,8 @@ describe('TerminalHost', () => {
     expect(hoisted.syncTerminalOverlay).toHaveBeenCalledWith('alpha')
   })
 
-  it('opens context menu on right-click over a wrapper with data-terminal-id', () => {
-    const { container, getByTestId } = render(<TerminalHost />)
+  it('opens the context menu on right-click and closes it via onClose', () => {
+    const { container, getByTestId, queryByTestId } = render(<TerminalHost />)
     const root = container.querySelector('div[aria-hidden="true"]') as HTMLElement
     const wrapper = document.createElement('div')
     wrapper.dataset.terminalId = 'my-term'
@@ -95,6 +95,8 @@ describe('TerminalHost', () => {
     fireEvent.contextMenu(wrapper, { clientX: 100, clientY: 200 })
     const menu = getByTestId('context-menu')
     expect(menu).toHaveAttribute('data-terminal-id', 'my-term')
+    fireEvent.click(menu)
+    expect(queryByTestId('context-menu')).toBeNull()
   })
 
   it('ignores right-clicks on elements without data-terminal-id', () => {
