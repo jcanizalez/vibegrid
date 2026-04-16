@@ -9,7 +9,7 @@ interface ProgressLabels {
 export async function withProgressToast<T>(
   labels: ProgressLabels,
   fn: () => Promise<T>
-): Promise<T> {
+): Promise<T | undefined> {
   const id = toast.loading(labels.loading)
   try {
     const result = await fn()
@@ -18,6 +18,6 @@ export async function withProgressToast<T>(
   } catch (err) {
     const msg = labels.error ? labels.error(err) : err instanceof Error ? err.message : String(err)
     toast.update(id, msg || 'Operation failed', 'error')
-    throw err
+    return undefined
   }
 }

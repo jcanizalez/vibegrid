@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { FolderGit2, GitBranch, ChevronRight, Plus, Pencil, Trash2, Check, X } from 'lucide-react'
 import { useAppStore } from '../../stores'
 import { Tooltip } from '../Tooltip'
@@ -34,6 +34,8 @@ export function WorktreeItem({
   const [renameValue, setRenameValue] = useState('')
   const [creatingSession, setCreatingSession] = useState(false)
   const [removing, setRemoving] = useState(false)
+  const creatingSessionLock = useRef(false)
+  const removingLock = useRef(false)
 
   const wt = worktree
 
@@ -145,7 +147,8 @@ export function WorktreeItem({
               disabled={creatingSession}
               onClick={(e) => {
                 e.stopPropagation()
-                if (creatingSession) return
+                if (creatingSessionLock.current) return
+                creatingSessionLock.current = true
                 setCreatingSession(true)
                 void withProgressToast(
                   { loading: 'Starting session…', success: 'Session started' },
@@ -157,7 +160,10 @@ export function WorktreeItem({
                       existingWorktreePath: wt.path
                     })
                   }
-                ).finally(() => setCreatingSession(false))
+                ).finally(() => {
+                  creatingSessionLock.current = false
+                  setCreatingSession(false)
+                })
               }}
               className="text-gray-500 hover:text-white p-0.5 rounded hover:bg-white/[0.08] transition-colors disabled:opacity-50"
             >
@@ -183,24 +189,34 @@ export function WorktreeItem({
               disabled={removing}
               onClick={async (e) => {
                 e.stopPropagation()
-                if (removing) return
-                const { count, sessionIds } = await window.api.getWorktreeActiveSessions(wt.path)
-                if (count > 0 || wt.isDirty) {
-                  requestWorktreeDelete({
-                    projectPath,
-                    worktreePath: wt.path,
-                    sessionIds
-                  })
-                } else {
-                  setRemoving(true)
-                  void withProgressToast(
-                    { loading: 'Removing worktree…', success: 'Worktree removed' },
-                    async () => {
-                      const removed = await window.api.removeWorktree(projectPath, wt.path, false)
-                      if (!removed) throw new Error('Failed to remove worktree')
-                      onWorktreesChanged()
-                    }
-                  ).finally(() => setRemoving(false))
+                if (removingLock.current) return
+                removingLock.current = true
+                try {
+                  const { count, sessionIds } = await window.api.getWorktreeActiveSessions(wt.path)
+                  if (count > 0 || wt.isDirty) {
+                    requestWorktreeDelete({
+                      projectPath,
+                      worktreePath: wt.path,
+                      sessionIds
+                    })
+                    removingLock.current = false
+                  } else {
+                    setRemoving(true)
+                    void withProgressToast(
+                      { loading: 'Removing worktree…', success: 'Worktree removed' },
+                      async () => {
+                        const removed = await window.api.removeWorktree(projectPath, wt.path, false)
+                        if (!removed) throw new Error('Failed to remove worktree')
+                        onWorktreesChanged()
+                      }
+                    ).finally(() => {
+                      removingLock.current = false
+                      setRemoving(false)
+                    })
+                  }
+                } catch (err) {
+                  removingLock.current = false
+                  toast.error(err instanceof Error ? err.message : 'Failed to check worktree')
                 }
               }}
               className="text-gray-500 hover:text-red-400 p-0.5 rounded hover:bg-white/[0.08] transition-colors disabled:opacity-50"

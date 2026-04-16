@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from 'react'
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { useAppStore } from '../../stores'
 import { Tooltip } from '../Tooltip'
@@ -62,6 +62,9 @@ export function ProjectItem({
   const [creatingSession, setCreatingSession] = useState(false)
   const [creatingWorktree, setCreatingWorktree] = useState(false)
   const [creatingMainSession, setCreatingMainSession] = useState(false)
+  const creatingSessionLock = useRef(false)
+  const creatingWorktreeLock = useRef(false)
+  const creatingMainSessionLock = useRef(false)
   const [collapsedBranches, setCollapsedBranches] = useState<Set<string>>(new Set())
   const isRemoteProject = !!getProjectRemoteHostId(project)
   const [isGitRepo, setIsGitRepo] = useState(isRemoteProject)
@@ -228,12 +231,16 @@ export function ProjectItem({
                     disabled={creatingSession}
                     onClick={(e) => {
                       e.stopPropagation()
-                      if (creatingSession) return
+                      if (creatingSessionLock.current) return
+                      creatingSessionLock.current = true
                       setCreatingSession(true)
                       void withProgressToast(
                         { loading: 'Starting session…', success: 'Session started' },
                         () => createSessionFromProject(project)
-                      ).finally(() => setCreatingSession(false))
+                      ).finally(() => {
+                        creatingSessionLock.current = false
+                        setCreatingSession(false)
+                      })
                     }}
                     className="text-gray-500 hover:text-white p-0.5 rounded hover:bg-white/[0.08] transition-colors disabled:opacity-50"
                   >
@@ -247,7 +254,8 @@ export function ProjectItem({
                       disabled={creatingWorktree}
                       onClick={(e) => {
                         e.stopPropagation()
-                        if (creatingWorktree) return
+                        if (creatingWorktreeLock.current) return
+                        creatingWorktreeLock.current = true
                         const name = generateWorktreeName()
                         setCreatingWorktree(true)
                         void withProgressToast(
@@ -260,7 +268,10 @@ export function ProjectItem({
                             loadWorktrees(project.path, true)
                             if (!isExpanded) setIsExpanded(true)
                           }
-                        ).finally(() => setCreatingWorktree(false))
+                        ).finally(() => {
+                          creatingWorktreeLock.current = false
+                          setCreatingWorktree(false)
+                        })
                       }}
                       className="text-gray-500 hover:text-white p-0.5 rounded hover:bg-white/[0.08] transition-colors disabled:opacity-50"
                     >
@@ -373,12 +384,16 @@ export function ProjectItem({
                             disabled={creatingMainSession}
                             onClick={(e) => {
                               e.stopPropagation()
-                              if (creatingMainSession) return
+                              if (creatingMainSessionLock.current) return
+                              creatingMainSessionLock.current = true
                               setCreatingMainSession(true)
                               void withProgressToast(
                                 { loading: 'Starting session…', success: 'Session started' },
                                 () => createSessionFromProject(project, { branch: mainWt.branch })
-                              ).finally(() => setCreatingMainSession(false))
+                              ).finally(() => {
+                                creatingMainSessionLock.current = false
+                                setCreatingMainSession(false)
+                              })
                             }}
                             className="text-gray-500 hover:text-white p-0.5 rounded hover:bg-white/[0.08] transition-colors disabled:opacity-50"
                           >

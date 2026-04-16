@@ -46,6 +46,7 @@ export function WorktreeCleanupDialog() {
   const [explicitDelete, setExplicitDelete] = useState<ExplicitDeleteInfo | null>(null)
   const [dirtyState, setDirtyState] = useState<DirtyState>('checking')
   const checkIdRef = useRef(0)
+  const removingLock = useRef(false)
 
   const dialogMode: DialogMode = explicitDelete ? 'explicit-delete' : 'session-exit'
   const activePath = explicitDelete?.worktreePath ?? pending?.worktreePath
@@ -94,6 +95,8 @@ export function WorktreeCleanupDialog() {
 
   const handleRemove = (): void => {
     if (!activePath || !activeProjectPath) return
+    if (removingLock.current) return
+    removingLock.current = true
     const projectPath = activeProjectPath
     const worktreePath = activePath
     const force = dirtyState === 'dirty' || dirtyState === 'unknown'
@@ -121,7 +124,9 @@ export function WorktreeCleanupDialog() {
         if (!removed) throw new Error('Failed to remove worktree')
         useAppStore.getState().loadWorktrees(projectPath, true)
       }
-    )
+    ).finally(() => {
+      removingLock.current = false
+    })
   }
 
   const showWarning = dirtyState === 'dirty' || dirtyState === 'unknown'
