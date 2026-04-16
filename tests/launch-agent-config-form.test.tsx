@@ -185,3 +185,63 @@ describe('LaunchAgentConfigForm — auto-revert on context loss', () => {
     expect(onChange).not.toHaveBeenCalled()
   })
 })
+
+describe('LaunchAgentConfigForm — UI sections', () => {
+  it('renders Agent, Project, Prompt, Execution sections', () => {
+    const { container } = render(<LaunchAgentConfigForm config={baseConfig()} onChange={vi.fn()} />)
+    const text = container.textContent ?? ''
+    expect(text).toContain('Agent')
+    expect(text).toContain('Project')
+    expect(text).toContain('Prompt')
+    expect(text).toContain('Execution')
+  })
+
+  it('shows queue hint when promptSource is queue', () => {
+    const { container } = render(
+      <LaunchAgentConfigForm
+        config={baseConfig({ taskFromQueue: true, projectName: 'demo' })}
+        onChange={vi.fn()}
+      />
+    )
+    expect(container.textContent).toContain('Auto-picks the next todo task')
+  })
+
+  it('renders Tab Name input when not headless', () => {
+    const { container } = render(
+      <LaunchAgentConfigForm config={baseConfig({ headless: false })} onChange={vi.fn()} />
+    )
+    expect(container.textContent).toContain('Tab Name')
+  })
+
+  it('hides Tab Name input when headless', () => {
+    const { container } = render(
+      <LaunchAgentConfigForm config={baseConfig({ headless: true })} onChange={vi.fn()} />
+    )
+    expect(container.textContent).not.toContain('Tab Name')
+  })
+
+  it('toggles the headless mode when the switch is clicked', () => {
+    const onChange = vi.fn()
+    const { container } = render(
+      <LaunchAgentConfigForm config={baseConfig({ headless: false })} onChange={onChange} />
+    )
+    const switchButton = container.querySelector('button[role="switch"]') as HTMLButtonElement
+    if (switchButton) switchButton.click()
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ headless: true }))
+  })
+
+  it('renders the Advanced toggle', () => {
+    const { container } = render(<LaunchAgentConfigForm config={baseConfig()} onChange={vi.fn()} />)
+    const advancedToggle = Array.from(container.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Advanced')
+    )
+    expect(advancedToggle).toBeDefined()
+  })
+
+  it('opens Advanced section pre-expanded when args are present', () => {
+    const { container } = render(
+      <LaunchAgentConfigForm config={baseConfig({ args: ['--flag'] })} onChange={vi.fn()} />
+    )
+    expect(container.textContent).toContain('Extra Arguments')
+  })
+})

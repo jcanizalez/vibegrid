@@ -108,4 +108,41 @@ describe('WorkflowsSection', () => {
     fireEvent.click(screen.getByText('Workflows'))
     expect(screen.queryByText('Flow a')).not.toBeInTheDocument()
   })
+
+  it('opens the context menu on right-click of a workflow row', () => {
+    render(<WorkflowsSection isCollapsed={false} workspaceWorkflows={[makeWorkflow('a')]} />)
+    fireEvent.contextMenu(screen.getByText('Flow a'))
+    expect(screen.getByText('Edit Workflow')).toBeInTheDocument()
+    expect(screen.getByText('Delete Workflow')).toBeInTheDocument()
+  })
+
+  it('triggers reorderWorkflows on a successful drop', () => {
+    const workflows = [makeWorkflow('a'), makeWorkflow('b')]
+    const { container } = render(
+      <WorkflowsSection isCollapsed={false} workspaceWorkflows={workflows} />
+    )
+    const rows = container.querySelectorAll('div.cursor-grab')
+    const dataTransfer = {
+      data: {} as Record<string, string>,
+      setData(key: string, value: string) {
+        this.data[key] = value
+      },
+      getData(key: string) {
+        return this.data[key]
+      },
+      effectAllowed: '',
+      dropEffect: ''
+    }
+    fireEvent.dragStart(rows[0], { dataTransfer })
+    fireEvent.dragOver(rows[1], { dataTransfer })
+    fireEvent.drop(rows[1], { dataTransfer })
+    expect(mockStore.reorderWorkflows).toHaveBeenCalledWith(0, 1)
+  })
+
+  it('renders compact icon-only rows when isCollapsed is true', () => {
+    const workflows = [makeWorkflow('a')]
+    render(<WorkflowsSection isCollapsed={true} workspaceWorkflows={workflows} />)
+    expect(screen.queryByText('Workflows')).not.toBeInTheDocument()
+    expect(screen.queryByText('Flow a')).not.toBeInTheDocument()
+  })
 })

@@ -1,0 +1,69 @@
+// @vitest-environment jsdom
+import { describe, it, expect, vi } from 'vitest'
+import { render, screen, fireEvent } from '@testing-library/react'
+import '@testing-library/jest-dom/vitest'
+import type { TriggerConfig } from '../src/shared/types'
+
+vi.mock('../src/renderer/stores', () => {
+  const state = { config: { projects: [] } }
+  return {
+    useAppStore: (selector?: (s: unknown) => unknown) => (selector ? selector(state) : state)
+  }
+})
+
+const { TriggerConfigForm } =
+  await import('../src/renderer/components/workflow-editor/panels/TriggerConfigForm')
+
+describe('TriggerConfigForm', () => {
+  it('renders the trigger type label and current type hint', () => {
+    render(<TriggerConfigForm config={{ triggerType: 'manual' }} onChange={vi.fn()} />)
+    expect(screen.getByText('Trigger Type')).toBeInTheDocument()
+    expect(screen.getByText(/Run manually/)).toBeInTheDocument()
+  })
+
+  it('shows the Run At input for the once trigger type', () => {
+    const config: TriggerConfig = { triggerType: 'once', runAt: new Date().toISOString() }
+    render(<TriggerConfigForm config={config} onChange={vi.fn()} />)
+    expect(screen.getByText('Run At')).toBeInTheDocument()
+  })
+
+  it('shows cron + timezone inputs for the recurring trigger type', () => {
+    const config: TriggerConfig = { triggerType: 'recurring', cron: '0 9 * * *' }
+    render(<TriggerConfigForm config={config} onChange={vi.fn()} />)
+    expect(screen.getByText('Cron Expression')).toBeInTheDocument()
+    expect(screen.getByText('Timezone')).toBeInTheDocument()
+    expect(screen.getByText('Preset')).toBeInTheDocument()
+  })
+
+  it('updates the cron value when typed', () => {
+    const onChange = vi.fn()
+    const config: TriggerConfig = { triggerType: 'recurring', cron: '0 9 * * *' }
+    render(<TriggerConfigForm config={config} onChange={onChange} />)
+    const input = screen.getByPlaceholderText('* * * * *')
+    fireEvent.change(input, { target: { value: '*/15 * * * *' } })
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({ cron: '*/15 * * * *' }))
+  })
+
+  it('shows project filter for the taskCreated trigger type', () => {
+    render(<TriggerConfigForm config={{ triggerType: 'taskCreated' }} onChange={vi.fn()} />)
+    expect(screen.getByText('Project Filter')).toBeInTheDocument()
+  })
+
+  it('shows From/To status pickers for the taskStatusChanged trigger type', () => {
+    render(<TriggerConfigForm config={{ triggerType: 'taskStatusChanged' }} onChange={vi.fn()} />)
+    expect(screen.getByText('From Status')).toBeInTheDocument()
+    expect(screen.getByText('To Status')).toBeInTheDocument()
+    expect(screen.getByText('Project Filter')).toBeInTheDocument()
+  })
+
+  it('updates timezone input', () => {
+    const onChange = vi.fn()
+    const config: TriggerConfig = { triggerType: 'recurring', cron: '0 9 * * *', timezone: 'UTC' }
+    const { container } = render(<TriggerConfigForm config={config} onChange={onChange} />)
+    const tzInput = container.querySelectorAll('input[type="text"]')[1] as HTMLInputElement
+    fireEvent.change(tzInput, { target: { value: 'America/Los_Angeles' } })
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({ timezone: 'America/Los_Angeles' })
+    )
+  })
+})

@@ -73,4 +73,56 @@ describe('WorkflowPropertiesPanel', () => {
     if (closeButton) fireEvent.click(closeButton)
     expect(onClose).toHaveBeenCalledTimes(1)
   })
+
+  it('calls onSelectTrigger when the trigger summary is clicked', () => {
+    const onSelectTrigger = vi.fn()
+    render(
+      <WorkflowPropertiesPanel
+        {...baseProps}
+        triggerNode={makeTrigger('manual')}
+        onSelectTrigger={onSelectTrigger}
+      />
+    )
+    fireEvent.click(screen.getByText('Manual'))
+    expect(onSelectTrigger).toHaveBeenCalledTimes(1)
+  })
+
+  it('renders Last run with a status dot when lastRun is provided', () => {
+    const lastRun = {
+      workflowId: 'w1',
+      startedAt: new Date(Date.now() - 5 * 60_000).toISOString(),
+      status: 'success' as const,
+      nodeStates: []
+    }
+    const { container } = render(<WorkflowPropertiesPanel {...baseProps} lastRun={lastRun} />)
+    expect(screen.getByText('Last run')).toBeInTheDocument()
+    expect(container.querySelector('.bg-green-400')).toBeInTheDocument()
+  })
+
+  it('hides the Last run row when there is no lastRun', () => {
+    render(<WorkflowPropertiesPanel {...baseProps} lastRun={null} />)
+    expect(screen.queryByText('Last run')).not.toBeInTheDocument()
+  })
+
+  it('updates stagger value when input changes', () => {
+    const onStaggerChange = vi.fn()
+    render(<WorkflowPropertiesPanel {...baseProps} onStaggerChange={onStaggerChange} />)
+    const input = screen.getByPlaceholderText('0ms')
+    fireEvent.change(input, { target: { value: '500' } })
+    expect(onStaggerChange).toHaveBeenCalledWith(500)
+  })
+
+  it('clears stagger value when input is emptied', () => {
+    const onStaggerChange = vi.fn()
+    render(
+      <WorkflowPropertiesPanel
+        {...baseProps}
+        staggerDelayMs={100}
+        onStaggerChange={onStaggerChange}
+      />
+    )
+    const input = screen.getByPlaceholderText('0ms')
+    fireEvent.change(input, { target: { value: '' } })
+    expect(onStaggerChange).toHaveBeenCalledWith(undefined)
+  })
 })
