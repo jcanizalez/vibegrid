@@ -55,6 +55,7 @@ export function WorkflowPropertiesPanel({
         <span className="text-[13px] font-medium text-white">Properties</span>
         <button
           onClick={onClose}
+          aria-label="Close properties panel"
           className="text-gray-500 hover:text-white p-1 rounded-md transition-colors"
         >
           <X size={14} />
@@ -72,9 +73,16 @@ export function WorkflowPropertiesPanel({
         <PropertyRow label="Stagger delay">
           <input
             type="number"
+            min={0}
             value={staggerDelayMs ?? ''}
-            onChange={(e) => onStaggerChange(e.target.value ? parseInt(e.target.value) : undefined)}
+            onChange={(e) => {
+              const raw = e.target.value
+              if (raw === '') return onStaggerChange(undefined)
+              const parsed = parseInt(raw, 10)
+              if (Number.isFinite(parsed) && parsed >= 0) onStaggerChange(parsed)
+            }}
             placeholder="0ms"
+            aria-label="Stagger delay in milliseconds"
             className="w-[80px] px-2 py-0.5 text-[12px] bg-white/[0.06] border border-white/[0.08] rounded
                        text-gray-200 focus:outline-none focus:border-white/[0.2]"
           />

@@ -73,6 +73,9 @@ export function SelectPicker({
       <button
         ref={triggerRef}
         onClick={handleTrigger}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label={current ? current.label : placeholder}
         className={
           variant === 'form'
             ? 'w-full flex items-center gap-2 px-3 py-2 text-[13px] bg-white/[0.06] border border-white/[0.1] rounded-md text-white hover:border-white/[0.2] transition-colors'

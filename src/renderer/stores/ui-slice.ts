@@ -448,6 +448,14 @@ export const createUISlice: StateCreator<AppStore, [], [], UISlice> = (set, get)
       const wsWorkflows = (state.config.workflows ?? []).filter(
         (w) => (w.workspaceId ?? 'personal') === activeWs
       )
+      if (
+        fromIndex < 0 ||
+        fromIndex >= wsWorkflows.length ||
+        toIndex < 0 ||
+        toIndex >= wsWorkflows.length
+      ) {
+        return {}
+      }
       const reordered = [...wsWorkflows]
       const [moved] = reordered.splice(fromIndex, 1)
       reordered.splice(toIndex, 0, moved)

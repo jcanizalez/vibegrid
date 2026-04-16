@@ -442,6 +442,7 @@ export function WorkflowEditor() {
         <div className="flex items-center gap-3 titlebar-no-drag" style={{ paddingLeft: '70px' }}>
           <button
             onClick={handleClose}
+            aria-label="Back"
             className="text-gray-400 hover:text-white p-1.5 rounded-md transition-colors"
           >
             <ArrowLeft size={16} />
@@ -518,6 +519,7 @@ export function WorkflowEditor() {
           <Tooltip label="Run workflow" position="bottom">
             <button
               onClick={handleRun}
+              aria-label="Run workflow"
               className="text-gray-400 hover:text-white p-1.5 rounded-md hover:bg-white/[0.06] transition-colors"
             >
               <Play size={15} />
@@ -534,6 +536,8 @@ export function WorkflowEditor() {
                   setShowRunHistory(!showRunHistory)
                   if (!showRunHistory) setSelectedNodeId(null)
                 }}
+                aria-label={`Run history (${executionHistory.length})`}
+                aria-pressed={showRunHistory}
                 className={`p-1.5 rounded-md transition-colors ${
                   showRunHistory
                     ? 'text-white bg-white/[0.08]'
@@ -559,6 +563,9 @@ export function WorkflowEditor() {
             <Tooltip label="More options" position="bottom">
               <button
                 onClick={() => setShowOverflowMenu(!showOverflowMenu)}
+                aria-label="More options"
+                aria-haspopup="menu"
+                aria-expanded={showOverflowMenu}
                 className={`p-1.5 rounded-md transition-colors ${
                   showOverflowMenu
                     ? 'text-white bg-white/[0.08]'

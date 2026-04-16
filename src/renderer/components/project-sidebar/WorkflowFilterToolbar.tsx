@@ -26,7 +26,18 @@ export function WorkflowFilterToolbar() {
     setOpen((o) => {
       if (!o && buttonRef.current) {
         const rect = buttonRef.current.getBoundingClientRect()
-        setPos({ top: rect.bottom + 4, left: rect.left })
+        const margin = 8
+        const menuWidth = 160
+        const menuMaxHeight = 140
+        const vw = window.innerWidth
+        const vh = window.innerHeight
+        let left = rect.left
+        let top = rect.bottom + 4
+        if (left + menuWidth + margin > vw) left = vw - menuWidth - margin
+        if (top + menuMaxHeight + margin > vh) top = vh - menuMaxHeight - margin
+        if (left < margin) left = margin
+        if (top < margin) top = margin
+        setPos({ top, left })
       }
       return !o
     })
@@ -57,6 +68,9 @@ export function WorkflowFilterToolbar() {
         <button
           ref={buttonRef}
           onClick={toggle}
+          aria-label="Filter workflows"
+          aria-haspopup="menu"
+          aria-expanded={open}
           className={`relative p-0.5 rounded transition-colors ${
             open
               ? 'text-white bg-white/[0.08]'

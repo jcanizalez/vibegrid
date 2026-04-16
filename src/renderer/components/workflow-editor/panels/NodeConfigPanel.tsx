@@ -79,6 +79,9 @@ export function NodeConfigPanel({
             <div className="relative">
               <button
                 onClick={() => setShowMenu(!showMenu)}
+                aria-label="More node actions"
+                aria-haspopup="menu"
+                aria-expanded={showMenu}
                 className="text-gray-500 hover:text-white p-1 rounded-md transition-colors"
               >
                 <MoreHorizontal size={14} />
@@ -106,6 +109,7 @@ export function NodeConfigPanel({
           )}
           <button
             onClick={onClose}
+            aria-label="Close node config"
             className="text-gray-500 hover:text-white p-1 rounded-md transition-colors"
           >
             <X size={14} />

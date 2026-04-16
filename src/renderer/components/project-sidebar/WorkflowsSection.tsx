@@ -100,6 +100,7 @@ export function WorkflowsSection({
                   setEditingWorkflowId(null)
                   setWorkflowEditorOpen(true)
                 }}
+                aria-label="New workflow"
                 className="p-0.5 rounded text-gray-600 hover:text-white hover:bg-white/[0.08] transition-colors"
               >
                 <Zap size={13} strokeWidth={1.5} />
