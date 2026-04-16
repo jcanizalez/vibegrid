@@ -181,8 +181,14 @@ function createTerminalEntry(terminalId: string): TerminalEntry {
     e._gpuAddon = addon
     term.refresh(0, term.rows - 1)
   }
-  const loadCanvas = (): Promise<void> =>
-    import('@xterm/addon-canvas').then(({ CanvasAddon }) => mountAddon(() => new CanvasAddon()))
+  // Terminal fallback — if even canvas fails to load, there's no further
+  // fallback, so swallow the error here instead of propagating an unhandled
+  // rejection up through the WebGL error paths.
+  const loadCanvas = (): void => {
+    import('@xterm/addon-canvas')
+      .then(({ CanvasAddon }) => mountAddon(() => new CanvasAddon()))
+      .catch(() => {})
+  }
   const loadRenderer = (): void => {
     const current = registry.get(terminalId)
     if (!current || current._gpuAddon) return
@@ -262,9 +268,9 @@ export function attachTerminal(terminalId: string, container: HTMLDivElement): T
 /**
  * Detach a terminal from its current container (e.g. on component unmount).
  * Does NOT dispose the Terminal — it stays alive in the registry and its
- * buffer keeps receiving pty data. Releases the GPU renderer addon though,
- * since there's no visible canvas for it to draw to. The renderer is
- * rebuilt by attachTerminal on re-attach.
+ * buffer keeps receiving pty data. Releases the active renderer addon
+ * (WebGL or canvas fallback) since there's no visible surface for it to
+ * draw to. The renderer is rebuilt by attachTerminal on re-attach.
  */
 export function detachTerminal(terminalId: string, container: HTMLDivElement): void {
   const entry = registry.get(terminalId)
