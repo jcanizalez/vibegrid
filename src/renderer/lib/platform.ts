@@ -10,3 +10,8 @@ export const isWeb =
   window.api.getAppVersion() === 'web'
 
 export const isElectron = !isWeb
+
+export const isMac =
+  typeof navigator !== 'undefined' && navigator.platform.toUpperCase().includes('MAC')
+
+export const MOD = isMac ? '⌘' : 'Ctrl+'
