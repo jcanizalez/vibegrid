@@ -79,10 +79,17 @@ export function BranchPicker({
     }
     window.addEventListener('resize', scheduleUpdate)
     window.addEventListener('scroll', scheduleUpdate, true)
+
+    const popover = ref.current
+    const resizeObserver =
+      popover && typeof ResizeObserver !== 'undefined' ? new ResizeObserver(scheduleUpdate) : null
+    if (popover && resizeObserver) resizeObserver.observe(popover)
+
     return () => {
       if (frame) window.cancelAnimationFrame(frame)
       window.removeEventListener('resize', scheduleUpdate)
       window.removeEventListener('scroll', scheduleUpdate, true)
+      resizeObserver?.disconnect()
     }
   }, [anchorRef, minWidth])
 

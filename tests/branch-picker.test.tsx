@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { useRef } from 'react'
 import { render, screen, act } from '@testing-library/react'
 import '@testing-library/jest-dom/vitest'
@@ -43,8 +43,8 @@ function Harness({
 
 describe('BranchPicker', () => {
   beforeEach(() => {
-    mockListBranches.mockResolvedValue({ local: ['main', 'dev'] })
-    mockListRemoteBranches.mockResolvedValue([])
+    mockListBranches.mockReset().mockResolvedValue({ local: ['main', 'dev'] })
+    mockListRemoteBranches.mockReset().mockResolvedValue([])
     vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
       top: 100,
       left: 200,
@@ -56,6 +56,10 @@ describe('BranchPicker', () => {
       y: 100,
       toJSON: () => ({})
     })
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
   })
 
   it('positions the portal based on the anchor rect', () => {
