@@ -240,6 +240,9 @@ const FLEX_ROW_H = 80
 const FLEX_DEFAULT_W = 4
 const FLEX_DEFAULT_H = 3
 
+// noCompactor gives free positioning; preventCollision blocks drag/resize into a neighbour.
+const flexCompactor = { ...noCompactor, preventCollision: true }
+
 function getStableKey(session: TerminalState['session']): string {
   return session.hookSessionId || session.agentSessionId || ''
 }
@@ -368,7 +371,7 @@ function FlexibleGrid({
           containerPadding: null,
           maxRows: Infinity
         }}
-        compactor={noCompactor}
+        compactor={flexCompactor}
         dragConfig={{ enabled: true, handle: '.drag-handle', bounded: false, threshold: 3 }}
         resizeConfig={{ enabled: true, handles: ['se'] }}
         onDragStop={handleDragStop}
