@@ -22,7 +22,8 @@ vi.mock('lucide-react', () => ({
   ChevronDown: (props: Record<string, unknown>) => <svg data-testid="chevron-down" {...props} />,
   ChevronRight: (props: Record<string, unknown>) => <svg data-testid="chevron-right" {...props} />,
   Maximize2: (props: Record<string, unknown>) => <svg data-testid="maximize-icon" {...props} />,
-  Play: (props: Record<string, unknown>) => <svg data-testid="play-icon" {...props} />
+  Play: (props: Record<string, unknown>) => <svg data-testid="play-icon" {...props} />,
+  RotateCcw: (props: Record<string, unknown>) => <svg data-testid="rotate-ccw-icon" {...props} />
 }))
 
 // Mock framer-motion (used by RunEntry's StatusIcon)
@@ -137,10 +138,10 @@ describe('SessionActivityLog', () => {
 
   it('shows "View Full Output" button and calls callback', () => {
     const log = makeLog({ logs: 'Some output content' })
-    const { getByText } = render(
+    const { getByLabelText } = render(
       <SessionActivityLog logs={[log]} onViewFullOutput={onViewFullOutput} />
     )
-    const btn = getByText('View Full Output')
+    const btn = getByLabelText('View full output')
     expect(btn).toBeInTheDocument()
     fireEvent.click(btn)
     expect(onViewFullOutput).toHaveBeenCalledWith('Some output content')
@@ -210,15 +211,15 @@ describe('SessionActivityLog', () => {
   })
 
   it('does not show Resume Session when no agentSessionId', () => {
-    const { queryByText } = render(
+    const { queryByLabelText } = render(
       <SessionActivityLog logs={[makeLog()]} onViewFullOutput={onViewFullOutput} />
     )
-    expect(queryByText('Resume Session')).not.toBeInTheDocument()
+    expect(queryByLabelText('Resume session')).not.toBeInTheDocument()
   })
 
   it('shows Resume Session for errored sessions when agentSessionId provided', () => {
     const onResume = vi.fn()
-    const { getByText } = render(
+    const { getByLabelText } = render(
       <SessionActivityLog
         logs={[makeLog({ status: 'error', exitCode: 1, logs: 'Error: failed' })]}
         onViewFullOutput={onViewFullOutput}
@@ -227,6 +228,52 @@ describe('SessionActivityLog', () => {
         projectPath="/test"
       />
     )
-    expect(getByText('Resume Session')).toBeInTheDocument()
+    expect(getByLabelText('Resume session')).toBeInTheDocument()
+  })
+
+  it('clicking Resume Session fires the callback with session + project info', () => {
+    const onResume = vi.fn()
+    const { getByLabelText } = render(
+      <SessionActivityLog
+        logs={[
+          makeLog({
+            status: 'error',
+            exitCode: 1,
+            logs: 'Error: failed',
+            projectName: 'proj',
+            branch: 'feat/x'
+          })
+        ]}
+        onViewFullOutput={onViewFullOutput}
+        onResumeSession={onResume}
+        agentSessionId="agent-xyz"
+        projectPath="/abs/path"
+      />
+    )
+    fireEvent.click(getByLabelText('Resume session'))
+    expect(onResume).toHaveBeenCalledWith('agent-xyz', 'claude', 'proj', '/abs/path', 'feat/x')
+  })
+
+  it('falls back to claude / empty project name when log fields are missing', () => {
+    const onResume = vi.fn()
+    const { getByLabelText } = render(
+      <SessionActivityLog
+        logs={[
+          makeLog({
+            status: 'error',
+            agentType: undefined,
+            projectName: undefined,
+            exitCode: 1,
+            logs: 'boom'
+          })
+        ]}
+        onViewFullOutput={onViewFullOutput}
+        onResumeSession={onResume}
+        agentSessionId="agent-2"
+        projectPath="/p"
+      />
+    )
+    fireEvent.click(getByLabelText('Resume session'))
+    expect(onResume).toHaveBeenCalledWith('agent-2', 'claude', '', '/p', 'main')
   })
 })
