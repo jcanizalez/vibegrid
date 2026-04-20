@@ -29,6 +29,7 @@ export function StatusPicker({
   const cancelTask = useAppStore((s) => s.cancelTask)
   const reopenTask = useAppStore((s) => s.reopenTask)
   const reviewTask = useAppStore((s) => s.reviewTask)
+  const updateTask = useAppStore((s) => s.updateTask)
 
   const badge = STATUS_BADGE[currentStatus]
   const CurrentIcon = STATUS_ICON[currentStatus]
@@ -64,13 +65,13 @@ export function StatusPicker({
     // Store mode: call dedicated store methods for existing tasks
     if (!taskId) return
 
-    // todo -> in_progress is disabled (requires Start Task)
-    if (status === 'in_progress' && currentStatus === 'todo') return
-
     switch (status) {
       case 'todo':
         reopenTask(taskId)
         toast.success('Task reopened')
+        break
+      case 'in_progress':
+        updateTask(taskId, { status: 'in_progress' })
         break
       case 'in_review':
         reviewTask(taskId)
@@ -104,9 +105,6 @@ export function StatusPicker({
       document.removeEventListener('keydown', handleKey)
     }
   }, [open])
-
-  // In store mode (no onChange), disable in_progress when coming from todo
-  const isStoreMode = !onChange
 
   return (
     <>
@@ -142,28 +140,17 @@ export function StatusPicker({
                 const b = STATUS_BADGE[status]
                 const Icon = STATUS_ICON[status]
                 const isCurrent = status === currentStatus
-                const isItemDisabled =
-                  isStoreMode && status === 'in_progress' && currentStatus === 'todo'
 
                 return (
                   <button
                     key={status}
                     onClick={(e) => {
                       e.stopPropagation()
-                      if (!isItemDisabled) handleSelect(status)
+                      handleSelect(status)
                     }}
-                    disabled={isItemDisabled}
-                    className={`w-full flex items-center gap-2.5 px-3 py-1.5 text-xs transition-colors ${
-                      isItemDisabled
-                        ? 'text-gray-600 cursor-not-allowed'
-                        : 'text-gray-300 hover:bg-white/[0.06] cursor-pointer'
-                    }`}
-                    title={isItemDisabled ? 'Use Start Task to begin work' : undefined}
+                    className="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs transition-colors text-gray-300 hover:bg-white/[0.06] cursor-pointer"
                   >
-                    <Icon
-                      size={14}
-                      className={isItemDisabled ? 'text-gray-600' : STATUS_ICON_COLOR[status]}
-                    />
+                    <Icon size={14} className={STATUS_ICON_COLOR[status]} />
                     <span className="flex-1 text-left">{b.label}</span>
                     {isCurrent && <Check size={13} className="text-gray-400" />}
                   </button>
