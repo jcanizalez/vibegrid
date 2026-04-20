@@ -29,6 +29,7 @@ export function StatusPicker({
   const cancelTask = useAppStore((s) => s.cancelTask)
   const reopenTask = useAppStore((s) => s.reopenTask)
   const reviewTask = useAppStore((s) => s.reviewTask)
+  const updateTask = useAppStore((s) => s.updateTask)
 
   const badge = STATUS_BADGE[currentStatus]
   const CurrentIcon = STATUS_ICON[currentStatus]
@@ -64,13 +65,17 @@ export function StatusPicker({
     // Store mode: call dedicated store methods for existing tasks
     if (!taskId) return
 
-    // todo -> in_progress is disabled (requires Start Task)
-    if (status === 'in_progress' && currentStatus === 'todo') return
-
     switch (status) {
       case 'todo':
         reopenTask(taskId)
         toast.success('Task reopened')
+        break
+      case 'in_progress':
+        // Only todo → in_progress is supported: the seeded Default Task
+        // Workflow listens for that exact transition. Other sources would
+        // leave completedAt/assignedSessionId stale with no agent spawn.
+        if (currentStatus !== 'todo') return
+        updateTask(taskId, { status: 'in_progress' })
         break
       case 'in_review':
         reviewTask(taskId)
@@ -104,9 +109,6 @@ export function StatusPicker({
       document.removeEventListener('keydown', handleKey)
     }
   }, [open])
-
-  // In store mode (no onChange), disable in_progress when coming from todo
-  const isStoreMode = !onChange
 
   return (
     <>
@@ -142,8 +144,10 @@ export function StatusPicker({
                 const b = STATUS_BADGE[status]
                 const Icon = STATUS_ICON[status]
                 const isCurrent = status === currentStatus
+                // In store mode, in_progress is only reachable from todo — the
+                // default workflow only fires on that transition.
                 const isItemDisabled =
-                  isStoreMode && status === 'in_progress' && currentStatus === 'todo'
+                  !onChange && status === 'in_progress' && currentStatus !== 'todo'
 
                 return (
                   <button
@@ -158,7 +162,7 @@ export function StatusPicker({
                         ? 'text-gray-600 cursor-not-allowed'
                         : 'text-gray-300 hover:bg-white/[0.06] cursor-pointer'
                     }`}
-                    title={isItemDisabled ? 'Use Start Task to begin work' : undefined}
+                    title={isItemDisabled ? 'Move to Todo first, then start the task' : undefined}
                   >
                     <Icon
                       size={14}

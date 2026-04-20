@@ -8,7 +8,7 @@ import {
   supportsExactSessionResume,
   getProjectRemoteHostId
 } from '../../shared/types'
-import { buildTaskPrompt, buildFeedbackPrompt } from '../../shared/prompt-builder'
+import { buildFeedbackPrompt } from '../../shared/prompt-builder'
 import { TASK_TEMPLATE } from './MarkdownEditor'
 const RichMarkdownEditor = lazy(() =>
   import('./rich-editor/RichMarkdownEditor').then((m) => ({ default: m.RichMarkdownEditor }))
@@ -370,25 +370,6 @@ export function TaskDetailPanel() {
     document.addEventListener('pointerup', onUp)
   }
 
-  const handleStartTask = async () => {
-    if (!project || !task) return
-    const agentType = formAssignedAgent ?? config?.defaults.defaultAgent ?? 'claude'
-    const siblingTasks = (config?.tasks || []).filter((t) => t.projectName === task.projectName)
-    const remoteHostId = getProjectRemoteHostId(project)
-    const session = await window.api.createTerminal({
-      agentType,
-      projectName: project.name,
-      projectPath: project.path,
-      branch: task.branch,
-      useWorktree: task.useWorktree,
-      initialPrompt: buildTaskPrompt({ task, project, siblingTasks }),
-      taskId: task.id,
-      remoteHostId
-    })
-    addTerminal(session)
-    startTask(task.id, session.id, agentType, session.worktreePath)
-  }
-
   const handleFocusSession = () => {
     if (task?.assignedSessionId) setFocusedTerminal(task.assignedSessionId)
   }
@@ -598,8 +579,7 @@ export function TaskDetailPanel() {
     })
   }
 
-  const hasSessionActions =
-    !isCreateMode && task && (task.status === 'todo' || sessionIsLive || canResume)
+  const hasSessionActions = !isCreateMode && task && (sessionIsLive || canResume)
 
   return (
     <div
@@ -807,17 +787,6 @@ export function TaskDetailPanel() {
         {/* Session action buttons (compact) */}
         {hasSessionActions && (
           <div className="px-4 py-2 border-t border-white/[0.06] flex flex-wrap gap-2">
-            {task.status === 'todo' && (
-              <button
-                onClick={handleStartTask}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 text-[12px] font-medium
-                           bg-green-500/10 hover:bg-green-500/20 border border-green-500/20
-                           rounded-md transition-colors text-green-400 hover:text-green-300"
-              >
-                <Play size={12} strokeWidth={2} />
-                Start Task
-              </button>
-            )}
             {sessionIsLive && (
               <button
                 onClick={handleFocusSession}
