@@ -39,6 +39,7 @@ const cells = grid.map((tier, i) => {
   const duration = (0.95 + seeded(i + 101) * 0.8).toFixed(3)
   return {
     key: i,
+    tier,
     x: (i % 4) * 4,
     y: Math.floor(i / 4) * 4,
     style:
@@ -69,7 +70,16 @@ export const RunningGlyph = memo(function RunningGlyph({
       data-component="running-glyph"
     >
       {cells.map((c) => (
-        <rect key={c.key} x={c.x} y={c.y} width="3" height="3" rx="1" style={c.style} />
+        <rect
+          key={c.key}
+          x={c.x}
+          y={c.y}
+          width="3"
+          height="3"
+          rx="1"
+          data-tier={c.tier}
+          style={c.style}
+        />
       ))}
     </svg>
   )

@@ -82,8 +82,10 @@ describe('SessionItem', () => {
       const s: SidebarSessionInfo = { ...session, status }
       const { container } = render(<SessionItem session={s} />)
       expect(container.querySelector('[data-component="running-glyph"]')).toBeNull()
-      // Identity svg still rendered (AgentIcon is an inline SVG)
-      expect(container.querySelector('svg')).toBeInTheDocument()
+      // Identity svg should be rendered inside the icon wrapper, not matched globally
+      const sessionButton = screen.getByText('My Session').closest('button')
+      const iconWrapper = sessionButton?.querySelector('span')
+      expect(iconWrapper?.querySelector('svg')).toBeInTheDocument()
     }
   )
 

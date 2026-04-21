@@ -223,7 +223,7 @@ select:focus:not(:focus-visible) {
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  [data-component='running-glyph'] rect {
+  [data-component='running-glyph'] rect:not([data-tier='hidden']) {
     animation: none !important;
     opacity: 0.5;
   }
