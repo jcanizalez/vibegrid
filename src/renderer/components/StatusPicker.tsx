@@ -71,6 +71,10 @@ export function StatusPicker({
         toast.success('Task reopened')
         break
       case 'in_progress':
+        // Only todo → in_progress is supported: the seeded Default Task
+        // Workflow listens for that exact transition. Other sources would
+        // leave completedAt/assignedSessionId stale with no agent spawn.
+        if (currentStatus !== 'todo') return
         updateTask(taskId, { status: 'in_progress' })
         break
       case 'in_review':
@@ -140,6 +144,10 @@ export function StatusPicker({
                 const b = STATUS_BADGE[status]
                 const Icon = STATUS_ICON[status]
                 const isCurrent = status === currentStatus
+                // In store mode, in_progress is only reachable from todo — the
+                // default workflow only fires on that transition.
+                const isItemDisabled =
+                  !onChange && status === 'in_progress' && currentStatus !== 'todo'
 
                 return (
                   <button
@@ -148,7 +156,13 @@ export function StatusPicker({
                       e.stopPropagation()
                       handleSelect(status)
                     }}
-                    className="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs transition-colors text-gray-300 hover:bg-white/[0.06] cursor-pointer"
+                    disabled={isItemDisabled}
+                    className={`w-full flex items-center gap-2.5 px-3 py-1.5 text-xs transition-colors ${
+                      isItemDisabled
+                        ? 'text-gray-600 cursor-not-allowed'
+                        : 'text-gray-300 hover:bg-white/[0.06] cursor-pointer'
+                    }`}
+                    title={isItemDisabled ? 'Move to Todo first, then start the task' : undefined}
                   >
                     <Icon size={14} className={STATUS_ICON_COLOR[status]} />
                     <span className="flex-1 text-left">{b.label}</span>

@@ -293,6 +293,10 @@ export interface ScriptConfig {
   projectName?: string // for resolving cwd
   projectPath?: string
   args?: string[]
+  /** Caller-supplied id to correlate streaming chunks back to a workflow step.
+   *  When set, the runner emits SCRIPT_DATA/SCRIPT_EXIT with this id so the
+   *  renderer can show output live in Run History. */
+  runId?: string
 }
 
 export type ConditionOperator =
@@ -341,6 +345,13 @@ export interface NodeExecutionState {
   output?: string
   taskId?: string
   agentSessionId?: string
+  /** Concrete agent type resolved at launch time. Distinct from the node's
+   *  configured agentType, which may be the 'fromTask' sentinel. */
+  agentType?: AgentType
+  /** Project name captured at launch so resume works for task-agnostic nodes. */
+  projectName?: string
+  /** Project path captured at launch. */
+  projectPath?: string
   worktreePath?: string
   worktreeName?: string
 }
@@ -499,6 +510,9 @@ export interface HeadlessSession {
   workflowName?: string
   /** Task this session is working on */
   taskId?: string
+  /** The agent's own session id (pinned via --session-id for claude/copilot),
+   *  enabling later --resume. Only set for agents that support pinning. */
+  agentSessionId?: string
 }
 
 export interface ResizePayload {
@@ -618,6 +632,8 @@ export const IPC = {
   HEADLESS_DATA: 'headless:data',
   HEADLESS_EXIT: 'headless:exit',
   SCRIPT_EXECUTE: 'script:execute',
+  SCRIPT_DATA: 'script:data',
+  SCRIPT_EXIT: 'script:exit',
   WORKFLOW_RUN_SAVE: 'workflowRun:save',
   WORKFLOW_RUN_LIST: 'workflowRun:list',
   WORKFLOW_RUN_LIST_BY_TASK: 'workflowRun:listByTask',

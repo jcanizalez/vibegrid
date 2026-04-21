@@ -91,7 +91,7 @@
     "@vitest/coverage-v8": "4.1.4",
     "@vitest/eslint-plugin": "^1.6.16",
     "electron": "^41.2.0",
-    "electron-builder": "^26.8.1",
+    "electron-builder": "^26.9.0",
     "electron-vite": "^5.0.0",
     "eslint": "^10.2.0",
     "eslint-config-prettier": "^10.1.8",
@@ -105,7 +105,7 @@
     "simple-git-hooks": "^2.13.1",
     "tailwindcss": "^4.2.2",
     "typescript": "^6.0.2",
-    "typescript-eslint": "^8.58.1",
+    "typescript-eslint": "^8.58.2",
     "vite": "^7.3.2",
     "vitest": "4.1.4"
   },
@@ -119,6 +119,6 @@
     "tar": "^7.5.13",
     "path-to-regexp": "^8.4.2",
     "picomatch": "^4.0.4",
-    "fastify": "^5.8.4"
+    "fastify": "^5.8.5"
   }
 }

@@ -360,10 +360,12 @@ export const AgentCard = memo(
         {/* Terminal */}
         <div className="relative flex-1 min-h-0" style={{ background: '#141416' }}>
           {!isFocused && (
+            // In flexible mode, reserve 16px at SE so the react-grid-layout
+            // resize handle isn't covered by the TerminalHost overlay (z-45).
             <TerminalSlot
               terminalId={terminalId}
               isFocused={isSelected}
-              className="w-full h-full"
+              className={flexible ? 'absolute inset-0 right-4 bottom-4' : 'w-full h-full'}
             />
           )}
           {isFocused && (
