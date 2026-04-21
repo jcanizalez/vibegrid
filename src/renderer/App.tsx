@@ -353,6 +353,17 @@ export function App() {
     pollHeadless()
     const headlessPollInterval = setInterval(pollHeadless, 5000)
 
+    window.api
+      .listRunsWithWaitingGates()
+      .then((runs) => {
+        const store = useAppStore.getState()
+        for (const run of runs) {
+          if (store.workflowExecutions.has(run.workflowId)) continue
+          store.setWorkflowExecution(run.workflowId, run)
+        }
+      })
+      .catch((err) => console.error('[App] failed to hydrate waiting gates:', err))
+
     // Auto-prune exited headless sessions
     const pruneInterval = setInterval(() => {
       const retentionMinutes =
