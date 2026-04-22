@@ -159,7 +159,7 @@ export const GridView = memo(function GridView() {
 
   return (
     <div
-      className="h-full overflow-auto p-4"
+      className="h-full overflow-auto"
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onPointerLeave={handlePointerUp}
@@ -207,7 +207,7 @@ export const GridView = memo(function GridView() {
           />
         ) : (
           <div
-            className="grid gap-4"
+            className="grid gap-0"
             style={gridStyle}
             onDoubleClick={handleGridDoubleClick}
             onContextMenu={handleGridContextMenu}
@@ -370,7 +370,7 @@ function FlexibleGrid({
         gridConfig={{
           cols: FLEX_COLS,
           rowHeight: FLEX_ROW_H,
-          margin: [16, 16],
+          margin: [0, 0],
           containerPadding: null,
           maxRows: Infinity
         }}
