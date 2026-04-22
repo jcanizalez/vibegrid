@@ -115,6 +115,7 @@ export function App() {
     isOnboardingOpen,
     isTerminalPanelOpen,
     isWorkflowEditorOpen,
+    editingWorkflowId,
     layoutMode,
     mainViewMode,
     selectedTaskId,
@@ -130,6 +131,7 @@ export function App() {
       isOnboardingOpen: s.isOnboardingOpen,
       isTerminalPanelOpen: s.isTerminalPanelOpen,
       isWorkflowEditorOpen: s.isWorkflowEditorOpen,
+      editingWorkflowId: s.editingWorkflowId,
       layoutMode: s.config?.defaults?.layoutMode ?? 'grid',
       mainViewMode: s.config?.defaults?.mainViewMode ?? 'sessions',
       selectedTaskId: s.selectedTaskId,
@@ -523,7 +525,9 @@ export function App() {
             </div>
           )}
           <div className={`flex items-center titlebar-no-drag ${isMobile ? 'gap-1.5' : 'gap-1'}`}>
-            {mainViewMode !== 'tasks' ? (
+            {mainViewMode === 'workflows' && !isMobile ? (
+              <></>
+            ) : mainViewMode !== 'tasks' ? (
               <>
                 {!isMobile && <GridToolbar />}
                 {!isMobile && (
@@ -660,6 +664,16 @@ export function App() {
           <div className="flex-1 min-w-0 flex flex-col min-h-0">
             {mainViewMode === 'tasks' ? (
               <TaskBoardView />
+            ) : mainViewMode === 'workflows' && !isMobile ? (
+              <Suspense fallback={null}>
+                {editingWorkflowId !== null || isWorkflowEditorOpen ? (
+                  <WorkflowEditor inline />
+                ) : (
+                  <div className="flex-1 flex items-center justify-center text-gray-500 text-sm">
+                    Select a workflow from the sidebar to edit it
+                  </div>
+                )}
+              </Suspense>
             ) : isMobile ? (
               <MobileSinglePane />
             ) : focusedId || previewId ? (
@@ -671,7 +685,10 @@ export function App() {
             )}
           </div>
           {mainViewMode === 'tasks' && selectedTaskId && <TaskDetailPanel />}
-          {mainViewMode !== 'tasks' && !isMobile && diffSidebarTerminalId && <RightPanel />}
+          {mainViewMode !== 'tasks' &&
+            mainViewMode !== 'workflows' &&
+            !isMobile &&
+            diffSidebarTerminalId && <RightPanel />}
         </div>
         <TerminalPanel />
         {isMobile && <MobileBottomTabs hidden={keyboardHeight > 0} />}
@@ -684,7 +701,7 @@ export function App() {
 
       <PromptLauncher mode="overlay" onClose={() => setDialogOpen(false)} />
       <AddProjectDialog />
-      {isWorkflowEditorOpen && (
+      {isWorkflowEditorOpen && mainViewMode !== 'workflows' && (
         <Suspense fallback={null}>
           <WorkflowEditor />
         </Suspense>

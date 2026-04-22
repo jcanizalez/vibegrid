@@ -42,8 +42,9 @@ import {
 
 const EMPTY_TASKS: import('../../../shared/types').TaskConfig[] = []
 
-export function WorkflowEditor() {
+export function WorkflowEditor({ inline = false }: { inline?: boolean } = {}) {
   const isOpen = useAppStore((s) => s.isWorkflowEditorOpen)
+  const isActive = inline || isOpen
   const editingId = useAppStore((s) => s.editingWorkflowId)
   const setOpen = useAppStore((s) => s.setWorkflowEditorOpen)
   const setEditingId = useAppStore((s) => s.setEditingWorkflowId)
@@ -97,16 +98,16 @@ export function WorkflowEditor() {
 
   // Load execution history from database
   useEffect(() => {
-    if (editingId && isOpen && loadedRunsForId.current !== editingId) {
+    if (editingId && isActive && loadedRunsForId.current !== editingId) {
       loadedRunsForId.current = editingId
       window.api.listWorkflowRuns(editingId, 20).then(setExecutionHistory)
     }
-    if (!isOpen) {
+    if (!isActive) {
       loadedRunsForId.current = null
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setExecutionHistory([])
     }
-  }, [editingId, isOpen])
+  }, [editingId, isActive])
 
   // Re-query on status transitions for this workflow only, plus whenever a
   // node flips into or out of 'waiting' (gate approve/reject). Selecting
@@ -127,9 +128,9 @@ export function WorkflowEditor() {
       .join(',')
   })
   useEffect(() => {
-    if (!editingId || !isOpen || !liveExecStatus) return
+    if (!editingId || !isActive || !liveExecStatus) return
     window.api.listWorkflowRuns(editingId, 20).then(setExecutionHistory).catch(console.error)
-  }, [editingId, isOpen, liveExecStatus, liveExecCompletedAt, liveWaitingSignature])
+  }, [editingId, isActive, liveExecStatus, liveExecCompletedAt, liveWaitingSignature])
 
   // Load existing workflow when editing (with slug migration)
   useEffect(() => {
@@ -172,7 +173,7 @@ export function WorkflowEditor() {
     }
     setSelectedNodeId(null)
     setShowRunHistory(false)
-  }, [existingWorkflow, editingId, isOpen])
+  }, [existingWorkflow, editingId, isActive])
 
   useEffect(() => {
     if (!showIconPicker) return
@@ -197,11 +198,17 @@ export function WorkflowEditor() {
   }, [showOverflowMenu])
 
   const handleClose = useCallback(() => {
-    setOpen(false)
-    setEditingId(null)
-    setSelectedNodeId(null)
-    setShowRunHistory(false)
-  }, [setOpen, setEditingId])
+    if (inline) {
+      setEditingId(null)
+      setSelectedNodeId(null)
+      setShowRunHistory(false)
+    } else {
+      setOpen(false)
+      setEditingId(null)
+      setSelectedNodeId(null)
+      setShowRunHistory(false)
+    }
+  }, [inline, setOpen, setEditingId])
 
   const activeWorkspace = useAppStore((s) => s.activeWorkspace)
 
@@ -225,8 +232,13 @@ export function WorkflowEditor() {
       updateWorkflow(editingId, workflow)
     } else {
       addWorkflow(workflow)
+      if (inline) {
+        setEditingId(workflow.id)
+      }
     }
-    handleClose()
+    if (!inline) {
+      handleClose()
+    }
   }, [
     editingId,
     name,
@@ -241,7 +253,9 @@ export function WorkflowEditor() {
     updateWorkflow,
     addWorkflow,
     handleClose,
-    activeWorkspace
+    activeWorkspace,
+    inline,
+    setEditingId
   ])
 
   const handleRun = useCallback(async () => {
@@ -262,8 +276,13 @@ export function WorkflowEditor() {
       updateWorkflow(editingId, workflow)
     } else {
       addWorkflow(workflow)
+      if (inline) {
+        setEditingId(workflow.id)
+      }
     }
-    handleClose()
+    if (!inline) {
+      handleClose()
+    }
     await executeWorkflow(workflow)
   }, [
     editingId,
@@ -279,7 +298,9 @@ export function WorkflowEditor() {
     updateWorkflow,
     addWorkflow,
     handleClose,
-    activeWorkspace
+    activeWorkspace,
+    inline,
+    setEditingId
   ])
 
   const handleDelete = useCallback(() => {
@@ -450,32 +471,27 @@ export function WorkflowEditor() {
     [setSelectedTaskId, handleClose]
   )
 
-  if (!isOpen) return null
+  if (!isActive) return null
 
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex flex-col titlebar-no-drag"
-      style={{
-        background: '#1a1a1e',
-        paddingTop: 'var(--safe-top, 0px)',
-        paddingRight: 'var(--safe-right, 0px)',
-        paddingBottom: 'var(--safe-bottom, 0px)',
-        paddingLeft: 'var(--safe-left, 0px)'
-      }}
-    >
+  const editorContent = (
+    <>
       {/* Top bar */}
-      <div className="shrink-0 h-[52px] flex items-center justify-between px-4 border-b border-white/[0.08] titlebar-drag">
-        <div className="flex items-center gap-3 titlebar-no-drag" style={{ paddingLeft: '70px' }}>
-          <button
-            onClick={handleClose}
-            aria-label="Back"
-            className="text-gray-400 hover:text-white p-1.5 rounded-md transition-colors"
-          >
-            <ArrowLeft size={16} />
-          </button>
+      <div
+        className={`shrink-0 h-[52px] flex items-center justify-between px-4 border-b border-white/[0.08] ${inline ? '' : 'titlebar-drag'}`}
+      >
+        <div
+          className={`flex items-center gap-3 ${inline ? '' : 'titlebar-no-drag'}`}
+          style={inline ? undefined : { paddingLeft: '70px' }}
+        >
+          {!inline && (
+            <button
+              onClick={handleClose}
+              aria-label="Back"
+              className="text-gray-400 hover:text-white p-1.5 rounded-md transition-colors"
+            >
+              <ArrowLeft size={16} />
+            </button>
+          )}
           <div className="relative">
             <button
               onClick={() => setShowIconPicker(!showIconPicker)}
@@ -544,7 +560,7 @@ export function WorkflowEditor() {
           />
         </div>
 
-        <div className="flex items-center gap-1 titlebar-no-drag">
+        <div className={`flex items-center gap-1 ${inline ? '' : 'titlebar-no-drag'}`}>
           <Tooltip label="Run workflow" position="bottom">
             <button
               onClick={handleRun}
@@ -645,7 +661,7 @@ export function WorkflowEditor() {
         </div>
       </div>
 
-      <div className="flex-1 flex overflow-hidden titlebar-no-drag">
+      <div className={`flex-1 flex overflow-hidden ${inline ? '' : 'titlebar-no-drag'}`}>
         <WorkflowCanvas
           nodes={nodes}
           edges={edges}
@@ -697,6 +713,32 @@ export function WorkflowEditor() {
           />
         )}
       </div>
+    </>
+  )
+
+  if (inline) {
+    return (
+      <div className="flex-1 flex flex-col min-h-0" style={{ background: '#1a1a1e' }}>
+        {editorContent}
+      </div>
+    )
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex flex-col titlebar-no-drag"
+      style={{
+        background: '#1a1a1e',
+        paddingTop: 'var(--safe-top, 0px)',
+        paddingRight: 'var(--safe-right, 0px)',
+        paddingBottom: 'var(--safe-bottom, 0px)',
+        paddingLeft: 'var(--safe-left, 0px)'
+      }}
+    >
+      {editorContent}
     </motion.div>
   )
 }
