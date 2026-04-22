@@ -107,74 +107,14 @@ describe('GridContextMenu', () => {
     expect(screen.getByText('OtherApp')).toBeInTheDocument()
   })
 
-  it('shows worktree submenu on hover over project item', () => {
-    const cache = new Map()
-    cache.set('/tmp/vorn', [
-      { path: '/tmp/wt/feat-a', branch: 'feat-a', isMain: false, name: 'feat-a' },
-      { path: '/tmp/wt/feat-b', branch: 'feat-b', isMain: false, name: 'feat-b' }
-    ])
-    useAppStore.setState({ worktreeCache: cache })
-
-    render(<GridContextMenu position={{ x: 100, y: 100 }} onClose={vi.fn()} />)
-
-    const vornItem = screen.getByText('Vorn')
-    fireEvent.mouseEnter(vornItem.closest('button')!)
-
-    expect(screen.getByText('feat-a')).toBeInTheDocument()
-    expect(screen.getByText('feat-b')).toBeInTheDocument()
-    expect(screen.getByText('New worktree')).toBeInTheDocument()
-  })
-
-  it('shows worktree submenu on hover over non-active project', () => {
-    const cache = new Map()
-    cache.set('/tmp/otherapp', [
-      { path: '/tmp/wt/experiment', branch: 'experiment', isMain: false, name: 'experiment' }
-    ])
-    useAppStore.setState({ worktreeCache: cache })
-
-    render(<GridContextMenu position={{ x: 100, y: 100 }} onClose={vi.fn()} />)
-
-    // The Projects section still lists OtherApp when we're inside Vorn.
-    const otherItem = screen.getByText('OtherApp')
-    fireEvent.mouseEnter(otherItem.closest('button')!)
-
-    expect(screen.getByText('experiment')).toBeInTheDocument()
-  })
-
-  it('shows the main branch as a first entry in the worktree submenu', () => {
-    const cache = new Map()
-    cache.set('/tmp/vorn', [
-      { path: '/tmp/vorn', branch: 'main', isMain: true, name: 'vorn' },
-      { path: '/tmp/wt/feat-a', branch: 'feat-a', isMain: false, name: 'feat-a' }
-    ])
-    useAppStore.setState({ worktreeCache: cache })
-
-    render(<GridContextMenu position={{ x: 100, y: 100 }} onClose={vi.fn()} />)
-
-    fireEvent.mouseEnter(screen.getByText('Vorn').closest('button')!)
-
-    expect(screen.getByText('main')).toBeInTheDocument()
-    expect(screen.getByText('feat-a')).toBeInTheDocument()
-    expect(screen.getByText('New worktree')).toBeInTheDocument()
-  })
-
-  it('clicking the main branch entry creates a terminal pinned to the main worktree', async () => {
-    const cache = new Map()
-    cache.set('/tmp/vorn', [
-      { path: '/tmp/vorn', branch: 'main', isMain: true, name: 'vorn' },
-      { path: '/tmp/wt/feat-a', branch: 'feat-a', isMain: false, name: 'feat-a' }
-    ])
-    useAppStore.setState({ worktreeCache: cache })
-
+  it('clicking a project item creates a session in that project', async () => {
     mockCreateTerminal.mockResolvedValue({
-      id: 'main-term',
+      id: 'proj-term',
       session: {
-        id: 'main-term',
+        id: 'proj-term',
         agentType: 'claude',
-        projectName: 'Vorn',
-        projectPath: '/tmp/vorn',
-        branch: 'main',
-        worktreePath: '/tmp/vorn'
+        projectName: 'OtherApp',
+        projectPath: '/tmp/otherapp'
       },
       status: 'idle',
       lastOutputTimestamp: Date.now()
@@ -183,61 +123,19 @@ describe('GridContextMenu', () => {
     const onClose = vi.fn()
     render(<GridContextMenu position={{ x: 100, y: 100 }} onClose={onClose} />)
 
-    fireEvent.mouseEnter(screen.getByText('Vorn').closest('button')!)
-    fireEvent.click(screen.getByText('main'))
+    fireEvent.click(screen.getByText('OtherApp'))
 
     expect(onClose).toHaveBeenCalled()
     expect(mockCreateTerminal).toHaveBeenCalledWith(
       expect.objectContaining({
         agentType: 'claude',
-        projectName: 'Vorn',
-        projectPath: '/tmp/vorn',
-        branch: 'main',
-        existingWorktreePath: '/tmp/vorn'
+        projectName: 'OtherApp',
+        projectPath: '/tmp/otherapp'
       })
     )
   })
 
-  it('clicking a worktree in the submenu creates terminal on that worktree', async () => {
-    const cache = new Map()
-    cache.set('/tmp/vorn', [
-      { path: '/tmp/wt/feat-a', branch: 'feat-a', isMain: false, name: 'feat-a' }
-    ])
-    useAppStore.setState({ worktreeCache: cache })
-
-    mockCreateTerminal.mockResolvedValue({
-      id: 'wt-term',
-      session: {
-        id: 'wt-term',
-        agentType: 'claude',
-        projectName: 'Vorn',
-        projectPath: '/tmp/vorn',
-        branch: 'feat-a',
-        worktreePath: '/tmp/wt/feat-a'
-      },
-      status: 'idle',
-      lastOutputTimestamp: Date.now()
-    })
-
-    const onClose = vi.fn()
-    render(<GridContextMenu position={{ x: 100, y: 100 }} onClose={onClose} />)
-
-    fireEvent.mouseEnter(screen.getByText('Vorn').closest('button')!)
-    fireEvent.click(screen.getByText('feat-a'))
-
-    expect(onClose).toHaveBeenCalled()
-    expect(mockCreateTerminal).toHaveBeenCalledWith(
-      expect.objectContaining({
-        agentType: 'claude',
-        projectName: 'Vorn',
-        projectPath: '/tmp/vorn',
-        branch: 'feat-a',
-        existingWorktreePath: '/tmp/wt/feat-a'
-      })
-    )
-  })
-
-  it('quick-launch creates terminal with active project', async () => {
+  it('quick-launch creates session with active project', async () => {
     mockCreateTerminal.mockResolvedValue({
       id: 'new-term',
       session: {
@@ -265,32 +163,13 @@ describe('GridContextMenu', () => {
     )
   })
 
-  it('clicking a project item opens its submenu (no direct session creation)', async () => {
-    const cache = new Map()
-    cache.set('/tmp/otherapp', [
-      { path: '/tmp/otherapp', branch: 'main', isMain: true, name: 'otherapp' }
-    ])
-    useAppStore.setState({ worktreeCache: cache })
-
-    const onClose = vi.fn()
-    render(<GridContextMenu position={{ x: 100, y: 100 }} onClose={onClose} />)
-
-    // Hovering the project row opens the submenu with agent + terminal options
-    fireEvent.mouseEnter(screen.getByText('OtherApp').closest('button')!)
-
-    // Submenu should contain the quick actions
-    const submenuAgentBtns = screen.getAllByText('New session')
-    expect(submenuAgentBtns.length).toBeGreaterThanOrEqual(1)
-  })
-
-  it('non-git project hover does not render a worktree submenu', () => {
-    // No worktreeCache entry for OtherApp → buildWorktreeSubmenu returns null.
+  it('no submenus are rendered — menu is flat', () => {
     render(<GridContextMenu position={{ x: 100, y: 100 }} onClose={vi.fn()} />)
 
-    const otherItem = screen.getByText('OtherApp')
-    fireEvent.mouseEnter(otherItem.closest('button')!)
+    const vornItem = screen.getByText('Vorn')
+    fireEvent.mouseEnter(vornItem.closest('button')!)
 
-    // "New worktree" would indicate a git-flavored submenu opened; it should not.
+    // No worktree entries should appear — submenus are removed
     expect(screen.queryByText('New worktree')).not.toBeInTheDocument()
   })
 
