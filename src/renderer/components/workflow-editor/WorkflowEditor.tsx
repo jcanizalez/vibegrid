@@ -5,6 +5,7 @@ import { ICON_MAP } from '../project-sidebar/icon-map'
 import { PROJECT_ICON_OPTIONS, ICON_COLOR_PALETTE } from '../../lib/project-icons'
 import { Tooltip } from '../Tooltip'
 import { useAppStore } from '../../stores'
+import { isWeb } from '../../lib/platform'
 import {
   WorkflowDefinition,
   WorkflowNode,
@@ -46,6 +47,7 @@ export function WorkflowEditor({ inline = false }: { inline?: boolean } = {}) {
   const isOpen = useAppStore((s) => s.isWorkflowEditorOpen)
   const isActive = inline || isOpen
   const editingId = useAppStore((s) => s.editingWorkflowId)
+  const isSidebarOpen = useAppStore((s) => s.isSidebarOpen)
   const setOpen = useAppStore((s) => s.setWorkflowEditorOpen)
   const setEditingId = useAppStore((s) => s.setEditingWorkflowId)
   const addWorkflow = useAppStore((s) => s.addWorkflow)
@@ -477,11 +479,12 @@ export function WorkflowEditor({ inline = false }: { inline?: boolean } = {}) {
     <>
       {/* Top bar */}
       <div
-        className={`shrink-0 h-[52px] flex items-center justify-between px-4 border-b border-white/[0.08] ${inline ? '' : 'titlebar-drag'}`}
+        className={`shrink-0 h-[52px] flex items-center justify-between px-4 border-b border-white/[0.08] titlebar-drag`}
+        style={inline && !isSidebarOpen && !isWeb ? { paddingLeft: '80px' } : undefined}
       >
         <div
-          className={`flex items-center gap-3 ${inline ? '' : 'titlebar-no-drag'}`}
-          style={inline ? undefined : { paddingLeft: '70px' }}
+          className="flex items-center gap-3 titlebar-no-drag"
+          style={!inline ? { paddingLeft: '70px' } : undefined}
         >
           {!inline && (
             <button
@@ -560,7 +563,7 @@ export function WorkflowEditor({ inline = false }: { inline?: boolean } = {}) {
           />
         </div>
 
-        <div className={`flex items-center gap-1 ${inline ? '' : 'titlebar-no-drag'}`}>
+        <div className="flex items-center gap-1 titlebar-no-drag">
           <Tooltip label="Run workflow" position="bottom">
             <button
               onClick={handleRun}

@@ -240,10 +240,16 @@ export const createUISlice: StateCreator<AppStore, [], [], UISlice> = (set, get)
 
   setMainViewMode: (mode) => {
     const config = get().config
-    const extra =
+    const prevMode = get().mainViewMode
+    const extra: Record<string, unknown> =
       mode === 'sessions'
         ? {}
         : { diffSidebarTerminalId: null, focusedTerminalId: null, previewTerminalId: null }
+    // Clear inline workflow editor state when leaving workflows tab
+    if (prevMode === 'workflows' && mode !== 'workflows') {
+      extra.isWorkflowEditorOpen = false
+      extra.editingWorkflowId = null
+    }
     if (config) {
       const updated = { ...config, defaults: { ...config.defaults, mainViewMode: mode } }
       window.api.saveConfig(updated)
