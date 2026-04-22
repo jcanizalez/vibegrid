@@ -1,3 +1,4 @@
+import { Terminal } from 'lucide-react'
 import { AgentType, AiAgentType } from '../../shared/types'
 
 interface Props {
@@ -6,33 +7,7 @@ interface Props {
 }
 
 function ShellIcon({ size }: { size: number }) {
-  // Rounded rect with a "$" centered — used as the kind indicator for plain
-  // shell terminals, so they're instantly distinguishable from AI agents.
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-      <rect
-        x="3"
-        y="3"
-        width="18"
-        height="18"
-        rx="3"
-        fill="rgba(255,255,255,0.06)"
-        stroke="rgba(255,255,255,0.2)"
-        strokeWidth="1"
-      />
-      <text
-        x="12"
-        y="16"
-        textAnchor="middle"
-        fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
-        fontSize="12"
-        fontWeight="600"
-        fill="#9ca3af"
-      >
-        $
-      </text>
-    </svg>
-  )
+  return <Terminal size={size} strokeWidth={1.5} className="text-gray-400" />
 }
 
 function ClaudeIcon({ size }: { size: number }) {

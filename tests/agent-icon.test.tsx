@@ -14,12 +14,11 @@ describe('AgentIcon', () => {
     expect(svg).toBeInTheDocument()
   })
 
-  it('renders a $-in-box glyph for shell (not an AI agent icon)', () => {
+  it('renders a terminal icon for shell (not an AI agent icon)', () => {
     const { container } = render(<AgentIcon agentType="shell" />)
-    // ShellIcon renders a rect + text containing "$"
-    const rect = container.querySelector('rect')
-    expect(rect).toBeInTheDocument()
-    expect(container.textContent).toContain('$')
+    const svg = container.querySelector('svg')
+    expect(svg).toBeInTheDocument()
+    expect(svg?.classList.contains('text-gray-400')).toBe(true)
   })
 
   it('defaults to size 16', () => {
