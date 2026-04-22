@@ -6,6 +6,7 @@ import {
   onRegistryChange,
   TERMINAL_ID_ATTR
 } from '../lib/terminal-registry'
+import { useAppStore } from '../stores'
 import { TerminalContextMenu } from './TerminalContextMenu'
 
 interface CtxMenuState {
@@ -39,6 +40,19 @@ export function TerminalHost() {
     }
     el.addEventListener('contextmenu', handleContextMenu)
 
+    const handlePointerDown = (e: PointerEvent): void => {
+      const target = e.target as HTMLElement | null
+      const wrapper = target?.closest(`[${TERMINAL_ID_ATTR}]`) as HTMLElement | null
+      if (!wrapper) return
+      const terminalId = wrapper.getAttribute(TERMINAL_ID_ATTR)
+      if (!terminalId) return
+      const state = useAppStore.getState()
+      if (state.selectedTerminalId !== terminalId && state.focusedTerminalId !== terminalId) {
+        state.setSelectedTerminal(terminalId)
+      }
+    }
+    el.addEventListener('pointerdown', handlePointerDown)
+
     let rafId = requestAnimationFrame(function tick(): void {
       const ids = getRegisteredTerminalIds()
       for (const id of ids) syncTerminalOverlay(id)
@@ -51,6 +65,7 @@ export function TerminalHost() {
 
     return () => {
       el.removeEventListener('contextmenu', handleContextMenu)
+      el.removeEventListener('pointerdown', handlePointerDown)
       cancelAnimationFrame(rafId)
       unsubscribe()
       setHostRoot(null)

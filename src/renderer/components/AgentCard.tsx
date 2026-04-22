@@ -77,7 +77,7 @@ export const AgentCard = memo(
     return (
       <div
         ref={ref}
-        className={`group/card relative rounded-lg border overflow-hidden flex flex-col
+        className={`group/card relative border overflow-hidden flex flex-col
                    transition-colors
                    ${flexible ? 'h-full' : ''}
                    ${
@@ -88,6 +88,9 @@ export const AgentCard = memo(
                          : isDragTarget
                            ? 'card-drop-target border-blue-500/30 hover:border-white/[0.12]'
                            : 'border-white/[0.06] hover:border-white/[0.12]'
+                   }
+                   ${
+                     flexible ? '' : isFocused || isSelected || isDragTarget ? 'z-10' : 'hover:z-10'
                    }`}
         style={{ background: '#1a1a1e' }}
         onPointerDown={() => {
