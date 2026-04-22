@@ -130,19 +130,22 @@ export function GridContextMenu({ position, onClose }: Props) {
         return count > 0 ? `${count} session${count > 1 ? 's' : ''}` : ''
       }
 
-      // Project-level entry
-      subs.push({
-        iconElement: <ProjectIcon icon={p.icon} color={p.iconColor} size={12} />,
-        label: p.name,
-        onClick:
-          mode === 'session'
-            ? () => createSession(p)
-            : () => {
-                onClose()
-                void createShellInProject(p.path)
-              },
-        separator: subs.length > 0
-      })
+      // Project-level entry — only shown for non-git projects (no worktrees)
+      const hasWorktrees = mainWt || nonMain.length > 0
+      if (!hasWorktrees) {
+        subs.push({
+          iconElement: <ProjectIcon icon={p.icon} color={p.iconColor} size={12} />,
+          label: p.name,
+          onClick:
+            mode === 'session'
+              ? () => createSession(p)
+              : () => {
+                  onClose()
+                  void createShellInProject(p.path)
+                },
+          separator: subs.length > 0
+        })
+      }
 
       // Worktree entries under the project
       if (mainWt) {
@@ -156,7 +159,8 @@ export function GridContextMenu({ position, onClose }: Props) {
               : () => {
                   onClose()
                   void createShellInProject(mainWt.path)
-                }
+                },
+          separator: subs.length > 0
         })
       }
       for (const wt of nonMain) {

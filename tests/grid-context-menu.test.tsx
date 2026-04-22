@@ -134,9 +134,10 @@ describe('GridContextMenu', () => {
     expect(mockCreateShellTerminal).toHaveBeenCalledWith('/tmp/vorn')
   })
 
-  it('"New session in…" submenu shows projects and worktrees', () => {
+  it('"New session in…" submenu shows worktrees (no duplicate project entry)', () => {
     const cache = new Map()
     cache.set('/tmp/vorn', [
+      { path: '/tmp/vorn', branch: 'main', isMain: true, name: 'vorn' },
       { path: '/tmp/wt/feat-a', branch: 'feat-a', isMain: false, name: 'feat-a' }
     ])
     useAppStore.setState({ worktreeCache: cache })
@@ -144,13 +145,17 @@ describe('GridContextMenu', () => {
     render(<GridContextMenu position={{ x: 100, y: 100 }} onClose={vi.fn()} />)
     fireEvent.mouseEnter(screen.getByText('New session in…').closest('button')!)
 
-    expect(screen.getByText('Vorn')).toBeInTheDocument()
+    // Main branch shown instead of standalone project entry
+    expect(screen.getByText('Vorn › main')).toBeInTheDocument()
     expect(screen.getByText('Vorn › feat-a')).toBeInTheDocument()
+    // No standalone "Vorn" entry (would be redundant with "Vorn › main")
+    expect(screen.queryByText(/^Vorn$/)).not.toBeInTheDocument()
   })
 
-  it('"New terminal in…" submenu shows projects and worktrees', () => {
+  it('"New terminal in…" submenu shows worktrees', () => {
     const cache = new Map()
     cache.set('/tmp/vorn', [
+      { path: '/tmp/vorn', branch: 'main', isMain: true, name: 'vorn' },
       { path: '/tmp/wt/feat-a', branch: 'feat-a', isMain: false, name: 'feat-a' }
     ])
     useAppStore.setState({ worktreeCache: cache })
@@ -158,7 +163,7 @@ describe('GridContextMenu', () => {
     render(<GridContextMenu position={{ x: 100, y: 100 }} onClose={vi.fn()} />)
     fireEvent.mouseEnter(screen.getByText('New terminal in…').closest('button')!)
 
-    expect(screen.getByText('Vorn')).toBeInTheDocument()
+    expect(screen.getByText('Vorn › main')).toBeInTheDocument()
     expect(screen.getByText('Vorn › feat-a')).toBeInTheDocument()
   })
 
