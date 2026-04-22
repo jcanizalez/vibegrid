@@ -1,6 +1,7 @@
 import { useShallow } from 'zustand/react/shallow'
 import { useAppStore } from '../../stores'
 import { GitChangesIndicator } from '../GitChangesIndicator'
+import { OpenInButton } from '../OpenInButton'
 import { BranchChip } from './BranchChip'
 import { ListTodo } from 'lucide-react'
 
@@ -52,6 +53,7 @@ export function CardStatusBar({ terminalId }: Props) {
       <div className="flex-1" />
 
       <GitChangesIndicator terminalId={terminalId} />
+      <OpenInButton projectPath={terminal.session.projectPath} direction="up" />
     </div>
   )
 }

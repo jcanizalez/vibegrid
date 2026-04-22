@@ -70,7 +70,9 @@ Object.defineProperty(window, 'api', {
     createTerminal: vi.fn(),
     listBranches: vi.fn().mockResolvedValue({ local: [], remote: [] }),
     listRemoteBranches: vi.fn().mockResolvedValue([]),
-    checkoutBranch: vi.fn().mockResolvedValue({ ok: true })
+    checkoutBranch: vi.fn().mockResolvedValue({ ok: true }),
+    detectIDEs: vi.fn().mockResolvedValue([]),
+    openInIDE: vi.fn()
   },
   writable: true
 })
