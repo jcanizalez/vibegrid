@@ -159,7 +159,7 @@ export const GridView = memo(function GridView() {
 
   return (
     <div
-      className="h-full overflow-auto p-4"
+      className="h-full overflow-auto"
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onPointerLeave={handlePointerUp}
@@ -168,13 +168,15 @@ export const GridView = memo(function GridView() {
       onContextMenu={handleGridContextMenu}
     >
       {/* Background tray: headless + minimized */}
-      <BackgroundTray
-        headlessSessions={filteredHeadless}
-        minimizedIds={minimizedIds}
-        waitingApprovals={waitingApprovals}
-        variant="grid"
-        hasItemsBelow={orderedIds.length > 0}
-      />
+      <div className="px-4 pt-4">
+        <BackgroundTray
+          headlessSessions={filteredHeadless}
+          minimizedIds={minimizedIds}
+          waitingApprovals={waitingApprovals}
+          variant="grid"
+          hasItemsBelow={orderedIds.length > 0}
+        />
+      </div>
 
       {orderedIds.length === 0 && filteredHeadless.length === 0 && minimizedIds.length === 0 ? (
         isFiltered ? (
@@ -207,7 +209,7 @@ export const GridView = memo(function GridView() {
           />
         ) : (
           <div
-            className="grid gap-4"
+            className="grid gap-0"
             style={gridStyle}
             onDoubleClick={handleGridDoubleClick}
             onContextMenu={handleGridContextMenu}
@@ -370,7 +372,7 @@ function FlexibleGrid({
         gridConfig={{
           cols: FLEX_COLS,
           rowHeight: FLEX_ROW_H,
-          margin: [16, 16],
+          margin: [0, 0],
           containerPadding: null,
           maxRows: Infinity
         }}
