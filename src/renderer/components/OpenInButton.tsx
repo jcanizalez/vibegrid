@@ -161,7 +161,7 @@ export function OpenInButton({ projectPath, direction = 'down' }: Props) {
         createPortal(
           <div
             ref={menuRef}
-            className="fixed z-[150] py-1 border border-white/[0.08] rounded-lg shadow-xl"
+            className="fixed z-[9999] py-1 border border-white/[0.08] rounded-lg shadow-xl"
             style={{
               background: '#1e1e22',
               top: menuPos.top,
