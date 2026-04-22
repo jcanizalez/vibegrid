@@ -26,6 +26,8 @@ interface SubmenuItem {
   separator?: boolean
 }
 
+type SubmenuKey = 'session-in' | 'terminal-in'
+
 interface MenuItem {
   icon?: React.FC<{ size?: number; className?: string }>
   iconElement?: React.ReactNode
@@ -34,12 +36,12 @@ interface MenuItem {
   className?: string
   separator?: boolean
   shortcut?: string
-  submenuProject?: ProjectConfig
+  submenuKey?: SubmenuKey
   onSubmenuEnter?: () => void
 }
 
 const MENU_WIDTH = 220
-const SUBMENU_WIDTH = 220
+const SUBMENU_WIDTH = 240
 
 function estimatePanelHeight(items: { separator?: boolean }[]): number {
   const seps = items.filter((i) => i.separator).length
@@ -111,48 +113,67 @@ export function GridContextMenu({ position, onClose }: Props) {
     void createSessionFromProject(p, opts)
   }
 
-  const buildWorktreeSubmenu = (p: ProjectConfig): SubmenuItem[] | null => {
-    const worktrees = worktreeCache.get(p.path)
-    if (!worktrees || worktrees.length === 0) return null
-    const mainWt = worktrees.find((wt) => wt.isMain)
-    const nonMain = worktrees.filter((wt) => !wt.isMain)
-    const sessionCountByPath = new Map<string, number>()
-    for (const [, t] of terminals) {
-      const wtPath = t.session.worktreePath
-      if (wtPath) sessionCountByPath.set(wtPath, (sessionCountByPath.get(wtPath) ?? 0) + 1)
-    }
-    const formatDetail = (path: string): string => {
-      const count = sessionCountByPath.get(path) ?? 0
-      return count > 0 ? `${count} session${count > 1 ? 's' : ''}` : 'idle'
-    }
-    const formatLabel = (wt: { name: string; branch: string }): string =>
-      wt.name === wt.branch ? wt.name : `${wt.name} (${wt.branch})`
-
+  // Build a flat list of project + worktree targets for "in…" submenus
+  const buildScopedSubmenu = (mode: 'session' | 'terminal'): SubmenuItem[] => {
     const subs: SubmenuItem[] = []
-    if (mainWt) {
+    for (const p of workspaceProjects) {
+      const worktrees = worktreeCache.get(p.path)
+      const mainWt = worktrees?.find((wt) => wt.isMain)
+      const nonMain = (worktrees ?? []).filter((wt) => !wt.isMain)
+      const sessionCountByPath = new Map<string, number>()
+      for (const [, t] of terminals) {
+        const wtPath = t.session.worktreePath
+        if (wtPath) sessionCountByPath.set(wtPath, (sessionCountByPath.get(wtPath) ?? 0) + 1)
+      }
+      const formatDetail = (path: string): string => {
+        const count = sessionCountByPath.get(path) ?? 0
+        return count > 0 ? `${count} session${count > 1 ? 's' : ''}` : ''
+      }
+
+      // Project-level entry
       subs.push({
-        iconElement: <GitBranch size={12} className="text-gray-400" />,
-        label: mainWt.branch,
-        detail: formatDetail(mainWt.path),
-        onClick: () =>
-          createSession(p, { branch: mainWt.branch, existingWorktreePath: mainWt.path })
+        iconElement: <ProjectIcon icon={p.icon} color={p.iconColor} size={12} />,
+        label: p.name,
+        onClick:
+          mode === 'session'
+            ? () => createSession(p)
+            : () => {
+                onClose()
+                void createShellInProject(p.path)
+              },
+        separator: subs.length > 0
       })
+
+      // Worktree entries under the project
+      if (mainWt) {
+        subs.push({
+          iconElement: <GitBranch size={12} className="text-gray-400" />,
+          label: `${p.name} / ${mainWt.branch}`,
+          detail: formatDetail(mainWt.path),
+          onClick:
+            mode === 'session'
+              ? () => createSession(p, { branch: mainWt.branch, existingWorktreePath: mainWt.path })
+              : () => {
+                  onClose()
+                  void createShellInProject(mainWt.path)
+                }
+        })
+      }
+      for (const wt of nonMain) {
+        subs.push({
+          iconElement: <FolderGit2 size={12} className="text-amber-400/70" />,
+          label: `${p.name} / ${wt.name}`,
+          detail: formatDetail(wt.path),
+          onClick:
+            mode === 'session'
+              ? () => createSession(p, { branch: wt.branch, existingWorktreePath: wt.path })
+              : () => {
+                  onClose()
+                  void createShellInProject(wt.path)
+                }
+        })
+      }
     }
-    nonMain.forEach((wt, i) => {
-      subs.push({
-        iconElement: <FolderGit2 size={12} className="text-amber-400/70" />,
-        label: formatLabel(wt),
-        detail: formatDetail(wt.path),
-        onClick: () => createSession(p, { branch: wt.branch, existingWorktreePath: wt.path }),
-        separator: i === 0 && mainWt !== undefined
-      })
-    })
-    subs.push({
-      iconElement: <Plus size={12} className="text-amber-400/70" />,
-      label: 'New worktree',
-      onClick: () => createSession(p, { useWorktree: true }),
-      separator: subs.length > 0
-    })
     return subs
   }
 
@@ -195,18 +216,24 @@ export function GridContextMenu({ position, onClose }: Props) {
     }
   })
 
-  // Project rows with worktree submenus (click = agent session)
-  const shouldSeparateProjects = items.length > 0 && workspaceProjects.length > 0
-  workspaceProjects.forEach((p, i) => {
+  // "New session in…" submenu — pick project/worktree for agent
+  if (workspaceProjects.length > 0) {
     items.push({
-      iconElement: <ProjectIcon icon={p.icon} color={p.iconColor} size={14} />,
-      label: p.name,
-      separator: i === 0 && shouldSeparateProjects,
-      onClick: () => createSession(p),
-      submenuProject: p,
-      onSubmenuEnter: () => loadWorktrees(p.path)
+      iconElement: <AgentIcon agentType={defaultAgent} size={14} />,
+      label: 'New session in…',
+      separator: true,
+      submenuKey: 'session-in',
+      onSubmenuEnter: () => workspaceProjects.forEach((p) => loadWorktrees(p.path))
     })
-  })
+
+    // "New terminal in…" submenu — pick project/worktree for shell
+    items.push({
+      iconElement: <Terminal size={14} className="text-gray-400" />,
+      label: 'New terminal in…',
+      submenuKey: 'terminal-in',
+      onSubmenuEnter: () => workspaceProjects.forEach((p) => loadWorktrees(p.path))
+    })
+  }
 
   items.push({
     icon: Plus,
@@ -219,15 +246,15 @@ export function GridContextMenu({ position, onClose }: Props) {
     separator: true
   })
 
-  const hasSubmenu = (item: MenuItem): boolean => item.submenuProject !== undefined
+  const hasSubmenu = (item: MenuItem): boolean => item.submenuKey !== undefined
 
   const menuHeight = estimatePanelHeight(items)
   const left = Math.max(8, Math.min(position.x, window.innerWidth - MENU_WIDTH - 8))
   const top = Math.max(8, Math.min(position.y, window.innerHeight - menuHeight - 8))
 
   const hoveredItem = hoveredSubmenu !== null ? items[hoveredSubmenu] : null
-  const activeSubmenu = hoveredItem?.submenuProject
-    ? buildWorktreeSubmenu(hoveredItem.submenuProject)
+  const activeSubmenu = hoveredItem?.submenuKey
+    ? buildScopedSubmenu(hoveredItem.submenuKey === 'session-in' ? 'session' : 'terminal')
     : null
 
   let submenuLeft = left + MENU_WIDTH + 4
