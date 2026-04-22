@@ -1,10 +1,13 @@
-import { isElectron } from '../../lib/platform'
+import { isElectron, MOD } from '../../lib/platform'
 import { useAppStore } from '../../stores'
 import { WorkspaceSwitcher } from '../WorkspaceSwitcher'
 import { PanelLeft, Monitor, ListTodo } from 'lucide-react'
 import { Tooltip } from '../Tooltip'
 
-const isMac = navigator.platform.toUpperCase().includes('MAC')
+const VIEW_MODES = [
+  { mode: 'sessions', label: 'Sessions', icon: Monitor, shortcutKey: 'S' },
+  { mode: 'tasks', label: 'Tasks', icon: ListTodo, shortcutKey: 'T' }
+] as const
 
 export function SidebarHeader({ isCollapsed }: { isCollapsed: boolean }) {
   const toggleSidebar = useAppStore((s) => s.toggleSidebar)
@@ -13,7 +16,6 @@ export function SidebarHeader({ isCollapsed }: { isCollapsed: boolean }) {
 
   return (
     <div className="shrink-0 border-b border-white/[0.06]">
-      {/* Row 1: Workspace switcher + sidebar toggle */}
       <div
         className={`titlebar-drag h-[52px] pr-3 flex items-center ${isElectron ? 'pl-[78px]' : 'pl-3'}`}
       >
@@ -32,50 +34,38 @@ export function SidebarHeader({ isCollapsed }: { isCollapsed: boolean }) {
         )}
       </div>
 
-      {/* Row 2: Sessions / Tasks view toggle */}
       <div
         className={`titlebar-no-drag flex items-center gap-1 py-2 ${
           isCollapsed ? 'flex-col justify-center px-1.5' : 'px-3'
         }`}
       >
-        <Tooltip
-          label="Sessions"
-          shortcut={`${isMac ? '⌘' : 'Ctrl+'}S`}
-          position={isCollapsed ? 'right' : 'bottom'}
-        >
-          <button
-            onClick={() => setMainViewMode('sessions')}
-            className={`flex items-center gap-1.5 rounded-lg text-[12px] font-medium transition-colors ${
-              isCollapsed ? 'p-2' : 'px-2.5 py-1.5'
-            } ${
-              mainViewMode === 'sessions'
-                ? 'bg-white/[0.1] text-white'
-                : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.04]'
-            }`}
-          >
-            <Monitor size={14} strokeWidth={2} />
-            {!isCollapsed && mainViewMode === 'sessions' && 'Sessions'}
-          </button>
-        </Tooltip>
-        <Tooltip
-          label="Tasks"
-          shortcut={`${isMac ? '⌘' : 'Ctrl+'}T`}
-          position={isCollapsed ? 'right' : 'bottom'}
-        >
-          <button
-            onClick={() => setMainViewMode('tasks')}
-            className={`flex items-center gap-1.5 rounded-lg text-[12px] font-medium transition-colors ${
-              isCollapsed ? 'p-2' : 'px-2.5 py-1.5'
-            } ${
-              mainViewMode === 'tasks'
-                ? 'bg-white/[0.1] text-white'
-                : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.04]'
-            }`}
-          >
-            <ListTodo size={14} strokeWidth={2} />
-            {!isCollapsed && mainViewMode === 'tasks' && 'Tasks'}
-          </button>
-        </Tooltip>
+        {VIEW_MODES.map(({ mode, label, icon: Icon, shortcutKey }) => {
+          const isActive = mainViewMode === mode
+          return (
+            <Tooltip
+              key={mode}
+              label={label}
+              shortcut={`${MOD}${shortcutKey}`}
+              position={isCollapsed ? 'right' : 'bottom'}
+            >
+              <button
+                onClick={() => setMainViewMode(mode)}
+                aria-label={label}
+                aria-pressed={isActive}
+                className={`flex items-center gap-1.5 rounded-lg text-[12px] font-medium transition-colors ${
+                  isCollapsed ? 'p-2' : 'px-2.5 py-1.5'
+                } ${
+                  isActive
+                    ? 'bg-white/[0.1] text-white'
+                    : 'text-gray-500 hover:text-gray-300 hover:bg-white/[0.04]'
+                }`}
+              >
+                <Icon size={14} strokeWidth={2} />
+                {!isCollapsed && isActive && label}
+              </button>
+            </Tooltip>
+          )
+        })}
       </div>
     </div>
   )
