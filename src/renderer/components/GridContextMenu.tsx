@@ -148,7 +148,7 @@ export function GridContextMenu({ position, onClose }: Props) {
       if (mainWt) {
         subs.push({
           iconElement: <GitBranch size={12} className="text-gray-400" />,
-          label: `${p.name} / ${mainWt.branch}`,
+          label: `${p.name} › ${mainWt.branch}`,
           detail: formatDetail(mainWt.path),
           onClick:
             mode === 'session'
@@ -162,7 +162,7 @@ export function GridContextMenu({ position, onClose }: Props) {
       for (const wt of nonMain) {
         subs.push({
           iconElement: <FolderGit2 size={12} className="text-amber-400/70" />,
-          label: `${p.name} / ${wt.name}`,
+          label: `${p.name} › ${wt.name}`,
           detail: formatDetail(wt.path),
           onClick:
             mode === 'session'

@@ -365,7 +365,7 @@ function useCommands(
         for (const wt of worktrees) {
           commands.push({
             id: `quicklaunch:${agent.type}:${project.name}:wt:${wt.path}`,
-            label: `${agent.displayName} on ${project.name} / ${wt.name}`,
+            label: `${agent.displayName} on ${project.name} › ${wt.name}`,
             sublabel: wt.branch === wt.name ? 'Existing worktree' : `Branch: ${wt.branch}`,
             category: 'quicklaunch',
             icon: <AgentIcon agentType={agent.type} size={14} />,
@@ -408,7 +408,7 @@ function useCommands(
       for (const wt of worktrees) {
         commands.push({
           id: `terminal:project:${project.name}:wt:${wt.path}`,
-          label: `Terminal in ${project.name} / ${wt.name}`,
+          label: `Terminal in ${project.name} › ${wt.name}`,
           sublabel: wt.branch === wt.name ? 'Existing worktree' : `Branch: ${wt.branch}`,
           category: 'quicklaunch',
           icon: <Terminal size={14} strokeWidth={1.5} />,

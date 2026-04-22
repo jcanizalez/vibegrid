@@ -145,7 +145,7 @@ describe('GridContextMenu', () => {
     fireEvent.mouseEnter(screen.getByText('New session in…').closest('button')!)
 
     expect(screen.getByText('Vorn')).toBeInTheDocument()
-    expect(screen.getByText('Vorn / feat-a')).toBeInTheDocument()
+    expect(screen.getByText('Vorn › feat-a')).toBeInTheDocument()
   })
 
   it('"New terminal in…" submenu shows projects and worktrees', () => {
@@ -159,7 +159,7 @@ describe('GridContextMenu', () => {
     fireEvent.mouseEnter(screen.getByText('New terminal in…').closest('button')!)
 
     expect(screen.getByText('Vorn')).toBeInTheDocument()
-    expect(screen.getByText('Vorn / feat-a')).toBeInTheDocument()
+    expect(screen.getByText('Vorn › feat-a')).toBeInTheDocument()
   })
 
   it('calls onClose on click outside', () => {
