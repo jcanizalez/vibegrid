@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, within, act, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, act, fireEvent, waitFor } from '@testing-library/react'
 import '@testing-library/jest-dom/vitest'
 import type { ReactNode } from 'react'
 
@@ -21,9 +21,6 @@ vi.mock('../src/renderer/components/MobileFontSizeControl', () => ({
 }))
 vi.mock('../src/renderer/components/MobileTerminalKeybar', () => ({
   MobileTerminalKeybar: () => null
-}))
-vi.mock('../src/renderer/components/OpenInButton', () => ({
-  OpenInButton: () => <div data-testid="open-in" />
 }))
 vi.mock('../src/renderer/components/GitChangesIndicator', () => ({
   GitChangesIndicator: () => <div data-testid="git-changes" />,
@@ -79,7 +76,7 @@ Object.defineProperty(window, 'api', {
 })
 
 import { useAppStore } from '../src/renderer/stores'
-import { SessionStatusBar } from '../src/renderer/components/SessionStatusBar'
+import { CardStatusBar } from '../src/renderer/components/card/CardStatusBar'
 import { TabView } from '../src/renderer/components/TabView'
 import { FocusedTerminal } from '../src/renderer/components/FocusedTerminal'
 
@@ -125,14 +122,30 @@ afterEach(() => {
   })
 })
 
-describe('SessionStatusBar (homologated bottom bar)', () => {
-  it('renders the branch label for the given terminal', () => {
-    render(<SessionStatusBar terminalId="term-1" />)
+describe('CardStatusBar — bottom VS Code style strip', () => {
+  it('renders the branch chip for the given terminal', () => {
+    render(<CardStatusBar terminalId="term-1" />)
     expect(screen.getByText('main')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Switch branch/ })).toBeInTheDocument()
+  })
+
+  it('renders nothing when the terminal has no branch and no task', () => {
+    const terminals = new Map()
+    terminals.set('blank', {
+      id: 'blank',
+      session: { ...mockTerminal.session, id: 'blank', branch: undefined },
+      status: 'running' as const,
+      lastOutputTimestamp: Date.now()
+    })
+    act(() => {
+      useAppStore.setState({ terminals })
+    })
+    const { container } = render(<CardStatusBar terminalId="blank" />)
+    expect(container).toBeEmptyDOMElement()
   })
 
   it('renders nothing when the terminal is missing', () => {
-    const { container } = render(<SessionStatusBar terminalId="nonexistent" />)
+    const { container } = render(<CardStatusBar terminalId="nonexistent" />)
     expect(container).toBeEmptyDOMElement()
   })
 
@@ -144,8 +157,8 @@ describe('SessionStatusBar (homologated bottom bar)', () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ;(window.api as any).checkoutBranch = checkoutBranch
 
-    render(<SessionStatusBar terminalId="term-1" />)
-    const branchButton = screen.getByRole('button', { name: /main/ })
+    render(<CardStatusBar terminalId="term-1" />)
+    const branchButton = screen.getByRole('button', { name: /Switch branch/ })
     fireEvent.click(branchButton)
 
     const featureEntry = await screen.findByText('feature-x')
@@ -172,42 +185,12 @@ describe('SessionStatusBar (homologated bottom bar)', () => {
     act(() => {
       useAppStore.setState({ terminals })
     })
-    render(<SessionStatusBar terminalId="wt-1" />)
+    render(<CardStatusBar terminalId="wt-1" />)
     expect(screen.getByText('feature-x-wt')).toBeInTheDocument()
     expect(screen.getByText('feature-x')).toBeInTheDocument()
-    expect(screen.queryByText('worktree')).not.toBeInTheDocument()
-  })
-})
-
-describe('TabView mounts SessionStatusBar at the bottom', () => {
-  it('renders the shared status bar so branch appears below the terminal', () => {
-    const { container } = render(<TabView />)
-    // SessionStatusBar sits at the bottom and displays the branch label.
-    // Use within + the git-changes testid as an anchor to target the bar.
-    const gitChanges = screen.getByTestId('git-changes')
-    const bar = gitChanges.closest('div.border-t') as HTMLElement | null
-    expect(bar).not.toBeNull()
-    expect(within(bar!).getByText('main')).toBeInTheDocument()
-    // Sanity: terminal instance also mounted
-    expect(container.querySelector('[data-testid="terminal-instance"]')).toBeInTheDocument()
-  })
-})
-
-describe('FocusedTerminal mounts SessionStatusBar at the bottom on desktop', () => {
-  it('moves branch, git changes, and open-in into the shared bottom bar', () => {
-    act(() => {
-      useAppStore.setState({ focusedTerminalId: 'term-1' })
-    })
-    render(<FocusedTerminal />)
-    const gitChanges = screen.getByTestId('git-changes')
-    const bar = gitChanges.closest('div.border-t') as HTMLElement | null
-    expect(bar).not.toBeNull()
-    expect(within(bar!).getByText('main')).toBeInTheDocument()
-    expect(within(bar!).getByTestId('open-in')).toBeInTheDocument()
-    expect(within(bar!).getByTestId('browse-files')).toBeInTheDocument()
   })
 
-  it('renders the assigned-task pill inside the shared bar', () => {
+  it('renders assigned-task pill in the status bar', () => {
     const task = {
       id: 'task-1',
       title: 'Ship the homologation',
@@ -216,20 +199,60 @@ describe('FocusedTerminal mounts SessionStatusBar at the bottom on desktop', () 
     }
     act(() => {
       useAppStore.setState({
-        focusedTerminalId: 'term-1',
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         config: { tasks: [task] } as any
       })
     })
-    render(<FocusedTerminal />)
-    const pill = screen.getByRole('button', { name: /Ship the homologation/ })
-    expect(pill).toBeInTheDocument()
-    const bar = pill.closest('div.border-t')
-    expect(bar).not.toBeNull()
+    render(<CardStatusBar terminalId="term-1" />)
+    expect(screen.getByRole('button', { name: /Ship the homologation/ })).toBeInTheDocument()
+  })
+
+  it('clicking the assigned-task pill opens the task dialog for that task', () => {
+    const task = {
+      id: 'task-1',
+      title: 'Ship the homologation',
+      status: 'in_progress' as const,
+      assignedSessionId: 'term-1'
+    }
+    const setEditingTask = vi.fn()
+    const setTaskDialogOpen = vi.fn()
+    act(() => {
+      useAppStore.setState({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        config: { tasks: [task] } as any,
+        setEditingTask,
+        setTaskDialogOpen
+      })
+    })
+    render(<CardStatusBar terminalId="term-1" />)
+    fireEvent.click(screen.getByRole('button', { name: /Ship the homologation/ }))
+    expect(setEditingTask).toHaveBeenCalledWith(task)
+    expect(setTaskDialogOpen).toHaveBeenCalledWith(true)
   })
 })
 
-describe('FocusedTerminal on mobile keeps branch + StatusBadge in the title bar', () => {
+describe('TabView mounts CardStatusBar at the bottom', () => {
+  it('renders the branch chip for the active tab', () => {
+    render(<TabView />)
+    expect(screen.getAllByRole('button', { name: /Switch branch/ }).length).toBeGreaterThan(0)
+    expect(screen.getByText('main')).toBeInTheDocument()
+  })
+})
+
+describe('FocusedTerminal uses CardStatusBar on desktop', () => {
+  it('renders branch and diff pill in the bottom bar', () => {
+    act(() => {
+      useAppStore.setState({ focusedTerminalId: 'term-1' })
+    })
+    render(<FocusedTerminal />)
+    expect(screen.getByRole('button', { name: /Switch branch/ })).toBeInTheDocument()
+    expect(screen.getByText('main')).toBeInTheDocument()
+    expect(screen.getByTestId('git-changes')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Browse files/ })).toBeInTheDocument()
+  })
+})
+
+describe('FocusedTerminal on mobile keeps branch in the title bar', () => {
   it('renders branch label for a non-worktree session in the mobile title bar', () => {
     mockIsMobile = true
     act(() => {
@@ -238,7 +261,7 @@ describe('FocusedTerminal on mobile keeps branch + StatusBadge in the title bar'
     render(<FocusedTerminal />)
     expect(screen.getByText('main')).toBeInTheDocument()
     expect(screen.queryByText('worktree')).not.toBeInTheDocument()
-    // SessionStatusBar (desktop) should not be mounted
+    // Desktop CardStatusBar should not be mounted on mobile
     expect(screen.queryByTestId('git-changes')).not.toBeInTheDocument()
   })
 
@@ -265,5 +288,90 @@ describe('FocusedTerminal on mobile keeps branch + StatusBadge in the title bar'
     expect(screen.getByText('feature-x-wt')).toBeInTheDocument()
     expect(screen.getByText('feature-x')).toBeInTheDocument()
     expect(screen.queryByText('worktree')).not.toBeInTheDocument()
+  })
+
+  it('back button and double-click title bar both contract (unset focused terminal)', () => {
+    mockIsMobile = true
+    const setFocused = vi.fn()
+    act(() => {
+      useAppStore.setState({ focusedTerminalId: 'term-1', setFocusedTerminal: setFocused })
+    })
+    render(<FocusedTerminal />)
+    fireEvent.click(screen.getByRole('button', { name: /Back to sessions/ }))
+    expect(setFocused).toHaveBeenCalledWith(null)
+  })
+
+  it('clicking the rename button on mobile puts the terminal into renaming state', () => {
+    mockIsMobile = true
+    const setRenamingTerminalId = vi.fn()
+    act(() => {
+      useAppStore.setState({ focusedTerminalId: 'term-1', setRenamingTerminalId })
+    })
+    render(<FocusedTerminal />)
+    fireEvent.click(screen.getByRole('button', { name: /Rename session/ }))
+    expect(setRenamingTerminalId).toHaveBeenCalledWith('term-1')
+  })
+
+  it('double-clicking the name on mobile also puts the terminal into renaming state', () => {
+    mockIsMobile = true
+    const setRenamingTerminalId = vi.fn()
+    act(() => {
+      useAppStore.setState({ focusedTerminalId: 'term-1', setRenamingTerminalId })
+    })
+    render(<FocusedTerminal />)
+    fireEvent.doubleClick(screen.getByText('Vorn'))
+    expect(setRenamingTerminalId).toHaveBeenCalledWith('term-1')
+  })
+
+  it('committing and cancelling the mobile InlineRename call the store', () => {
+    mockIsMobile = true
+    const renameTerminal = vi.fn()
+    const setRenamingTerminalId = vi.fn()
+    act(() => {
+      useAppStore.setState({
+        focusedTerminalId: 'term-1',
+        renamingTerminalId: 'term-1',
+        renameTerminal,
+        setRenamingTerminalId
+      })
+    })
+    const { unmount } = render(<FocusedTerminal />)
+    const input = screen.getByDisplayValue('Vorn')
+    fireEvent.change(input, { target: { value: 'Mobile renamed' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+    expect(renameTerminal).toHaveBeenCalledWith('term-1', 'Mobile renamed')
+    expect(setRenamingTerminalId).toHaveBeenCalledWith(null)
+    unmount()
+
+    setRenamingTerminalId.mockClear()
+    renameTerminal.mockClear()
+    act(() => {
+      useAppStore.setState({
+        focusedTerminalId: 'term-1',
+        renamingTerminalId: 'term-1',
+        renameTerminal,
+        setRenamingTerminalId
+      })
+    })
+    render(<FocusedTerminal />)
+    const input2 = screen.getByDisplayValue('Vorn')
+    fireEvent.keyDown(input2, { key: 'Escape' })
+    expect(renameTerminal).not.toHaveBeenCalled()
+    expect(setRenamingTerminalId).toHaveBeenCalledWith(null)
+  })
+})
+
+describe('FocusedTerminal desktop title bar', () => {
+  it('double-clicking the title bar (outside buttons) contracts back to grid', () => {
+    mockIsMobile = false
+    const setFocused = vi.fn()
+    act(() => {
+      useAppStore.setState({ focusedTerminalId: 'term-1', setFocusedTerminal: setFocused })
+    })
+    const { container } = render(<FocusedTerminal />)
+    const titleBar = container.querySelector('.titlebar-no-drag') as HTMLElement
+    expect(titleBar).not.toBeNull()
+    fireEvent.doubleClick(titleBar)
+    expect(setFocused).toHaveBeenCalledWith(null)
   })
 })

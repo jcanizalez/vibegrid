@@ -4,18 +4,15 @@ import { useAppStore } from '../stores'
 import { TerminalSlot } from './TerminalSlot'
 import { AgentStatusIcon } from './AgentStatusIcon'
 import { InlineRename } from './InlineRename'
-import { Tooltip } from './Tooltip'
-import { ConfirmPopover } from './ConfirmPopover'
-import { SessionStatusBar } from './SessionStatusBar'
+import { CardHeader } from './card/CardHeader'
+import { CardStatusBar } from './card/CardStatusBar'
 import { MobileFontSizeControl } from './MobileFontSizeControl'
 import { MobileTerminalKeybar } from './MobileTerminalKeybar'
 import { getDisplayName, getBranchLabel } from '../lib/terminal-display'
-import { closeTerminalSession } from '../lib/terminal-close'
 import { useTerminalScrollButton } from '../hooks/useTerminalScrollButton'
 import { useTerminalPinchZoom } from '../hooks/useTerminalPinchZoom'
 import { useIsMobile } from '../hooks/useIsMobile'
-import { ArrowDown, FolderGit2, GitBranch, Minimize2, X, Pencil } from 'lucide-react'
-import { MOD } from '../lib/platform'
+import { ArrowDown, FolderGit2, GitBranch, Minimize2, Pencil } from 'lucide-react'
 
 export function FocusedTerminal() {
   const focusedId = useAppStore((s) => s.focusedTerminalId)
@@ -74,19 +71,14 @@ export function FocusedTerminal() {
             }
           : {})}
       >
-        {/* Title bar */}
-        <div
-          className={`flex items-center gap-3 pr-4 py-2.5 border-b border-white/[0.06] titlebar-no-drag ${
-            isMobile ? 'pl-3' : 'pl-4'
-          }`}
-          onDoubleClick={(e) => {
-            // Contract on double-click, but not if clicking on a button or interactive element
-            if ((e.target as HTMLElement).closest('button, input, [role="button"]')) return
-            handleContract()
-          }}
-        >
-          {/* Mobile: back button */}
-          {isMobile && (
+        {isMobile ? (
+          <div
+            className="flex items-center gap-3 pl-3 pr-4 py-2.5 border-b border-white/[0.06] titlebar-no-drag"
+            onDoubleClick={(e) => {
+              if ((e.target as HTMLElement).closest('button, input, [role="button"]')) return
+              handleContract()
+            }}
+          >
             <button
               type="button"
               onClick={handleContract}
@@ -95,104 +87,77 @@ export function FocusedTerminal() {
             >
               <Minimize2 size={16} strokeWidth={2} />
             </button>
-          )}
-          <AgentStatusIcon
-            agentType={terminal.session.agentType}
-            status={terminal.status}
-            size={16}
-          />
-          <div className="flex-1 min-w-0">
-            {isRenaming ? (
-              <InlineRename
-                value={getDisplayName(terminal.session)}
-                onCommit={(name) => {
-                  renameTerminal(effectiveId, name)
-                  setRenamingTerminalId(null)
-                }}
-                onCancel={() => setRenamingTerminalId(null)}
-                className="text-[13px] font-medium"
-              />
-            ) : (
-              <span className="inline-flex items-center gap-1 group/rename">
-                <span
-                  className="text-[13px] font-medium text-gray-200 cursor-default"
-                  onDoubleClick={() => setRenamingTerminalId(effectiveId)}
-                >
-                  {getDisplayName(terminal.session)}
+            <AgentStatusIcon
+              agentType={terminal.session.agentType}
+              status={terminal.status}
+              size={16}
+            />
+            <div className="flex-1 min-w-0">
+              {isRenaming ? (
+                <InlineRename
+                  value={getDisplayName(terminal.session)}
+                  onCommit={(name) => {
+                    renameTerminal(effectiveId, name)
+                    setRenamingTerminalId(null)
+                  }}
+                  onCancel={() => setRenamingTerminalId(null)}
+                  className="text-[13px] font-medium"
+                />
+              ) : (
+                <span className="inline-flex items-center gap-1 group/rename">
+                  <span
+                    className="text-[13px] font-medium text-gray-200 cursor-default"
+                    onDoubleClick={() => setRenamingTerminalId(effectiveId)}
+                  >
+                    {getDisplayName(terminal.session)}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setRenamingTerminalId(effectiveId)}
+                    className="opacity-0 group-hover/rename:opacity-100 text-gray-500 hover:text-gray-300 transition-opacity shrink-0"
+                    aria-label="Rename session"
+                  >
+                    <Pencil size={11} />
+                  </button>
                 </span>
-                <button
-                  type="button"
-                  onClick={() => setRenamingTerminalId(effectiveId)}
-                  className="opacity-0 group-hover/rename:opacity-100 text-gray-500 hover:text-gray-300 transition-opacity shrink-0"
-                  aria-label="Rename session"
-                >
-                  <Pencil size={11} />
-                </button>
-              </span>
-            )}
-            {isMobile && terminal.session.branch && (
-              <span className="flex items-center gap-1 mt-0.5">
-                {terminal.session.isWorktree ? (
-                  <FolderGit2 size={11} className="text-amber-500 shrink-0" strokeWidth={1.5} />
-                ) : (
-                  <GitBranch size={11} className="text-gray-600 shrink-0" strokeWidth={1.5} />
-                )}
-                <span
-                  className={`text-[11px] font-mono truncate ${
-                    terminal.session.isWorktree ? 'text-amber-400' : 'text-gray-500'
-                  }`}
-                >
-                  {getBranchLabel(terminal.session)}
+              )}
+              {terminal.session.branch && (
+                <span className="flex items-center gap-1 mt-0.5">
+                  {terminal.session.isWorktree ? (
+                    <FolderGit2 size={11} className="text-amber-500 shrink-0" strokeWidth={1.5} />
+                  ) : (
+                    <GitBranch size={11} className="text-gray-600 shrink-0" strokeWidth={1.5} />
+                  )}
+                  <span
+                    className={`text-[11px] font-mono truncate ${
+                      terminal.session.isWorktree ? 'text-amber-400' : 'text-gray-500'
+                    }`}
+                  >
+                    {getBranchLabel(terminal.session)}
+                  </span>
+                  {terminal.session.isWorktree && (
+                    <>
+                      <GitBranch size={10} className="text-gray-600 shrink-0" strokeWidth={1.5} />
+                      <span className="text-[10px] font-mono text-gray-500 truncate">
+                        {terminal.session.branch}
+                      </span>
+                    </>
+                  )}
                 </span>
-                {terminal.session.isWorktree && (
-                  <>
-                    <GitBranch size={10} className="text-gray-600 shrink-0" strokeWidth={1.5} />
-                    <span className="text-[10px] font-mono text-gray-500 truncate">
-                      {terminal.session.branch}
-                    </span>
-                  </>
-                )}
-              </span>
-            )}
+              )}
+            </div>
           </div>
-
-          {!isMobile && (
-            <Tooltip label="Collapse to grid" shortcut={`${MOD}W`} position="bottom">
-              <button
-                type="button"
-                onClick={handleContract}
-                className="p-1.5 rounded-md text-gray-400 hover:text-white hover:bg-white/[0.08] transition-colors"
-                aria-label="Collapse to grid"
-              >
-                <Minimize2 size={16} strokeWidth={2} />
-              </button>
-            </Tooltip>
-          )}
-          {!isMobile && (
-            <ConfirmPopover
-              message="Close this session?"
-              confirmLabel="Close"
-              onConfirm={async () => {
-                if (isPreview) {
-                  setPreviewTerminal(null)
-                } else {
-                  setFocused(null)
-                }
-                await closeTerminalSession(effectiveId)
-              }}
-            >
-              <Tooltip label="Close session" position="bottom">
-                <button
-                  type="button"
-                  className="p-1.5 rounded-md text-gray-400 hover:text-red-400 hover:bg-white/[0.08] transition-colors"
-                  aria-label="Close session"
-                >
-                  <X size={16} strokeWidth={2} />
-                </button>
-              </Tooltip>
-            </ConfirmPopover>
-          )}
-        </div>
+        ) : (
+          <div
+            className="group/card titlebar-no-drag"
+            onDoubleClick={(e) => {
+              if ((e.target as HTMLElement).closest('button, input, [role="button"]')) return
+              handleContract()
+            }}
+          >
+            <CardHeader terminalId={effectiveId} variant="focused" />
+          </div>
+        )}
 
         {/* Terminal */}
         <div
@@ -222,9 +187,8 @@ export function FocusedTerminal() {
           </div>
         </div>
 
-        {!isMobile && <SessionStatusBar terminalId={effectiveId} />}
+        {!isMobile && <CardStatusBar terminalId={effectiveId} />}
 
-        {/* Mobile: extended terminal keyboard bar (Termux-style) */}
         {isMobile && <MobileTerminalKeybar terminalId={effectiveId} />}
       </motion.div>
     </>
