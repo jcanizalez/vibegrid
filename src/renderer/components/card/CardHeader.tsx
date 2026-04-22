@@ -49,7 +49,7 @@ export function CardHeader({
   const dragHandleClass = draggable && onDragStart ? 'drag-handle cursor-grab' : ''
 
   return (
-    <div className="flex items-center gap-2 px-3 py-2 border-b border-white/[0.04] shrink-0">
+    <div className="flex items-center gap-2 px-3 py-2.5 border-b border-white/[0.04] shrink-0">
       <div
         className={`flex-1 min-w-0 flex items-center gap-2 ${dragHandleClass}`}
         onDoubleClick={onDoubleClick}
@@ -58,7 +58,7 @@ export function CardHeader({
         <AgentStatusIcon
           agentType={terminal.session.agentType}
           status={terminal.status}
-          size={16}
+          size={18}
         />
         <div className="min-w-0 flex items-center gap-1 group/rename">
           {isRenaming ? (
@@ -102,7 +102,7 @@ export function CardHeader({
         {variant === 'mini' && typeof index === 'number' && index < 9 && !alwaysVisible && (
           <span
             className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none
-                       px-1 py-0.5 text-[9px] font-mono text-gray-600
+                       px-1.5 py-0.5 text-[10px] font-mono text-gray-600
                        bg-white/[0.04] border border-white/[0.06] rounded
                        leading-none opacity-100 group-hover/card:opacity-0 transition-opacity"
           >

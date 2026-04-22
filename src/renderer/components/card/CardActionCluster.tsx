@@ -71,7 +71,7 @@ export function CardActionCluster({ terminalId, variant }: Props) {
           className={btn}
           aria-label="Browse files"
         >
-          <FolderOpen size={12} strokeWidth={2} />
+          <FolderOpen size={14} strokeWidth={2} />
         </button>
       </Tooltip>
 
@@ -84,7 +84,7 @@ export function CardActionCluster({ terminalId, variant }: Props) {
             className={btn}
             aria-label="Minimize session"
           >
-            <Minus size={12} strokeWidth={2} />
+            <Minus size={14} strokeWidth={2} />
           </button>
         </Tooltip>
       )}
@@ -103,9 +103,9 @@ export function CardActionCluster({ terminalId, variant }: Props) {
             aria-label={isFocused ? 'Collapse session' : 'Expand session'}
           >
             {isFocused ? (
-              <Minimize2 size={12} strokeWidth={2} />
+              <Minimize2 size={14} strokeWidth={2} />
             ) : (
-              <Maximize2 size={12} strokeWidth={2} />
+              <Maximize2 size={14} strokeWidth={2} />
             )}
           </button>
         </Tooltip>
@@ -119,7 +119,7 @@ export function CardActionCluster({ terminalId, variant }: Props) {
             className="p-1 rounded text-gray-500 hover:text-red-400 hover:bg-white/[0.08] transition-colors"
             aria-label="Close session"
           >
-            <X size={12} strokeWidth={2} />
+            <X size={14} strokeWidth={2} />
           </button>
         </Tooltip>
       </ConfirmPopover>

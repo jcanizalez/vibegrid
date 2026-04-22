@@ -3,7 +3,7 @@ import { useAppStore } from '../../stores'
 import { Tooltip } from '../Tooltip'
 import { ProjectItem } from './ProjectItem'
 import { ProjectsSectionToolbar } from './ProjectsSectionToolbar'
-import { ChevronRight, FolderPlus, Monitor } from 'lucide-react'
+import { ChevronRight, FolderPlus, Layers } from 'lucide-react'
 import type { ProjectConfig } from '../../../shared/types'
 import type { SidebarSessionInfo } from './types'
 
@@ -147,14 +147,14 @@ export function ProjectsSection({
             setActiveProject(null)
             setFocusedTerminal(null)
           }}
-          className={`w-full text-left px-2.5 py-1.5 rounded-md text-[13px] transition-colors flex items-center gap-2 ${
+          className={`w-full text-left px-2 py-1.5 rounded-md text-[13px] transition-colors flex items-center gap-2 ${
             activeProject === null
               ? 'bg-white/[0.08] text-white'
               : 'text-gray-300 hover:text-white hover:bg-white/[0.04]'
           } ${isCollapsed ? 'justify-center px-0' : ''}`}
           title={isCollapsed ? 'All Projects' : undefined}
         >
-          <Monitor size={iconSize} strokeWidth={1.5} className="shrink-0" />
+          <Layers size={iconSize} strokeWidth={1.5} className="shrink-0" />
           {!isCollapsed && (
             <>
               All Projects
