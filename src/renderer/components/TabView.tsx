@@ -11,7 +11,8 @@ import { PromptLauncher } from './PromptLauncher'
 import { InlineRename } from './InlineRename'
 import { CardContextMenu } from './CardContextMenu'
 import { BackgroundTray } from './BackgroundTray'
-import { SessionStatusBar } from './SessionStatusBar'
+import { CardHeader } from './card/CardHeader'
+import { CardStatusBar } from './card/CardStatusBar'
 import { getDisplayName, getBranchLabel } from '../lib/terminal-display'
 import { closeTerminalSession } from '../lib/terminal-close'
 import { resolveActiveProject } from '../lib/session-utils'
@@ -493,8 +494,13 @@ export function TabView() {
         )}
       </div>
 
-      {/* Terminal content */}
-      <div className="relative flex-1 min-h-0 pt-4" style={{ background: '#141416' }}>
+      {activeTabId && activeTerminal && (
+        <div className="group/card shrink-0" style={{ background: '#1a1a1e' }}>
+          <CardHeader terminalId={activeTabId} variant="tab" />
+        </div>
+      )}
+
+      <div className="relative flex-1 min-h-0" style={{ background: '#141416' }}>
         {activeTabId && activeTerminal && (
           <TerminalSlot
             key={activeTabId}
@@ -525,10 +531,8 @@ export function TabView() {
         )}
       </div>
 
-      {/* Status bar */}
-      {activeTabId && activeTerminal && <SessionStatusBar terminalId={activeTabId} />}
+      {activeTabId && activeTerminal && <CardStatusBar terminalId={activeTabId} />}
 
-      {/* Context menu */}
       {contextMenu && (
         <CardContextMenu
           terminalId={contextMenu.terminalId}

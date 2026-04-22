@@ -1,0 +1,57 @@
+import { useShallow } from 'zustand/react/shallow'
+import { useAppStore } from '../../stores'
+import { GitChangesIndicator } from '../GitChangesIndicator'
+import { BranchChip } from './BranchChip'
+import { ListTodo } from 'lucide-react'
+
+interface Props {
+  terminalId: string
+}
+
+export function CardStatusBar({ terminalId }: Props) {
+  const { terminal, assignedTask, setEditingTask, setTaskDialogOpen } = useAppStore(
+    useShallow((s) => ({
+      terminal: s.terminals.get(terminalId),
+      assignedTask: s.config?.tasks?.find(
+        (t) => t.assignedSessionId === terminalId && t.status === 'in_progress'
+      ),
+      setEditingTask: s.setEditingTask,
+      setTaskDialogOpen: s.setTaskDialogOpen
+    }))
+  )
+
+  if (!terminal) return null
+  if (!terminal.session.branch && !assignedTask) return null
+
+  return (
+    <div
+      className="shrink-0 flex items-center gap-2 px-2 h-[22px] border-t border-white/[0.04] text-[11px]"
+      style={{ background: '#17171a' }}
+    >
+      <BranchChip terminalId={terminalId} />
+
+      {assignedTask && (
+        <button
+          type="button"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation()
+            setEditingTask(assignedTask)
+            setTaskDialogOpen(true)
+          }}
+          className="flex items-center gap-1 px-1.5 py-0.5 rounded-full
+                     bg-violet-500/10 hover:bg-violet-500/20 transition-colors shrink-0"
+        >
+          <ListTodo size={10} className="text-violet-400 shrink-0" strokeWidth={2} />
+          <span className="text-[10px] text-violet-400 truncate max-w-[140px]">
+            {assignedTask.title}
+          </span>
+        </button>
+      )}
+
+      <div className="flex-1" />
+
+      <GitChangesIndicator terminalId={terminalId} />
+    </div>
+  )
+}

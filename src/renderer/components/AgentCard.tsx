@@ -1,29 +1,11 @@
 import { useState, memo, forwardRef } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { useAppStore } from '../stores'
-import { AgentStatusIcon } from './AgentStatusIcon'
 import { TerminalSlot } from './TerminalSlot'
-import { InlineRename } from './InlineRename'
-import { GitChangesIndicator, BrowseFilesButton } from './GitChangesIndicator'
-import { closeTerminalSession } from '../lib/terminal-close'
-import { getDisplayName, getBranchLabel } from '../lib/terminal-display'
+import { CardHeader } from './card/CardHeader'
+import { CardStatusBar } from './card/CardStatusBar'
 import { CardContextMenu } from './CardContextMenu'
 import { useTerminalScrollButton } from '../hooks/useTerminalScrollButton'
-import {
-  GitBranch,
-  FolderGit2,
-  Pencil,
-  ListTodo,
-  Pin,
-  Archive,
-  Maximize2,
-  Minus,
-  X
-} from 'lucide-react'
-import { toast } from './Toast'
-import { Tooltip } from './Tooltip'
-import { ConfirmPopover } from './ConfirmPopover'
-import { isMac, MOD } from '../lib/platform'
 
 // On touch devices, always show action buttons (no hover available)
 const isTouchDevice = typeof window !== 'undefined' && window.matchMedia('(hover: none)').matches
@@ -71,42 +53,15 @@ export const AgentCard = memo(
     { terminalId, index, isDragTarget, onDragStart, flexible },
     ref
   ) {
-    const {
-      terminal,
-      focusedId,
-      selectedId,
-      setSelected,
-      setFocused,
-      toggleMinimized,
-      isRenaming,
-      setRenamingTerminalId,
-      renameTerminal,
-      assignedTask,
-      setEditingTask,
-      setTaskDialogOpen,
-      togglePinned,
-      archiveSession
-    } = useAppStore(
+    const { terminal, focusedId, selectedId, setSelected, setFocused } = useAppStore(
       useShallow((s) => ({
         terminal: s.terminals.get(terminalId),
         focusedId: s.focusedTerminalId,
         selectedId: s.selectedTerminalId,
         setSelected: s.setSelectedTerminal,
-        setFocused: s.setFocusedTerminal,
-        toggleMinimized: s.toggleMinimized,
-        isRenaming: s.renamingTerminalId === terminalId,
-        setRenamingTerminalId: s.setRenamingTerminalId,
-        renameTerminal: s.renameTerminal,
-        assignedTask: s.config?.tasks?.find(
-          (t) => t.assignedSessionId === terminalId && t.status === 'in_progress'
-        ),
-        setEditingTask: s.setEditingTask,
-        setTaskDialogOpen: s.setTaskDialogOpen,
-        togglePinned: s.togglePinned,
-        archiveSession: s.archiveSession
+        setFocused: s.setFocusedTerminal
       }))
     )
-    const [cardHovered, setCardHovered] = useState(isTouchDevice)
     const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null)
     const { showScrollBtn, handleScrollToBottom } = useTerminalScrollButton(terminalId)
 
@@ -116,16 +71,6 @@ export const AgentCard = memo(
     const isSelected = selectedId === terminalId
     const isPinned = terminal.session.pinned === true
     const isIdlePinned = terminal.status === 'idle' && isPinned
-    const handleKill = async (): Promise<void> => {
-      const name = getDisplayName(terminal.session)
-      if (focusedId === terminalId) setFocused(null)
-      await closeTerminalSession(terminalId)
-      toast.success(`Session "${name}" closed`)
-    }
-
-    const handleMinimize = (): void => {
-      toggleMinimized(terminalId)
-    }
 
     const handleExpand = (): void => {
       setFocused(terminalId)
@@ -134,7 +79,7 @@ export const AgentCard = memo(
     return (
       <div
         ref={ref}
-        className={`relative rounded-lg border overflow-hidden flex flex-col
+        className={`group/card relative rounded-lg border overflow-hidden flex flex-col
                    transition-colors
                    ${flexible ? 'h-full' : ''}
                    ${
@@ -153,209 +98,21 @@ export const AgentCard = memo(
         onPointerDown={() => {
           if (!isSelected && !isFocused) setSelected(terminalId)
         }}
-        onMouseEnter={() => setCardHovered(true)}
-        onMouseLeave={() => !isTouchDevice && setCardHovered(false)}
         onContextMenu={(e) => {
           e.preventDefault()
           e.stopPropagation()
           setContextMenu({ x: e.clientX, y: e.clientY })
         }}
       >
-        {/* Header */}
-        <div className="flex items-center gap-2 px-3 py-2 border-b border-white/[0.04] shrink-0">
-          {/* Drag handle + info — double-click to expand */}
-          <div
-            className={`flex-1 min-w-0 flex items-center gap-2 cursor-text ${onDragStart || flexible ? 'drag-handle' : ''}`}
-            onDoubleClick={handleExpand}
-            onPointerDown={onDragStart ? (e) => onDragStart(terminalId, e) : undefined}
-          >
-            <AgentStatusIcon
-              agentType={terminal.session.agentType}
-              status={terminal.status}
-              size={16}
-            />
-            <div className="flex-1 min-w-0">
-              {isRenaming ? (
-                <InlineRename
-                  value={getDisplayName(terminal.session)}
-                  onCommit={(name) => {
-                    renameTerminal(terminalId, name)
-                    setRenamingTerminalId(null)
-                    toast.success(`Renamed to "${name}"`)
-                  }}
-                  onCancel={() => setRenamingTerminalId(null)}
-                  className="text-[13px] font-medium w-full"
-                />
-              ) : (
-                <div className="flex items-center gap-1 group/rename">
-                  <span
-                    className="text-[13px] font-medium text-gray-300 truncate"
-                    title={
-                      terminal.session.displayName?.trim()
-                        ? getDisplayName(terminal.session)
-                        : assignedTask
-                          ? assignedTask.title
-                          : getDisplayName(terminal.session)
-                    }
-                  >
-                    {terminal.session.displayName?.trim()
-                      ? getDisplayName(terminal.session)
-                      : assignedTask
-                        ? assignedTask.title
-                        : getDisplayName(terminal.session)}
-                  </span>
-                  <button
-                    onPointerDown={(e) => e.stopPropagation()}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setRenamingTerminalId(terminalId)
-                    }}
-                    className="opacity-0 group-hover/rename:opacity-100 text-gray-500 hover:text-gray-300 transition-opacity shrink-0"
-                    title="Rename"
-                  >
-                    <Pencil size={10} />
-                  </button>
-                </div>
-              )}
-              {terminal.session.branch && (
-                <div className="flex items-center gap-1 mt-0.5">
-                  {terminal.session.isWorktree ? (
-                    <FolderGit2 size={10} className="text-amber-500 shrink-0" strokeWidth={1.5} />
-                  ) : (
-                    <GitBranch size={10} className="text-gray-600 shrink-0" strokeWidth={1.5} />
-                  )}
-                  <span
-                    className={`text-[10px] font-mono truncate ${terminal.session.isWorktree ? 'text-amber-400' : 'text-gray-500'}`}
-                  >
-                    {getBranchLabel(terminal.session)}
-                  </span>
-                  {terminal.session.isWorktree && (
-                    <>
-                      <GitBranch size={9} className="text-gray-600 shrink-0" strokeWidth={1.5} />
-                      <span className="text-[9px] font-mono text-gray-500 truncate">
-                        {terminal.session.branch}
-                      </span>
-                    </>
-                  )}
-                </div>
-              )}
-              {assignedTask && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setEditingTask(assignedTask)
-                    setTaskDialogOpen(true)
-                  }}
-                  className="flex items-center gap-1 mt-0.5 px-1.5 py-0.5 rounded-full
-                             bg-violet-500/10 hover:bg-violet-500/20 transition-colors group/task"
-                >
-                  <ListTodo size={10} className="text-violet-400 shrink-0" strokeWidth={2} />
-                  <span className="text-[10px] text-violet-400 group-hover/task:text-violet-300 truncate max-w-[120px]">
-                    {assignedTask.title}
-                  </span>
-                </button>
-              )}
-            </div>
-          </div>
-
-          {typeof index === 'number' && index < 9 && (
-            <span
-              className="px-1 py-0.5 text-[9px] font-mono text-gray-600
-                         bg-white/[0.04] border border-white/[0.06] rounded
-                         leading-none shrink-0"
-            >
-              {isMac ? '\u2318' : 'Ctrl+'}
-              {index + 1}
-            </span>
-          )}
-
-          {/* Pin + Browse — appear on hover, left of git */}
-          {cardHovered && (
-            <div className="flex items-center gap-0.5">
-              <Tooltip label={isPinned ? 'Unpin session' : 'Pin session'} position="top">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    togglePinned(terminalId)
-                  }}
-                  className={`p-1.5 rounded transition-colors ${
-                    isPinned
-                      ? 'text-amber-400 hover:text-amber-300'
-                      : 'text-gray-500 hover:text-gray-300'
-                  }`}
-                  aria-label={isPinned ? 'Unpin session' : 'Pin session'}
-                >
-                  <Pin size={12} strokeWidth={2} className={isPinned ? 'fill-current' : ''} />
-                </button>
-              </Tooltip>
-              {isIdlePinned && (
-                <Tooltip label="Archive session" position="top">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      archiveSession(terminalId)
-                    }}
-                    className="p-1.5 rounded text-gray-500 hover:text-gray-300 transition-colors"
-                    aria-label="Archive session"
-                  >
-                    <Archive size={12} strokeWidth={2} />
-                  </button>
-                </Tooltip>
-              )}
-              <BrowseFilesButton terminalId={terminalId} />
-            </div>
-          )}
-          {!cardHovered && isPinned && (
-            <Pin size={10} strokeWidth={2} className="text-amber-400 fill-current shrink-0" />
-          )}
-
-          <GitChangesIndicator terminalId={terminalId} />
-
-          {/* Expand + Minimize + Close — appear on hover, right of git */}
-          {cardHovered && (
-            <div className="flex items-center gap-0.5">
-              <Tooltip label="Expand" shortcut={`${MOD}O`} position="top">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handleExpand()
-                  }}
-                  className="p-1.5 rounded text-gray-500 hover:text-white hover:bg-white/[0.08] transition-colors"
-                  aria-label="Expand session"
-                >
-                  <Maximize2 size={12} strokeWidth={2} />
-                </button>
-              </Tooltip>
-              <Tooltip label="Minimize" position="top">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handleMinimize()
-                  }}
-                  className="p-1.5 rounded text-gray-500 hover:text-white hover:bg-white/[0.08] transition-colors"
-                  aria-label="Minimize session"
-                >
-                  <Minus size={12} strokeWidth={2} />
-                </button>
-              </Tooltip>
-              <ConfirmPopover
-                message="Close this session?"
-                confirmLabel="Close"
-                onConfirm={handleKill}
-              >
-                <Tooltip label="Close session" position="top">
-                  <button
-                    onPointerDown={(e) => e.stopPropagation()}
-                    className="p-1.5 rounded text-gray-500 hover:text-red-400 hover:bg-white/[0.08] transition-colors"
-                    aria-label="Close session"
-                  >
-                    <X size={12} strokeWidth={2} />
-                  </button>
-                </Tooltip>
-              </ConfirmPopover>
-            </div>
-          )}
-        </div>
+        <CardHeader
+          terminalId={terminalId}
+          variant="mini"
+          index={index}
+          draggable={Boolean(onDragStart || flexible)}
+          onDragStart={onDragStart}
+          onDoubleClick={handleExpand}
+          revealActions={isTouchDevice}
+        />
 
         {/* Terminal */}
         <div className="relative flex-1 min-h-0 pt-0.5" style={{ background: '#141416' }}>
@@ -414,10 +171,10 @@ export const AgentCard = memo(
           )}
         </div>
 
-        {/* Resize handle */}
+        <CardStatusBar terminalId={terminalId} />
+
         {!flexible && <RowResizeHandle />}
 
-        {/* Context menu */}
         {contextMenu && (
           <CardContextMenu
             terminalId={terminalId}
