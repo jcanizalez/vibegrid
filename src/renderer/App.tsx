@@ -464,12 +464,10 @@ export function App() {
                   </button>
                 </Tooltip>
               ))}
-            {/* Main view toggle: Sessions / Tasks (hidden on mobile — bottom tabs handle it) */}
-            {!isMobile && (
+            {/* Main view toggle: Sessions / Tasks — shown in top bar only when sidebar is closed (otherwise it's in the sidebar header) */}
+            {!isMobile && !isSidebarOpen && (
               <>
-                {(isMobile || !isSidebarOpen) && (
-                  <div className="w-px h-4 bg-white/[0.06] mx-0.5" />
-                )}
+                <div className="w-px h-4 bg-white/[0.06] mx-0.5" />
                 <div className="flex bg-white/[0.04] rounded-lg p-0.5 gap-0.5">
                   <Tooltip
                     label="Sessions"
