@@ -8,7 +8,7 @@ import { toast } from '../Toast'
 import { getDisplayName } from '../../lib/terminal-display'
 import { MOD } from '../../lib/platform'
 
-export type CardVariant = 'mini' | 'focused' | 'tab'
+export type CardVariant = 'mini' | 'focused'
 
 interface Props {
   terminalId: string
@@ -53,10 +53,7 @@ export function CardActionCluster({ terminalId, variant }: Props) {
     toast.success(`Session "${name}" closed`)
   }
 
-  // Minimize only in grid mini (drop card from grid into minimized tray).
-  // Expand/Collapse only in grid contexts (mini → expand; focused → collapse back to grid).
   const showMinimize = variant === 'mini'
-  const showExpandCollapse = variant === 'mini' || variant === 'focused'
   const isFocused = variant === 'focused'
 
   const btn = 'p-1 rounded text-gray-500 hover:text-white hover:bg-white/[0.08] transition-colors'
@@ -71,7 +68,7 @@ export function CardActionCluster({ terminalId, variant }: Props) {
           className={btn}
           aria-label="Browse files"
         >
-          <FolderOpen size={12} strokeWidth={2} />
+          <FolderOpen size={14} strokeWidth={2} />
         </button>
       </Tooltip>
 
@@ -84,32 +81,30 @@ export function CardActionCluster({ terminalId, variant }: Props) {
             className={btn}
             aria-label="Minimize session"
           >
-            <Minus size={12} strokeWidth={2} />
+            <Minus size={14} strokeWidth={2} />
           </button>
         </Tooltip>
       )}
 
-      {showExpandCollapse && (
-        <Tooltip
-          label={isFocused ? 'Collapse to grid' : 'Expand'}
-          shortcut={isFocused ? `${MOD}W` : `${MOD}O`}
-          position="top"
+      <Tooltip
+        label={isFocused ? 'Collapse to grid' : 'Expand'}
+        shortcut={isFocused ? `${MOD}W` : `${MOD}O`}
+        position="top"
+      >
+        <button
+          type="button"
+          onClick={isFocused ? handleCollapse : handleExpand}
+          onPointerDown={(e) => e.stopPropagation()}
+          className={btn}
+          aria-label={isFocused ? 'Collapse session' : 'Expand session'}
         >
-          <button
-            type="button"
-            onClick={isFocused ? handleCollapse : handleExpand}
-            onPointerDown={(e) => e.stopPropagation()}
-            className={btn}
-            aria-label={isFocused ? 'Collapse session' : 'Expand session'}
-          >
-            {isFocused ? (
-              <Minimize2 size={12} strokeWidth={2} />
-            ) : (
-              <Maximize2 size={12} strokeWidth={2} />
-            )}
-          </button>
-        </Tooltip>
-      )}
+          {isFocused ? (
+            <Minimize2 size={14} strokeWidth={2} />
+          ) : (
+            <Maximize2 size={14} strokeWidth={2} />
+          )}
+        </button>
+      </Tooltip>
 
       <ConfirmPopover message="Close this session?" confirmLabel="Close" onConfirm={handleClose}>
         <Tooltip label="Close session" position="top">
@@ -119,7 +114,7 @@ export function CardActionCluster({ terminalId, variant }: Props) {
             className="p-1 rounded text-gray-500 hover:text-red-400 hover:bg-white/[0.08] transition-colors"
             aria-label="Close session"
           >
-            <X size={12} strokeWidth={2} />
+            <X size={14} strokeWidth={2} />
           </button>
         </Tooltip>
       </ConfirmPopover>
