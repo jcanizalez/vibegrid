@@ -62,7 +62,7 @@ vi.mock('../src/renderer/components/ConfirmPopover', () => ({
   // this lets tests exercise the handler (line 454 of TabView) without driving
   // the full confirm-popover UI.
   ConfirmPopover: ({ children, onConfirm }: { children: ReactNode; onConfirm: () => void }) => (
-    <div onClick={onConfirm}>{children}</div>
+    <div onClickCapture={onConfirm}>{children}</div>
   )
 }))
 
