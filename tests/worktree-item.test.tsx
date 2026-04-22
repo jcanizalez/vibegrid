@@ -55,7 +55,8 @@ vi.mock('../src/renderer/components/Toast', () => ({
 const mockCreateSession = vi.fn()
 
 vi.mock('../src/renderer/lib/session-utils', () => ({
-  createSessionFromProject: (...args: unknown[]) => mockCreateSession(...args)
+  createSessionFromProject: (...args: unknown[]) => mockCreateSession(...args),
+  createShellInProject: vi.fn().mockResolvedValue(undefined)
 }))
 
 const mockRequestWorktreeDelete = vi.fn()
@@ -133,7 +134,8 @@ describe('WorktreeItem progress-toast handlers', () => {
   it('new session button fires loading toast and calls createSessionFromProject', async () => {
     const { container } = renderWorktreeItem()
     const buttons = Array.from(container.querySelectorAll('button[type="button"]'))
-    const sessionBtn = buttons[0]
+    // Terminal button is first, session (+) button is second
+    const sessionBtn = buttons[1]
     act(() => {
       fireEvent.click(sessionBtn)
     })
@@ -156,7 +158,8 @@ describe('WorktreeItem progress-toast handlers', () => {
         })
     )
     const { container } = renderWorktreeItem()
-    const sessionBtn = container.querySelectorAll('button[type="button"]')[0]
+    // Terminal button is first, session (+) button is second
+    const sessionBtn = container.querySelectorAll('button[type="button"]')[1]
     act(() => {
       fireEvent.click(sessionBtn)
       fireEvent.click(sessionBtn)

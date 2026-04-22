@@ -10,7 +10,8 @@ import { resolveActiveProject } from '../lib/session-utils'
 import {
   formatRecentSessionActivity,
   resolveProjectName,
-  createSessionFromProject
+  createSessionFromProject,
+  createShellInProject
 } from '../lib/session-utils'
 import { executeWorkflow } from '../lib/workflow-execution'
 import { useAgentInstallStatus } from '../hooks/useAgentInstallStatus'
@@ -128,7 +129,6 @@ function useCommands(
   const setMainViewMode = useAppStore((s) => s.setMainViewMode)
   const setTaskDialogOpen = useAppStore((s) => s.setTaskDialogOpen)
   const setOnboardingOpen = useAppStore((s) => s.setOnboardingOpen)
-  const setActiveTabId = useAppStore((s) => s.setActiveTabId)
 
   return useMemo(() => {
     const commands: Command[] = []
@@ -235,11 +235,9 @@ function useCommands(
       icon: <Terminal size={14} strokeWidth={1.5} />,
       shortcutDisplay: 'Ctrl+`',
       keywords: ['shell', 'terminal', 'zsh', 'bash'],
-      onExecute: async () => {
+      onExecute: () => {
         const project = resolveActiveProject()
-        const session = await window.api.createShellTerminal(project?.path)
-        addTerminal(session)
-        setActiveTabId(session.id)
+        return createShellInProject(project?.path)
       }
     })
     commands.push({
@@ -395,6 +393,31 @@ function useCommands(
       }
     }
 
+    // --- Quick Launch Terminal (project x worktree) ---
+    for (const project of localProjects) {
+      commands.push({
+        id: `terminal:project:${project.name}`,
+        label: `Terminal in ${project.name}`,
+        category: 'quicklaunch',
+        icon: <Terminal size={14} strokeWidth={1.5} />,
+        keywords: ['terminal', 'shell', 'launch', project.name],
+        onExecute: () => createShellInProject(project.path)
+      })
+      if (gitRepoStatus[project.path] !== true) continue
+      const worktrees = (worktreeCache.get(project.path) ?? []).filter((wt) => !wt.isMain)
+      for (const wt of worktrees) {
+        commands.push({
+          id: `terminal:project:${project.name}:wt:${wt.path}`,
+          label: `Terminal in ${project.name} / ${wt.name}`,
+          sublabel: wt.branch === wt.name ? 'Existing worktree' : `Branch: ${wt.branch}`,
+          category: 'quicklaunch',
+          icon: <Terminal size={14} strokeWidth={1.5} />,
+          keywords: ['terminal', 'shell', 'launch', 'worktree', wt.name, wt.branch],
+          onExecute: () => createShellInProject(wt.path)
+        })
+      }
+    }
+
     // --- Filter & Sort ---
     const statusOptions: { value: StatusFilter; label: string; shortcut?: string }[] = [
       { value: 'all', label: 'Show All', shortcut: '\u23181' },
@@ -450,8 +473,7 @@ function useCommands(
     setStatusFilter,
     setMainViewMode,
     setTaskDialogOpen,
-    setOnboardingOpen,
-    setActiveTabId
+    setOnboardingOpen
   ])
 }
 

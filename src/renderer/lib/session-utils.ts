@@ -193,6 +193,17 @@ export async function createSessionFromProject(
 }
 
 /**
+ * Create a plain shell terminal, optionally scoped to a directory.
+ * Shared by the context menu, sidebar buttons, and command palette.
+ */
+export async function createShellInProject(cwd?: string): Promise<void> {
+  const session = await window.api.createShellTerminal(cwd)
+  const state = useAppStore.getState()
+  state.addTerminal(session)
+  state.setActiveTabId(session.id)
+}
+
+/**
  * Resolve the currently active project from the store.
  * Falls back to the first project in the active workspace.
  */

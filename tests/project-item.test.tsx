@@ -54,7 +54,8 @@ vi.mock('../src/renderer/components/Toast', () => ({
 const mockCreateSession = vi.fn()
 
 vi.mock('../src/renderer/lib/session-utils', () => ({
-  createSessionFromProject: (...args: unknown[]) => mockCreateSession(...args)
+  createSessionFromProject: (...args: unknown[]) => mockCreateSession(...args),
+  createShellInProject: vi.fn().mockResolvedValue(undefined)
 }))
 
 const mockCreateWorktree = vi.fn()
@@ -133,7 +134,9 @@ describe('ProjectItem progress-toast handlers', () => {
   it('new session button fires a loading toast and calls createSessionFromProject', async () => {
     const { container } = renderProjectItem()
     await waitFor(() => expect(mockIsGitRepo).toHaveBeenCalled())
-    const sessionBtn = container.querySelector('button[type="button"]')
+    // Terminal button is first, session (+) button is second
+    const buttons = Array.from(container.querySelectorAll('button[type="button"]'))
+    const sessionBtn = buttons[1]
     expect(sessionBtn).not.toBeNull()
     act(() => {
       fireEvent.click(sessionBtn!)
@@ -194,7 +197,8 @@ describe('ProjectItem progress-toast handlers', () => {
     )
     const { container } = renderProjectItem()
     await waitFor(() => expect(mockIsGitRepo).toHaveBeenCalled())
-    const sessionBtn = container.querySelector('button[type="button"]') as HTMLElement
+    // Terminal button is first, session (+) button is second
+    const sessionBtn = container.querySelectorAll('button[type="button"]')[1] as HTMLElement
     act(() => {
       fireEvent.click(sessionBtn)
       fireEvent.click(sessionBtn)

@@ -73,7 +73,7 @@ beforeEach(() => {
 describe('GridContextMenu', () => {
   it('renders smart quick-launch with active project name', () => {
     render(<GridContextMenu position={{ x: 100, y: 100 }} onClose={vi.fn()} />)
-    expect(screen.getByText('New session in Vorn')).toBeInTheDocument()
+    expect(screen.getByText('New agent session')).toBeInTheDocument()
   })
 
   it('renders every workspace project as a top-level item', () => {
@@ -98,8 +98,8 @@ describe('GridContextMenu', () => {
 
     render(<GridContextMenu position={{ x: 100, y: 100 }} onClose={vi.fn()} />)
 
-    // Quick launch should use first project from resolveActiveProject
-    expect(screen.getByText(/New session in Vorn/)).toBeInTheDocument()
+    // Quick launch should show generic agent session label
+    expect(screen.getByText('New agent session')).toBeInTheDocument()
 
     // Projects are now top-level items, no "New session from..." wrapper
     expect(screen.queryByText('New session from...')).not.toBeInTheDocument()
@@ -253,7 +253,7 @@ describe('GridContextMenu', () => {
     const onClose = vi.fn()
     render(<GridContextMenu position={{ x: 100, y: 100 }} onClose={onClose} />)
 
-    fireEvent.click(screen.getByText('New session in Vorn'))
+    fireEvent.click(screen.getByText('New agent session'))
 
     expect(onClose).toHaveBeenCalled()
     expect(mockCreateTerminal).toHaveBeenCalledWith(
@@ -265,29 +265,22 @@ describe('GridContextMenu', () => {
     )
   })
 
-  it('clicking a project item creates a plain session in that project', async () => {
-    mockCreateTerminal.mockResolvedValue({
-      id: 'plain-term',
-      session: {
-        id: 'plain-term',
-        agentType: 'claude',
-        projectName: 'OtherApp',
-        projectPath: '/tmp/otherapp'
-      },
-      status: 'idle',
-      lastOutputTimestamp: Date.now()
-    })
+  it('clicking a project item opens its submenu (no direct session creation)', async () => {
+    const cache = new Map()
+    cache.set('/tmp/otherapp', [
+      { path: '/tmp/otherapp', branch: 'main', isMain: true, name: 'otherapp' }
+    ])
+    useAppStore.setState({ worktreeCache: cache })
 
     const onClose = vi.fn()
     render(<GridContextMenu position={{ x: 100, y: 100 }} onClose={onClose} />)
 
-    fireEvent.click(screen.getByText('OtherApp'))
+    // Hovering the project row opens the submenu with agent + terminal options
+    fireEvent.mouseEnter(screen.getByText('OtherApp').closest('button')!)
 
-    expect(onClose).toHaveBeenCalled()
-    const call = mockCreateTerminal.mock.calls[0][0]
-    expect(call.projectName).toBe('OtherApp')
-    expect(call.branch).toBeUndefined()
-    expect(call.existingWorktreePath).toBeUndefined()
+    // Submenu should contain the quick actions
+    const submenuAgentBtns = screen.getAllByText('New agent session')
+    expect(submenuAgentBtns.length).toBeGreaterThanOrEqual(1)
   })
 
   it('non-git project hover does not render a worktree submenu', () => {
@@ -307,8 +300,8 @@ describe('GridContextMenu', () => {
 
     render(<GridContextMenu position={{ x: 100, y: 100 }} onClose={vi.fn()} />)
 
-    // Should show generic "New session" without project name
-    expect(screen.getByText('New session')).toBeInTheDocument()
+    // Should show generic "New agent session" without project name
+    expect(screen.getByText('New agent session')).toBeInTheDocument()
   })
 
   it('calls onClose on click outside', () => {

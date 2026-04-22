@@ -1,11 +1,16 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Play, FolderGit2, GitBranch, Plus, ChevronRight, Terminal } from 'lucide-react'
+import { FolderGit2, GitBranch, Plus, ChevronRight, Terminal } from 'lucide-react'
 import { useAppStore } from '../stores'
-import { type ProjectConfig } from '../../shared/types'
+import { type ProjectConfig, type AiAgentType } from '../../shared/types'
 import { ProjectIcon } from './project-sidebar/ProjectIcon'
-import { resolveActiveProject, createSessionFromProject } from '../lib/session-utils'
+import { AgentIcon } from './AgentIcon'
+import {
+  resolveActiveProject,
+  createSessionFromProject,
+  createShellInProject
+} from '../lib/session-utils'
 import { useWorkspaceProjects } from '../hooks/useWorkspaceProjects'
 
 interface Props {
@@ -28,6 +33,7 @@ interface MenuItem {
   onClick?: () => void
   className?: string
   separator?: boolean
+  shortcut?: string
   submenu?: SubmenuItem[]
   submenuProject?: ProjectConfig
   onSubmenuEnter?: () => void
@@ -104,10 +110,8 @@ export function GridContextMenu({ position, onClose }: Props) {
     return createSessionFromProject(p, opts)
   }
 
-  // Returns null for non-git projects (whose worktreeCache entry is never
-  // populated because listWorktrees fails). The main worktree is surfaced as
-  // its own entry (with a GitBranch icon) so users don't have to know they
-  // can click the parent project row to launch on main.
+  const defaultAgent: AiAgentType = useAppStore.getState().config?.defaults.defaultAgent ?? 'claude'
+
   const buildWorktreeSubmenu = (p: ProjectConfig): SubmenuItem[] | null => {
     const worktrees = worktreeCache.get(p.path)
     if (!worktrees || worktrees.length === 0) return null
@@ -126,13 +130,30 @@ export function GridContextMenu({ position, onClose }: Props) {
       wt.name === wt.branch ? wt.name : `${wt.name} (${wt.branch})`
 
     const subs: SubmenuItem[] = []
+
+    // Quick actions at the top: agent + terminal for this project
+    subs.push({
+      iconElement: <AgentIcon agentType={defaultAgent} size={12} />,
+      label: 'New agent session',
+      onClick: () => createSession(p)
+    })
+    subs.push({
+      iconElement: <Terminal size={12} className="text-gray-400" />,
+      label: 'New terminal',
+      onClick: () => {
+        onClose()
+        void createShellInProject(p.path)
+      }
+    })
+
     if (mainWt) {
       subs.push({
         iconElement: <GitBranch size={12} className="text-gray-400" />,
         label: mainWt.branch,
         detail: formatDetail(mainWt.path),
         onClick: () =>
-          createSession(p, { branch: mainWt.branch, existingWorktreePath: mainWt.path })
+          createSession(p, { branch: mainWt.branch, existingWorktreePath: mainWt.path }),
+        separator: true
       })
     }
     nonMain.forEach((wt, i) => {
@@ -141,34 +162,25 @@ export function GridContextMenu({ position, onClose }: Props) {
         label: formatLabel(wt),
         detail: formatDetail(wt.path),
         onClick: () => createSession(p, { branch: wt.branch, existingWorktreePath: wt.path }),
-        separator: i === 0 && mainWt !== undefined
+        separator: i === 0 && mainWt === undefined
       })
     })
     subs.push({
       iconElement: <Plus size={12} className="text-amber-400/70" />,
       label: 'New worktree',
       onClick: () => createSession(p, { useWorktree: true }),
-      separator: subs.length > 0
+      separator: subs.length > 2
     })
     return subs
   }
 
   const items: MenuItem[] = []
 
+  // Quick launch: agent session in active project/worktree
   if (project) {
-    const quickLabel = activeWorktreePath
-      ? activeWt
-        ? `New session in ${project.name} / ${activeWt.name}`
-        : `New session in ${project.name} (worktree)`
-      : `New session in ${project.name}`
-
     items.push({
-      iconElement: activeWorktreePath ? (
-        <FolderGit2 size={14} className="text-amber-400" />
-      ) : (
-        <ProjectIcon icon={project.icon} color={project.iconColor} size={14} />
-      ),
-      label: quickLabel,
+      iconElement: <AgentIcon agentType={defaultAgent} size={14} />,
+      label: 'New agent session',
       className: 'text-white font-medium',
       onClick: () =>
         activeWorktreePath
@@ -180,8 +192,8 @@ export function GridContextMenu({ position, onClose }: Props) {
     })
   } else {
     items.push({
-      icon: Play,
-      label: 'New session',
+      iconElement: <AgentIcon agentType={defaultAgent} size={14} />,
+      label: 'New agent session',
       className: 'text-white font-medium',
       onClick: () => {
         onClose()
@@ -190,29 +202,24 @@ export function GridContextMenu({ position, onClose }: Props) {
     })
   }
 
-  // Shell: always available, independent of project
+  // Quick launch: terminal in active project/worktree
   items.push({
     iconElement: <Terminal size={14} className="text-gray-400" />,
     label: 'New terminal',
-    onClick: async () => {
+    onClick: () => {
       onClose()
-      const session = await window.api.createShellTerminal(project?.path)
-      const state = useAppStore.getState()
-      state.addTerminal(session)
-      state.setActiveTabId(session.id)
-    },
-    separator: true
+      const cwd = activeWorktreePath ?? project?.path
+      void createShellInProject(cwd)
+    }
   })
 
+  // Project rows with submenus
   const shouldSeparateProjects = items.length > 0 && workspaceProjects.length > 0
   workspaceProjects.forEach((p, i) => {
     items.push({
       iconElement: <ProjectIcon icon={p.icon} color={p.iconColor} size={14} />,
       label: p.name,
       separator: i === 0 && shouldSeparateProjects,
-      // Click creates a plain session in the project (main worktree).
-      // Hover opens the worktree submenu if the project is a git repo.
-      onClick: () => createSession(p),
       submenuProject: p,
       onSubmenuEnter: () => loadWorktrees(p.path)
     })
@@ -221,6 +228,7 @@ export function GridContextMenu({ position, onClose }: Props) {
   items.push({
     icon: Plus,
     label: 'New session...',
+    shortcut: '⌘N',
     onClick: () => {
       onClose()
       useAppStore.getState().setNewAgentDialogOpen(true)
@@ -308,6 +316,11 @@ export function GridContextMenu({ position, onClose }: Props) {
                     <item.icon size={14} className={item.className ?? 'text-gray-500'} />
                   ))}
                 <span className="flex-1 text-left truncate">{item.label}</span>
+                {item.shortcut && (
+                  <span className="text-[10px] text-gray-600 ml-auto shrink-0">
+                    {item.shortcut}
+                  </span>
+                )}
                 {itemHasSubmenu && (
                   <ChevronRight size={11} className="text-gray-600 ml-auto shrink-0" />
                 )}
