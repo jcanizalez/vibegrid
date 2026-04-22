@@ -8,6 +8,7 @@ import 'react-resizable/css/styles.css'
 import { useAppStore } from '../stores'
 import { AgentCard } from './AgentCard'
 import { BackgroundTray } from './BackgroundTray'
+import { backgroundTrayHasItems } from '../lib/background-tray'
 import { PromptLauncher } from './PromptLauncher'
 import { GridContextMenu } from './GridContextMenu'
 import { AgentIcon } from './AgentIcon'
@@ -168,15 +169,17 @@ export const GridView = memo(function GridView() {
       onContextMenu={handleGridContextMenu}
     >
       {/* Background tray: headless + minimized */}
-      <div className="px-4 pt-4">
-        <BackgroundTray
-          headlessSessions={filteredHeadless}
-          minimizedIds={minimizedIds}
-          waitingApprovals={waitingApprovals}
-          variant="grid"
-          hasItemsBelow={orderedIds.length > 0}
-        />
-      </div>
+      {backgroundTrayHasItems(filteredHeadless, minimizedIds, waitingApprovals) && (
+        <div className="px-4 pt-4">
+          <BackgroundTray
+            headlessSessions={filteredHeadless}
+            minimizedIds={minimizedIds}
+            waitingApprovals={waitingApprovals}
+            variant="grid"
+            hasItemsBelow={orderedIds.length > 0}
+          />
+        </div>
+      )}
 
       {orderedIds.length === 0 && filteredHeadless.length === 0 && minimizedIds.length === 0 ? (
         isFiltered ? (
