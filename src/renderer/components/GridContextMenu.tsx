@@ -175,6 +175,29 @@ export function GridContextMenu({ position, onClose }: Props) {
           onClick: onClickFor(p, wt.path, wt.branch, wt.name)
         })
       }
+
+      if (mode === 'session') {
+        subs.push({
+          iconElement: <Plus size={12} className="text-gray-500" />,
+          label: 'New worktree',
+          onClick: () => {
+            onClose()
+            const agentType = useAppStore.getState().config?.defaults.defaultAgent ?? 'claude'
+            window.api.listBranches(p.path).then((result) => {
+              const branch = result.current || 'main'
+              window.api
+                .createTerminal({
+                  agentType,
+                  projectName: p.name,
+                  projectPath: p.path,
+                  branch,
+                  useWorktree: true
+                })
+                .then((session) => useAppStore.getState().addTerminal(session))
+            })
+          }
+        })
+      }
     }
     return subs
   }
