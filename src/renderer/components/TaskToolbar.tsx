@@ -5,6 +5,7 @@ import { TaskViewMode } from '../../shared/types'
 import { SlidersHorizontal } from 'lucide-react'
 import { Tooltip } from './Tooltip'
 import { OptionRow } from './OptionRow'
+import { ConnectorIcon } from './ConnectorIcon'
 
 const isMac = navigator.platform.toUpperCase().includes('MAC')
 
@@ -48,9 +49,16 @@ export function TaskToolbar() {
 
   const taskStatusFilter = useAppStore((s) => s.taskStatusFilter)
   const setTaskStatusFilter = useAppStore((s) => s.setTaskStatusFilter)
+  const taskSourceFilter = useAppStore((s) => s.taskSourceFilter)
+  const setTaskSourceFilter = useAppStore((s) => s.setTaskSourceFilter)
   const config = useAppStore((s) => s.config)
   const setConfig = useAppStore((s) => s.setConfig)
   const taskViewMode = (config?.defaults?.taskViewMode ?? 'list') as TaskViewMode
+
+  // Detect which connectors have tasks
+  const connectorIds = new Set(
+    (config?.tasks || []).map((t) => t.sourceConnectorId).filter(Boolean) as string[]
+  )
 
   const setViewMode = (mode: TaskViewMode): void => {
     if (!config || taskViewMode === mode) return
@@ -62,7 +70,8 @@ export function TaskToolbar() {
     setConfig(updated)
   }
 
-  const hasActiveFilters = taskStatusFilter !== 'all' || taskViewMode !== 'list'
+  const hasActiveFilters =
+    taskStatusFilter !== 'all' || taskViewMode !== 'list' || taskSourceFilter !== 'all'
 
   const toggle = useCallback(() => setOpen((o) => !o), [])
 
@@ -124,6 +133,59 @@ export function TaskToolbar() {
               />
             ))}
           </div>
+
+          {/* Source section (only show if connectors have tasks) */}
+          {connectorIds.size > 0 && (
+            <div className="py-1.5 border-t border-white/[0.06]">
+              <div className="px-3 py-1 text-[10px] text-gray-500 uppercase tracking-wider">
+                Source
+              </div>
+              <OptionRow
+                selected={taskSourceFilter === 'all'}
+                dot="bg-gray-400"
+                label="All Sources"
+                onClick={() => setTaskSourceFilter('all')}
+              />
+              <OptionRow
+                selected={taskSourceFilter === 'local'}
+                dot="bg-blue-400"
+                label="Local Only"
+                onClick={() => setTaskSourceFilter('local')}
+              />
+              {[...connectorIds].map((cid) => (
+                <button
+                  key={cid}
+                  onClick={() => setTaskSourceFilter(cid)}
+                  className={`w-full text-left px-3 py-1.5 text-[12px] transition-colors flex items-center gap-2 ${
+                    taskSourceFilter === cid
+                      ? 'text-white bg-white/[0.06]'
+                      : 'text-gray-300 hover:text-white hover:bg-white/[0.04]'
+                  }`}
+                >
+                  {taskSourceFilter === cid ? (
+                    <svg
+                      width="11"
+                      height="11"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                    >
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  ) : (
+                    <span className="w-[11px]" />
+                  )}
+                  <ConnectorIcon
+                    connectorId={cid}
+                    size={10}
+                    className={taskSourceFilter === cid ? 'text-white' : 'text-gray-500'}
+                  />
+                  {cid.charAt(0).toUpperCase() + cid.slice(1)}
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* View section */}
           <div className="py-1.5 border-t border-white/[0.06]">

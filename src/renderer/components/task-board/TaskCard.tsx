@@ -1,5 +1,6 @@
 import { TaskConfig } from '../../../shared/types'
 import { AgentIcon } from '../AgentIcon'
+import { SourceBadge, ConnectorIcon } from '../ConnectorIcon'
 import {
   STATUS_ICON,
   STATUS_ICON_COLOR,
@@ -58,9 +59,31 @@ export function TaskCard({
         onClick={onSelect}
       >
         <div className="px-3.5 py-3">
-          {/* Top row: short ID + menu */}
+          {/* Top row: short ID + source badge + menu */}
           <div className="flex items-center justify-between mb-1.5">
-            <span className="text-[10px] text-gray-500 font-medium">{shortId}</span>
+            <span className="flex items-center gap-1">
+              <span className="text-[10px] text-gray-500 font-medium">{shortId}</span>
+              {task.sourceConnectorId && task.sourceExternalId && (
+                <span className="flex items-center gap-0.5 text-[10px] text-gray-500">
+                  <ConnectorIcon
+                    connectorId={task.sourceConnectorId}
+                    size={10}
+                    className="text-gray-500"
+                  />
+                  <a
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      if (task.sourceExternalUrl) window.api.openExternal(task.sourceExternalUrl)
+                    }}
+                    className="hover:text-gray-300 transition-colors"
+                  >
+                    #{task.sourceExternalId}
+                  </a>
+                </span>
+              )}
+            </span>
             <div
               className="opacity-0 group-hover:opacity-100 transition-opacity"
               onClick={(e) => e.stopPropagation()}
@@ -126,8 +149,17 @@ export function TaskCard({
         )}
       </div>
 
-      {/* Task short ID */}
-      <span className="text-[11px] text-gray-500 font-medium w-14 shrink-0">{shortId}</span>
+      {/* Task short ID + source badge */}
+      <span className="flex items-center gap-1.5 text-[11px] text-gray-500 font-medium shrink-0">
+        {shortId}
+        {task.sourceConnectorId && task.sourceExternalId && (
+          <SourceBadge
+            connectorId={task.sourceConnectorId}
+            url={task.sourceExternalUrl}
+            label={`#${task.sourceExternalId}`}
+          />
+        )}
+      </span>
 
       {/* Status icon */}
       <StatusIcon size={14} className={`${iconColor} shrink-0`} />

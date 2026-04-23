@@ -178,6 +178,142 @@ export interface TaskConfig {
   createdAt: string
   updatedAt: string
   completedAt?: string
+  // Source connector fields (set when task originates from an external connector)
+  sourceConnectorId?: string // 'github' | 'linear' | custom connector id
+  sourceExternalId?: string // e.g. issue number "42"
+  sourceExternalUrl?: string // link to upstream item
+}
+
+// ─── Connector System ───────────────────────────────────────────
+
+/** Origin of a task mutation — only 'user' fires workflow triggers. */
+export type MutationOrigin = 'user' | 'sync' | 'system'
+
+// -- Connector interface --
+
+export interface ExternalItem {
+  externalId: string
+  url: string
+  title: string
+  description: string
+  status: string // raw upstream status
+  labels?: string[]
+  assignee?: string
+  priority?: string
+  updatedAt: string
+  metadata?: Record<string, unknown>
+}
+
+export interface PollResult {
+  events: TriggerEvent[]
+  nextCursor?: string
+}
+
+export interface TriggerEvent {
+  id: string // dedup key
+  type: string
+  data: Record<string, unknown>
+  timestamp: string
+}
+
+export interface ActionResult {
+  success: boolean
+  output?: Record<string, unknown>
+  error?: string
+}
+
+export interface ConnectorConfigField {
+  key: string
+  label: string
+  type: 'text' | 'select' | 'multiselect' | 'toggle' | 'textarea' | 'password'
+  required?: boolean
+  placeholder?: string
+  description?: string
+  options?: { value: string; label: string }[]
+  supportsTemplates?: boolean
+}
+
+export interface ConnectorTriggerDef {
+  type: string // e.g. 'issueCreated'
+  label: string
+  description?: string
+  configFields: ConnectorConfigField[]
+  defaultIntervalMs: number
+}
+
+export interface ConnectorActionDef {
+  type: string // e.g. 'createIssue'
+  label: string
+  description?: string
+  configFields: ConnectorConfigField[]
+}
+
+export interface ConnectorStatusOption {
+  upstream: string
+  suggestedLocal: TaskStatus
+}
+
+export interface ConnectorManifest {
+  auth: ConnectorConfigField[]
+  taskFilters?: ConnectorConfigField[]
+  statusMapping?: ConnectorStatusOption[]
+  triggers?: ConnectorTriggerDef[]
+  actions?: ConnectorActionDef[]
+  defaultWorkflows?: Array<{
+    name: string
+    trigger: 'recurring'
+    cron: string
+    actionType: string
+  }>
+}
+
+/**
+ * The core connector interface. A connector provides tasks, triggers, and/or
+ * actions for an external service. Implementations can use any transport:
+ * gh CLI, REST API, MCP server, shell script, etc.
+ */
+export interface VornConnector {
+  readonly id: string
+  readonly name: string
+  readonly icon: string
+  readonly capabilities: ('tasks' | 'triggers' | 'actions')[]
+
+  listItems?(filters: Record<string, unknown>): Promise<ExternalItem[]>
+  getItem?(externalId: string, filters: Record<string, unknown>): Promise<ExternalItem | null>
+  poll?(triggerType: string, config: Record<string, unknown>, cursor?: string): Promise<PollResult>
+  execute?(actionType: string, args: Record<string, unknown>): Promise<ActionResult>
+
+  describe(): ConnectorManifest
+}
+
+// -- Source connection (saved config for a linked connector) --
+
+export interface SourceConnection {
+  id: string
+  connectorId: string
+  name: string
+  filters: Record<string, unknown>
+  syncIntervalMinutes: number
+  statusMapping: Record<string, TaskStatus>
+  executionProject?: string // vorn project for tasks
+  lastSyncAt?: string
+  lastSyncError?: string
+  syncCursor?: string
+  createdAt: string
+}
+
+// -- Task source link (sync metadata, separate from TaskConfig) --
+
+export interface TaskSourceLink {
+  taskId: string
+  connectionId: string
+  connectorId: string
+  externalId: string
+  externalUrl: string
+  sourceStatusRaw: string
+  sourceUpdatedAt: string
+  lastSyncedAt: string
+  conflictState: 'none' | 'upstream_changed' | 'both_changed'
 }
 
 // Session event types (lifecycle activity log)
@@ -671,7 +807,16 @@ export const IPC = {
   SSH_TEST_CONNECTION: 'ssh:testConnection',
   OPEN_EXTERNAL: 'shell:openExternal',
   FILE_LIST_DIR: 'file:listDir',
-  FILE_READ_CONTENT: 'file:readContent'
+  FILE_READ_CONTENT: 'file:readContent',
+  CONNECTOR_LIST: 'connector:list',
+  CONNECTOR_GET: 'connector:get',
+  CONNECTION_LIST: 'connection:list',
+  CONNECTION_CREATE: 'connection:create',
+  CONNECTION_UPDATE: 'connection:update',
+  CONNECTION_DELETE: 'connection:delete',
+  CONNECTION_SYNC: 'connection:sync',
+  CONNECTION_GET_SOURCE_LINK: 'connection:getSourceLink',
+  CONNECTOR_DETECT_REPO: 'connector:detectRepo'
 } as const
 
 export interface PermissionSuggestion {

@@ -26,6 +26,7 @@ import {
   RemoteHost,
   getProjectRemoteHostId
 } from '@vornrun/shared/types'
+import type { SourceConnection, TaskConfig, TaskStatus } from '@vornrun/shared/types'
 import * as gitUtils from './git-utils'
 import { listDir, readFileContent } from './file-utils'
 import {
@@ -51,8 +52,23 @@ import {
   listSessionLogs,
   insertSessionEvent,
   listSessionEvents,
-  listSessionEventsBySession
+  listSessionEventsBySession,
+  dbListSourceConnections,
+  dbGetSourceConnection,
+  dbInsertSourceConnection,
+  dbUpdateSourceConnection,
+  dbDeleteSourceConnection,
+  dbGetTaskSourceLink,
+  dbGetTaskSourceLinkByExternalId,
+  dbInsertTaskSourceLink,
+  dbUpdateTaskSourceLink,
+  dbInsertTask,
+  dbUpdateTask,
+  dbGetMaxTaskOrder,
+  dbSignalChange
 } from './database'
+import { connectorRegistry } from './connectors'
+import { detectRepoSlug } from './connectors/github'
 import { stripAnsi } from './ansi-strip'
 import { executeScript, scriptRunnerEvents } from './script-runner'
 import { getTailscaleStatus, clearBinaryCache } from './tailscale'
@@ -486,6 +502,155 @@ export function registerAllMethods(): void {
       configManager.notifyChanged()
     }
   )
+
+  // Connectors
+  registerMethod('connector:list', () => {
+    return connectorRegistry.list().map((c) => ({
+      id: c.id,
+      name: c.name,
+      icon: c.icon,
+      capabilities: [...c.capabilities],
+      manifest: c.describe()
+    }))
+  })
+
+  registerMethod('connector:get', (id) => {
+    const c = connectorRegistry.get(id)
+    if (!c) return null
+    return {
+      id: c.id,
+      name: c.name,
+      icon: c.icon,
+      capabilities: [...c.capabilities],
+      manifest: c.describe()
+    }
+  })
+
+  registerMethod('connection:list', ({ connectorId }) => {
+    return dbListSourceConnections(connectorId)
+  })
+
+  registerMethod('connection:create', (params) => {
+    const id = crypto.randomUUID()
+    const conn: SourceConnection = {
+      id,
+      connectorId: params.connectorId,
+      name: params.name,
+      filters: params.filters,
+      syncIntervalMinutes: params.syncIntervalMinutes,
+      statusMapping: params.statusMapping,
+      ...(params.executionProject && { executionProject: params.executionProject }),
+      createdAt: new Date().toISOString()
+    }
+    dbInsertSourceConnection(conn)
+    dbSignalChange()
+    return conn
+  })
+
+  registerMethod('connection:update', ({ id, updates }) => {
+    dbUpdateSourceConnection(id, updates)
+    dbSignalChange()
+    return dbGetSourceConnection(id)
+  })
+
+  registerMethod('connection:delete', (id) => {
+    dbDeleteSourceConnection(id)
+    dbSignalChange()
+  })
+
+  registerMethod('connection:sync', async (connectionId) => {
+    const conn = dbGetSourceConnection(connectionId)
+    if (!conn) return { created: 0, updated: 0, error: 'Connection not found' }
+
+    const connector = connectorRegistry.get(conn.connectorId)
+    if (!connector?.listItems) {
+      return {
+        created: 0,
+        updated: 0,
+        error: `Connector "${conn.connectorId}" not found or has no task source`
+      }
+    }
+
+    try {
+      const items = await connector.listItems(conn.filters)
+      let created = 0
+      let updated = 0
+      const now = new Date().toISOString()
+      const projectName = conn.executionProject || conn.name
+
+      for (const item of items) {
+        const existingLink = dbGetTaskSourceLinkByExternalId(conn.id, item.externalId)
+
+        if (!existingLink) {
+          // Create new task + link
+          const mappedStatus = conn.statusMapping[item.status] || ('todo' as TaskStatus)
+          const maxOrder = dbGetMaxTaskOrder(projectName)
+          const task: TaskConfig = {
+            id: crypto.randomUUID(),
+            projectName,
+            title: item.title,
+            description: item.description,
+            status: mappedStatus,
+            order: maxOrder + 1,
+            createdAt: now,
+            updatedAt: now,
+            sourceConnectorId: conn.connectorId,
+            sourceExternalId: item.externalId,
+            sourceExternalUrl: item.url
+          }
+          dbInsertTask(task)
+          dbInsertTaskSourceLink({
+            taskId: task.id,
+            connectionId: conn.id,
+            connectorId: conn.connectorId,
+            externalId: item.externalId,
+            externalUrl: item.url,
+            sourceStatusRaw: item.status,
+            sourceUpdatedAt: item.updatedAt,
+            lastSyncedAt: now,
+            conflictState: 'none'
+          })
+          created++
+        } else {
+          // Update upstream-owned fields only (title, description)
+          dbUpdateTask(existingLink.taskId, {
+            title: item.title,
+            description: item.description,
+            updatedAt: now,
+            sourceExternalUrl: item.url,
+            sourceExternalId: item.externalId
+          })
+          dbUpdateTaskSourceLink(existingLink.taskId, {
+            sourceStatusRaw: item.status,
+            sourceUpdatedAt: item.updatedAt,
+            lastSyncedAt: now
+          })
+          updated++
+        }
+      }
+
+      dbUpdateSourceConnection(conn.id, {
+        lastSyncAt: now,
+        lastSyncError: undefined
+      })
+      dbSignalChange()
+      configManager.notifyChanged()
+
+      return { created, updated }
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : String(err)
+      dbUpdateSourceConnection(conn.id, { lastSyncError: errorMsg })
+      return { created: 0, updated: 0, error: errorMsg }
+    }
+  })
+
+  registerMethod('connection:getSourceLink', (taskId) => {
+    return dbGetTaskSourceLink(taskId)
+  })
+
+  registerMethod('connector:detectRepo', (projectPath) => {
+    return detectRepoSlug(projectPath)
+  })
 
   // Wire manager events → broadcast to WS clients
   ptyManager.on('client-message', (channel: string, payload: unknown) => {
