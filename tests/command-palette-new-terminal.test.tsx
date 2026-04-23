@@ -115,7 +115,9 @@ describe('CommandPalette — New Terminal Session action', () => {
     })
 
     expect(mockCreateShellTerminal).toHaveBeenCalledWith('/tmp/vorn')
-    expect(addTerminal).toHaveBeenCalledWith(shellSession)
+    expect(addTerminal).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'sh-42', projectName: 'vorn' })
+    )
     expect(setActiveTabId).toHaveBeenCalledWith('sh-42')
   })
 
@@ -172,7 +174,9 @@ describe('CommandPalette — per-project and per-worktree Terminal entries', () 
     })
 
     expect(mockCreateShellTerminal).toHaveBeenCalledWith('/tmp/vorn')
-    expect(addTerminal).toHaveBeenCalledWith(shellSession)
+    expect(addTerminal).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'sh-99', projectName: 'vorn' })
+    )
   })
 
   it('clicking a worktree Terminal entry creates a shell in the worktree path', async () => {

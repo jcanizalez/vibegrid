@@ -17,8 +17,9 @@ import { buildTooltip } from '../lib/tab-tooltip'
 import { ConfirmPopover } from './ConfirmPopover'
 import { Tooltip } from './Tooltip'
 import { toast } from './Toast'
-import { FolderOpen, GripVertical, Pencil, X } from 'lucide-react'
+import { ChevronDown, FolderOpen, GripVertical, Pencil, Plus, X } from 'lucide-react'
 import { GridContextMenu } from './GridContextMenu'
+import { resolveActiveProject, createSessionFromProject } from '../lib/session-utils'
 import { MOD } from '../lib/platform'
 
 const DRAG_THRESHOLD = 5
@@ -432,6 +433,34 @@ export function TabView() {
 
         <div className="shrink-0 flex items-center">
           <button
+            onClick={() => {
+              const project = resolveActiveProject()
+              if (!project) {
+                useAppStore.getState().setNewAgentDialogOpen(true)
+                return
+              }
+              const activeWorktreePath = useAppStore.getState().activeWorktreePath
+              const activeWt = activeWorktreePath
+                ? useAppStore
+                    .getState()
+                    .worktreeCache.get(project.path)
+                    ?.find((wt) => wt.path === activeWorktreePath)
+                : undefined
+              void createSessionFromProject(
+                project,
+                activeWorktreePath
+                  ? { branch: activeWt?.branch, existingWorktreePath: activeWorktreePath }
+                  : {}
+              )
+            }}
+            className="h-[36px] w-[28px] flex items-center justify-center rounded-md
+                       text-gray-500 hover:text-gray-200 hover:bg-white/[0.06] transition-colors"
+            title="New session"
+            aria-label="New session"
+          >
+            <Plus size={14} strokeWidth={1.5} />
+          </button>
+          <button
             onClick={(e) => {
               if (plusDropdownPos) {
                 setPlusDropdownPos(null)
@@ -447,20 +476,12 @@ export function TabView() {
                 top: rect.bottom + 4
               })
             }}
-            className="h-[36px] w-[32px] flex items-center justify-center rounded-md
+            className="h-[36px] w-[22px] flex items-center justify-center rounded-md
                        text-gray-500 hover:text-gray-200 hover:bg-white/[0.06] transition-colors"
-            title="New session"
+            title="More session options"
+            aria-label="More session options"
           >
-            <svg
-              width="12"
-              height="12"
-              viewBox="0 0 12 12"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-            >
-              <path d="M6 1v10M1 6h10" />
-            </svg>
+            <ChevronDown size={12} strokeWidth={1.5} />
           </button>
         </div>
 

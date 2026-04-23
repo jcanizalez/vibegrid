@@ -208,16 +208,51 @@ export async function createSessionFromProject(
   state.addTerminal(session)
 }
 
-export async function createShellInProject(cwd?: string): Promise<void> {
+export async function createShellInProject(
+  cwd?: string,
+  context?: {
+    project?: ProjectConfig
+    worktreePath?: string
+    worktreeName?: string
+    branch?: string
+  }
+): Promise<void> {
   try {
     const session = await window.api.createShellTerminal(cwd)
+    const project = context?.project ?? resolveProjectForPath(cwd)
+    const enriched: TerminalSession = project
+      ? {
+          ...session,
+          projectName: project.name,
+          projectPath: project.path,
+          worktreePath: context?.worktreePath,
+          worktreeName: context?.worktreeName,
+          branch: context?.branch,
+          isWorktree: Boolean(context?.worktreePath && context.worktreePath !== project.path)
+        }
+      : session
     const state = useAppStore.getState()
-    state.addTerminal(session)
-    state.setActiveTabId(session.id)
+    state.addTerminal(enriched)
+    state.setActiveTabId(enriched.id)
   } catch (err) {
     console.error('[createShellInProject] failed:', err)
     toast.error(`Failed to start terminal: ${err instanceof Error ? err.message : String(err)}`)
   }
+}
+
+function resolveProjectForPath(p?: string): ProjectConfig | undefined {
+  if (!p) return undefined
+  const projects = useAppStore.getState().config?.projects ?? []
+  const normalized = normalizeComparablePath(p)
+  const match = projects.find((proj) => {
+    const projPath = normalizeComparablePath(proj.path)
+    return (
+      projPath === normalized ||
+      normalized.startsWith(`${projPath}/`) ||
+      isManagedWorktreePath(p, proj.path)
+    )
+  })
+  return match
 }
 
 /**

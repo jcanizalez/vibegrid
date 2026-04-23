@@ -401,7 +401,7 @@ function useCommands(
         category: 'quicklaunch',
         icon: <Terminal size={14} strokeWidth={1.5} />,
         keywords: ['terminal', 'shell', 'launch', project.name],
-        onExecute: () => createShellInProject(project.path)
+        onExecute: () => createShellInProject(project.path, { project })
       })
       if (gitRepoStatus[project.path] !== true) continue
       const worktrees = (worktreeCache.get(project.path) ?? []).filter((wt) => !wt.isMain)
@@ -413,7 +413,13 @@ function useCommands(
           category: 'quicklaunch',
           icon: <Terminal size={14} strokeWidth={1.5} />,
           keywords: ['terminal', 'shell', 'launch', 'worktree', wt.name, wt.branch],
-          onExecute: () => createShellInProject(wt.path)
+          onExecute: () =>
+            createShellInProject(wt.path, {
+              project,
+              worktreePath: wt.path,
+              worktreeName: wt.name,
+              branch: wt.branch
+            })
         })
       }
     }

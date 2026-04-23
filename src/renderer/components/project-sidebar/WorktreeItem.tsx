@@ -163,7 +163,13 @@ export function WorktreeItem({
                 if (creatingTerminalLock.current) return
                 creatingTerminalLock.current = true
                 setCreatingTerminal(true)
-                void createShellInProject(wt.path).finally(() => {
+                const proj = config?.projects.find((p) => p.name === projectName)
+                void createShellInProject(wt.path, {
+                  project: proj,
+                  worktreePath: wt.path,
+                  worktreeName: wt.name,
+                  branch: wt.branch
+                }).finally(() => {
                   creatingTerminalLock.current = false
                   setCreatingTerminal(false)
                 })

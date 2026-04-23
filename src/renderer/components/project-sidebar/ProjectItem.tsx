@@ -247,7 +247,7 @@ export function ProjectItem({
                       if (creatingTerminalLock.current) return
                       creatingTerminalLock.current = true
                       setCreatingTerminal(true)
-                      void createShellInProject(project.path).finally(() => {
+                      void createShellInProject(project.path, { project }).finally(() => {
                         creatingTerminalLock.current = false
                         setCreatingTerminal(false)
                       })
@@ -421,7 +421,12 @@ export function ProjectItem({
                               if (creatingMainTerminalLock.current) return
                               creatingMainTerminalLock.current = true
                               setCreatingMainTerminal(true)
-                              void createShellInProject(mainWt.path).finally(() => {
+                              void createShellInProject(mainWt.path, {
+                                project,
+                                worktreePath: mainWt.path,
+                                worktreeName: mainWt.name,
+                                branch: mainWt.branch
+                              }).finally(() => {
                                 creatingMainTerminalLock.current = false
                                 setCreatingMainTerminal(false)
                               })

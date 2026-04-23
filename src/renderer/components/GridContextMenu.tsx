@@ -119,14 +119,24 @@ export function GridContextMenu({ position, onClose }: Props) {
   const buildScopedSubmenu = (mode: 'session' | 'terminal'): SubmenuItem[] => {
     const subs: SubmenuItem[] = []
     const sessionCountByPath = countSessionsByWorktree(terminals.values())
-    const onClickFor = (p: ProjectConfig, wtPath?: string, branch?: string): (() => void) => {
+    const onClickFor = (
+      p: ProjectConfig,
+      wtPath?: string,
+      branch?: string,
+      wtName?: string
+    ): (() => void) => {
       if (mode === 'session') {
         return () =>
           wtPath ? createSession(p, { branch, existingWorktreePath: wtPath }) : createSession(p)
       }
       return () => {
         onClose()
-        void createShellInProject(wtPath ?? p.path)
+        void createShellInProject(wtPath ?? p.path, {
+          project: p,
+          worktreePath: wtPath,
+          worktreeName: wtName,
+          branch
+        })
       }
     }
 
@@ -158,7 +168,7 @@ export function GridContextMenu({ position, onClose }: Props) {
           iconElement: <GitBranch size={12} className="text-gray-400" />,
           label: mainWt.branch,
           detail: formatSessionCount(sessionCountByPath.get(mainWt.path) ?? 0),
-          onClick: onClickFor(p, mainWt.path, mainWt.branch)
+          onClick: onClickFor(p, mainWt.path, mainWt.branch, mainWt.name)
         })
       }
       for (const wt of nonMain) {
@@ -166,7 +176,7 @@ export function GridContextMenu({ position, onClose }: Props) {
           iconElement: <FolderGit2 size={12} className="text-amber-400/70" />,
           label: wt.name,
           detail: formatSessionCount(sessionCountByPath.get(wt.path) ?? 0),
-          onClick: onClickFor(p, wt.path, wt.branch)
+          onClick: onClickFor(p, wt.path, wt.branch, wt.name)
         })
       }
     }
@@ -206,7 +216,12 @@ export function GridContextMenu({ position, onClose }: Props) {
     onClick: () => {
       onClose()
       const cwd = activeWorktreePath ?? project?.path
-      void createShellInProject(cwd)
+      void createShellInProject(cwd, {
+        project,
+        worktreePath: activeWorktreePath ?? undefined,
+        worktreeName: activeWt?.name,
+        branch: activeWt?.branch
+      })
     }
   })
 

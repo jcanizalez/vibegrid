@@ -156,7 +156,10 @@ describe('WorktreeItem progress-toast handlers', () => {
       fireEvent.click(terminalBtn)
     })
     await waitFor(() => {
-      expect(mockCreateShell).toHaveBeenCalledWith(worktree.path)
+      expect(mockCreateShell).toHaveBeenCalledWith(
+        worktree.path,
+        expect.objectContaining({ worktreePath: worktree.path })
+      )
     })
   })
 

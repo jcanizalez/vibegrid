@@ -194,7 +194,10 @@ describe('ProjectItem progress-toast handlers', () => {
       fireEvent.click(terminalBtn)
     })
     await waitFor(() => {
-      expect(mockCreateShell).toHaveBeenCalledWith(project.path)
+      expect(mockCreateShell).toHaveBeenCalledWith(
+        project.path,
+        expect.objectContaining({ project })
+      )
     })
   })
 
@@ -229,7 +232,10 @@ describe('ProjectItem progress-toast handlers', () => {
       fireEvent.click(mainTerminalBtn)
     })
     await waitFor(() => {
-      expect(mockCreateShell).toHaveBeenCalledWith(mainWorktree.path)
+      expect(mockCreateShell).toHaveBeenCalledWith(
+        mainWorktree.path,
+        expect.objectContaining({ worktreePath: mainWorktree.path })
+      )
     })
   })
 
