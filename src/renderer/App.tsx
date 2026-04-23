@@ -25,7 +25,7 @@ import { ToolbarBreadcrumb } from './components/ToolbarBreadcrumb'
 import { SettingsPage } from './components/SettingsPage'
 import { RecentSessionsPopover } from './components/RecentSessionsPopover'
 import { Tooltip } from './components/Tooltip'
-import { RotateCcw, Monitor, ListTodo, Plus, Menu } from 'lucide-react'
+import { RotateCcw, Monitor, ListTodo, Zap, Plus, Menu } from 'lucide-react'
 import { MobileBottomTabs } from './components/MobileBottomTabs'
 import { TaskToolbar } from './components/TaskToolbar'
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
@@ -115,6 +115,7 @@ export function App() {
     isOnboardingOpen,
     isTerminalPanelOpen,
     isWorkflowEditorOpen,
+    editingWorkflowId,
     layoutMode,
     mainViewMode,
     selectedTaskId,
@@ -130,6 +131,7 @@ export function App() {
       isOnboardingOpen: s.isOnboardingOpen,
       isTerminalPanelOpen: s.isTerminalPanelOpen,
       isWorkflowEditorOpen: s.isWorkflowEditorOpen,
+      editingWorkflowId: s.editingWorkflowId,
       layoutMode: s.config?.defaults?.layoutMode ?? 'grid',
       mainViewMode: s.config?.defaults?.mainViewMode ?? 'sessions',
       selectedTaskId: s.selectedTaskId,
@@ -142,6 +144,10 @@ export function App() {
   const setMainViewMode = useAppStore((s) => s.setMainViewMode)
   const [recentOpen, setRecentOpen] = useState(false)
   const isMobile = useIsMobile()
+  const isInlineWorkflowEditor =
+    mainViewMode === 'workflows' &&
+    !isMobile &&
+    (editingWorkflowId !== null || isWorkflowEditorOpen)
 
   // On mobile, auto-close sidebar on initial load
   useEffect(() => {
@@ -417,226 +423,244 @@ export function App() {
         }
       >
         {/* Top bar — z-46 + opaque bg covers the TerminalHost overlay (z-45) when the grid scrolls up. */}
-        <div
-          className={`titlebar-drag shrink-0 border-b border-white/[0.06] relative z-[46] bg-[#1a1a1e]
+        {!isInlineWorkflowEditor && (
+          <div
+            className={`titlebar-drag shrink-0 border-b border-white/[0.06] relative z-[46] bg-[#1a1a1e]
                         flex items-center ${isMobile ? 'px-2 justify-between' : 'px-3'} h-[52px]`}
-          style={!isSidebarOpen && !isWeb && !isMobile ? { paddingLeft: '80px' } : undefined}
-        >
-          <div className={`flex items-center titlebar-no-drag ${isMobile ? 'gap-2.5' : 'gap-1'}`}>
-            {/* Mobile: always show hamburger. Desktop: show sidebar toggle only when closed */}
-            {(isMobile || !isSidebarOpen) &&
-              (isMobile ? (
-                <button
-                  onClick={toggleSidebar}
-                  className="text-gray-400 hover:text-white active:text-white p-2 transition-colors rounded-full"
-                  style={{
-                    background: 'var(--glass-bg, transparent)',
-                    backdropFilter: 'var(--glass-blur, none)',
-                    WebkitBackdropFilter: 'var(--glass-blur, none)',
-                    boxShadow: 'var(--glass-shadow, none)'
-                  }}
-                  title="Show sidebar"
-                >
-                  <Menu size={20} strokeWidth={2} />
-                </button>
-              ) : (
-                <Tooltip
-                  label="Toggle sidebar"
-                  shortcut={`${isMac ? '⌘' : 'Ctrl+'}B`}
-                  position="bottom"
-                >
+            style={!isSidebarOpen && !isWeb && !isMobile ? { paddingLeft: '80px' } : undefined}
+          >
+            <div className={`flex items-center titlebar-no-drag ${isMobile ? 'gap-2.5' : 'gap-1'}`}>
+              {/* Mobile: always show hamburger. Desktop: show sidebar toggle only when closed */}
+              {(isMobile || !isSidebarOpen) &&
+                (isMobile ? (
                   <button
                     onClick={toggleSidebar}
-                    className="text-gray-400 hover:text-white active:text-white p-1 transition-colors rounded-md"
+                    className="text-gray-400 hover:text-white active:text-white p-2 transition-colors rounded-full"
+                    style={{
+                      background: 'var(--glass-bg, transparent)',
+                      backdropFilter: 'var(--glass-blur, none)',
+                      WebkitBackdropFilter: 'var(--glass-blur, none)',
+                      boxShadow: 'var(--glass-shadow, none)'
+                    }}
                     title="Show sidebar"
                   >
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                    >
-                      <rect x="3" y="3" width="18" height="18" rx="2" />
-                      <path d="M9 3v18" />
-                    </svg>
+                    <Menu size={20} strokeWidth={2} />
                   </button>
-                </Tooltip>
-              ))}
-            {/* Main view toggle: Sessions / Tasks — shown in top bar only when sidebar is closed (otherwise it's in the sidebar header) */}
-            {!isMobile && !isSidebarOpen && (
-              <>
-                <div className="w-px h-4 bg-white/[0.06] mx-0.5" />
-                <div className="flex bg-white/[0.04] rounded-lg p-0.5 gap-0.5">
+                ) : (
                   <Tooltip
-                    label="Sessions"
-                    shortcut={`${isMac ? '⌘' : 'Ctrl+'}S`}
+                    label="Toggle sidebar"
+                    shortcut={`${isMac ? '⌘' : 'Ctrl+'}B`}
                     position="bottom"
                   >
                     <button
-                      onClick={() => setMainViewMode('sessions')}
-                      className={`px-2.5 py-1 rounded-md transition-colors ${
-                        mainViewMode === 'sessions'
-                          ? 'bg-white/[0.1] text-white'
-                          : 'text-gray-500 hover:text-gray-300'
-                      }`}
+                      onClick={toggleSidebar}
+                      className="text-gray-400 hover:text-white active:text-white p-1 transition-colors rounded-md"
+                      title="Show sidebar"
                     >
-                      <Monitor size={14} strokeWidth={2} />
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
+                        <rect x="3" y="3" width="18" height="18" rx="2" />
+                        <path d="M9 3v18" />
+                      </svg>
                     </button>
                   </Tooltip>
-                  <Tooltip label="Tasks" shortcut={`${isMac ? '⌘' : 'Ctrl+'}T`} position="bottom">
-                    <button
-                      onClick={() => setMainViewMode('tasks')}
-                      className={`px-2.5 py-1 rounded-md transition-colors ${
-                        mainViewMode === 'tasks'
-                          ? 'bg-white/[0.1] text-white'
-                          : 'text-gray-500 hover:text-gray-300'
-                      }`}
+                ))}
+              {/* Main view toggle: Sessions / Tasks — shown in top bar only when sidebar is closed (otherwise it's in the sidebar header) */}
+              {!isMobile && !isSidebarOpen && (
+                <>
+                  <div className="w-px h-4 bg-white/[0.06] mx-0.5" />
+                  <div className="flex bg-white/[0.04] rounded-lg p-0.5 gap-0.5">
+                    <Tooltip
+                      label="Sessions"
+                      shortcut={`${isMac ? '⌘' : 'Ctrl+'}S`}
+                      position="bottom"
                     >
-                      <ListTodo size={14} strokeWidth={2} />
-                    </button>
-                  </Tooltip>
-                </div>
-              </>
-            )}
-          </div>
-          {!isMobile && (
-            <div className="flex-1 flex justify-center min-w-0 titlebar-no-drag">
-              <ToolbarBreadcrumb />
-            </div>
-          )}
-          <div className={`flex items-center titlebar-no-drag ${isMobile ? 'gap-1.5' : 'gap-1'}`}>
-            {mainViewMode === 'sessions' ? (
-              <>
-                {!isMobile && <GridToolbar />}
-                {!isMobile && (
-                  <>
-                    <div className="w-px h-4 bg-white/[0.06] mx-0.5" />
-                    <Tooltip label="Terminal panel" shortcut="Ctrl+`" position="bottom">
                       <button
-                        onClick={toggleTerminalPanel}
-                        className={`p-1 rounded-md transition-colors ${
-                          isTerminalPanelOpen
-                            ? 'text-white bg-white/[0.1]'
-                            : 'text-gray-400 hover:text-white hover:bg-white/[0.06]'
+                        onClick={() => setMainViewMode('sessions')}
+                        className={`px-2.5 py-1 rounded-md transition-colors ${
+                          mainViewMode === 'sessions'
+                            ? 'bg-white/[0.1] text-white'
+                            : 'text-gray-500 hover:text-gray-300'
                         }`}
                       >
-                        <svg
-                          width="16"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                        >
-                          <polyline points="4 17 10 11 4 5" />
-                          <line x1="12" y1="19" x2="20" y2="19" />
-                        </svg>
+                        <Monitor size={14} strokeWidth={2} />
                       </button>
                     </Tooltip>
-                    <div className="relative flex items-center">
-                      <Tooltip label="Recent sessions" position="bottom">
+                    <Tooltip label="Tasks" shortcut={`${isMac ? '⌘' : 'Ctrl+'}T`} position="bottom">
+                      <button
+                        onClick={() => setMainViewMode('tasks')}
+                        className={`px-2.5 py-1 rounded-md transition-colors ${
+                          mainViewMode === 'tasks'
+                            ? 'bg-white/[0.1] text-white'
+                            : 'text-gray-500 hover:text-gray-300'
+                        }`}
+                      >
+                        <ListTodo size={14} strokeWidth={2} />
+                      </button>
+                    </Tooltip>
+                    <Tooltip
+                      label="Workflows"
+                      shortcut={`${isMac ? '⌘⇧' : 'Ctrl+Shift+'}W`}
+                      position="bottom"
+                    >
+                      <button
+                        onClick={() => setMainViewMode('workflows')}
+                        className={`px-2.5 py-1 rounded-md transition-colors ${
+                          mainViewMode === 'workflows'
+                            ? 'bg-white/[0.1] text-white'
+                            : 'text-gray-500 hover:text-gray-300'
+                        }`}
+                      >
+                        <Zap size={14} strokeWidth={2} />
+                      </button>
+                    </Tooltip>
+                  </div>
+                </>
+              )}
+            </div>
+            {!isMobile && (
+              <div className="flex-1 flex justify-center min-w-0 titlebar-no-drag">
+                <ToolbarBreadcrumb />
+              </div>
+            )}
+            <div className={`flex items-center titlebar-no-drag ${isMobile ? 'gap-1.5' : 'gap-1'}`}>
+              {mainViewMode === 'workflows' && !isMobile ? null : mainViewMode !== 'tasks' ? (
+                <>
+                  {!isMobile && <GridToolbar />}
+                  {!isMobile && (
+                    <>
+                      <div className="w-px h-4 bg-white/[0.06] mx-0.5" />
+                      <Tooltip label="Terminal panel" shortcut="Ctrl+`" position="bottom">
                         <button
-                          onClick={() => setRecentOpen(!recentOpen)}
-                          className="p-1 text-gray-400 hover:text-white hover:bg-white/[0.06] rounded-md transition-colors"
+                          onClick={toggleTerminalPanel}
+                          className={`p-1 rounded-md transition-colors ${
+                            isTerminalPanelOpen
+                              ? 'text-white bg-white/[0.1]'
+                              : 'text-gray-400 hover:text-white hover:bg-white/[0.06]'
+                          }`}
                         >
-                          <RotateCcw size={16} strokeWidth={1.5} />
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                          >
+                            <polyline points="4 17 10 11 4 5" />
+                            <line x1="12" y1="19" x2="20" y2="19" />
+                          </svg>
                         </button>
                       </Tooltip>
-                      <RecentSessionsPopover
-                        isOpen={recentOpen}
-                        onClose={() => setRecentOpen(false)}
-                      />
-                    </div>
-                  </>
-                )}
-                {isMobile ? (
-                  <button
-                    onClick={() => setDialogOpen(true)}
-                    className="p-2.5 text-xs rounded-full font-medium text-gray-200 hover:text-white active:bg-white/[0.15] transition-colors"
-                    style={{
-                      background: 'var(--glass-bg, rgba(255,255,255,0.06))',
-                      backdropFilter: 'var(--glass-blur, none)',
-                      WebkitBackdropFilter: 'var(--glass-blur, none)',
-                      boxShadow: 'var(--glass-shadow, none)'
-                    }}
-                  >
-                    <Plus size={18} strokeWidth={2} />
-                  </button>
-                ) : (
-                  <Tooltip
-                    label="New session"
-                    shortcut={`${isMac ? '⌘' : 'Ctrl+'}N`}
-                    position="bottom"
-                  >
+                      <div className="relative flex items-center">
+                        <Tooltip label="Recent sessions" position="bottom">
+                          <button
+                            onClick={() => setRecentOpen(!recentOpen)}
+                            className="p-1 text-gray-400 hover:text-white hover:bg-white/[0.06] rounded-md transition-colors"
+                          >
+                            <RotateCcw size={16} strokeWidth={1.5} />
+                          </button>
+                        </Tooltip>
+                        <RecentSessionsPopover
+                          isOpen={recentOpen}
+                          onClose={() => setRecentOpen(false)}
+                        />
+                      </div>
+                    </>
+                  )}
+                  {isMobile ? (
                     <button
                       onClick={() => setDialogOpen(true)}
-                      className="p-1 text-gray-400 hover:text-white hover:bg-white/[0.06] rounded-md transition-colors"
+                      className="p-2.5 text-xs rounded-full font-medium text-gray-200 hover:text-white active:bg-white/[0.15] transition-colors"
+                      style={{
+                        background: 'var(--glass-bg, rgba(255,255,255,0.06))',
+                        backdropFilter: 'var(--glass-blur, none)',
+                        WebkitBackdropFilter: 'var(--glass-blur, none)',
+                        boxShadow: 'var(--glass-shadow, none)'
+                      }}
                     >
-                      <Plus size={16} strokeWidth={2} />
+                      <Plus size={18} strokeWidth={2} />
                     </button>
-                  </Tooltip>
-                )}
-              </>
-            ) : (
-              <>
-                {!isMobile && <TaskToolbar />}
-                {!isMobile && (
-                  <>
-                    <div className="w-px h-4 bg-white/[0.06] mx-0.5" />
-                    <Tooltip label="Terminal panel" shortcut="Ctrl+`" position="bottom">
+                  ) : (
+                    <Tooltip
+                      label="New session"
+                      shortcut={`${isMac ? '⌘' : 'Ctrl+'}N`}
+                      position="bottom"
+                    >
                       <button
-                        onClick={toggleTerminalPanel}
-                        className={`p-1 rounded-md transition-colors ${
-                          isTerminalPanelOpen
-                            ? 'text-white bg-white/[0.1]'
-                            : 'text-gray-400 hover:text-white hover:bg-white/[0.06]'
-                        }`}
+                        onClick={() => setDialogOpen(true)}
+                        className="p-1 text-gray-400 hover:text-white hover:bg-white/[0.06] rounded-md transition-colors"
                       >
-                        <svg
-                          width="16"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                        >
-                          <polyline points="4 17 10 11 4 5" />
-                          <line x1="12" y1="19" x2="20" y2="19" />
-                        </svg>
+                        <Plus size={16} strokeWidth={2} />
                       </button>
                     </Tooltip>
-                  </>
-                )}
-                {isMobile ? (
-                  <button
-                    onClick={() => useAppStore.getState().setTaskDialogOpen(true)}
-                    className="p-2.5 text-xs rounded-full font-medium text-gray-200 hover:text-white active:bg-white/[0.15] transition-colors"
-                    style={{
-                      background: 'var(--glass-bg, rgba(255,255,255,0.06))',
-                      backdropFilter: 'var(--glass-blur, none)',
-                      WebkitBackdropFilter: 'var(--glass-blur, none)',
-                      boxShadow: 'var(--glass-shadow, none)'
-                    }}
-                  >
-                    <Plus size={18} strokeWidth={2} />
-                  </button>
-                ) : (
-                  <Tooltip label="Add task" position="bottom">
+                  )}
+                </>
+              ) : (
+                <>
+                  {!isMobile && <TaskToolbar />}
+                  {!isMobile && (
+                    <>
+                      <div className="w-px h-4 bg-white/[0.06] mx-0.5" />
+                      <Tooltip label="Terminal panel" shortcut="Ctrl+`" position="bottom">
+                        <button
+                          onClick={toggleTerminalPanel}
+                          className={`p-1 rounded-md transition-colors ${
+                            isTerminalPanelOpen
+                              ? 'text-white bg-white/[0.1]'
+                              : 'text-gray-400 hover:text-white hover:bg-white/[0.06]'
+                          }`}
+                        >
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                          >
+                            <polyline points="4 17 10 11 4 5" />
+                            <line x1="12" y1="19" x2="20" y2="19" />
+                          </svg>
+                        </button>
+                      </Tooltip>
+                    </>
+                  )}
+                  {isMobile ? (
                     <button
                       onClick={() => useAppStore.getState().setTaskDialogOpen(true)}
-                      className="p-1 text-gray-400 hover:text-white hover:bg-white/[0.06] rounded-md transition-colors"
+                      className="p-2.5 text-xs rounded-full font-medium text-gray-200 hover:text-white active:bg-white/[0.15] transition-colors"
+                      style={{
+                        background: 'var(--glass-bg, rgba(255,255,255,0.06))',
+                        backdropFilter: 'var(--glass-blur, none)',
+                        WebkitBackdropFilter: 'var(--glass-blur, none)',
+                        boxShadow: 'var(--glass-shadow, none)'
+                      }}
                     >
-                      <Plus size={16} strokeWidth={2} />
+                      <Plus size={18} strokeWidth={2} />
                     </button>
-                  </Tooltip>
-                )}
-              </>
-            )}
-            <WindowControls />
+                  ) : (
+                    <Tooltip label="Add task" position="bottom">
+                      <button
+                        onClick={() => useAppStore.getState().setTaskDialogOpen(true)}
+                        className="p-1 text-gray-400 hover:text-white hover:bg-white/[0.06] rounded-md transition-colors"
+                      >
+                        <Plus size={16} strokeWidth={2} />
+                      </button>
+                    </Tooltip>
+                  )}
+                </>
+              )}
+              <WindowControls />
+            </div>
           </div>
-        </div>
+        )}
 
         {showBanner && <SessionRestoredBanner />}
         <UpdateBanner />
@@ -644,6 +668,20 @@ export function App() {
           <div className="flex-1 min-w-0 flex flex-col min-h-0">
             {mainViewMode === 'tasks' ? (
               <TaskBoardView />
+            ) : mainViewMode === 'workflows' && !isMobile ? (
+              <Suspense fallback={null}>
+                {editingWorkflowId !== null || isWorkflowEditorOpen ? (
+                  <WorkflowEditor inline />
+                ) : (
+                  <div className="flex-1 flex items-center justify-center text-gray-500 text-sm">
+                    Select a workflow from the sidebar to edit it
+                  </div>
+                )}
+              </Suspense>
+            ) : mainViewMode === 'workflows' && isMobile ? (
+              <div className="flex-1 flex items-center justify-center text-gray-500 text-sm px-6 text-center">
+                Open the sidebar to pick a workflow
+              </div>
             ) : isMobile ? (
               <MobileSinglePane />
             ) : focusedId || previewId ? (
@@ -655,7 +693,10 @@ export function App() {
             )}
           </div>
           {mainViewMode === 'tasks' && selectedTaskId && <TaskDetailPanel />}
-          {mainViewMode === 'sessions' && !isMobile && diffSidebarTerminalId && <RightPanel />}
+          {mainViewMode !== 'tasks' &&
+            mainViewMode !== 'workflows' &&
+            !isMobile &&
+            diffSidebarTerminalId && <RightPanel />}
         </div>
         <TerminalPanel />
         {isMobile && <MobileBottomTabs hidden={keyboardHeight > 0} />}
@@ -668,7 +709,7 @@ export function App() {
 
       <PromptLauncher mode="overlay" onClose={() => setDialogOpen(false)} />
       <AddProjectDialog />
-      {isWorkflowEditorOpen && (
+      {isWorkflowEditorOpen && (mainViewMode !== 'workflows' || isMobile) && (
         <Suspense fallback={null}>
           <WorkflowEditor />
         </Suspense>
