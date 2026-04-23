@@ -3,13 +3,21 @@ import { useShallow } from 'zustand/react/shallow'
 import { useAppStore } from '../../stores'
 import { Tooltip } from '../Tooltip'
 import { withProgressToast } from '../../lib/progress-toast'
-import { createSessionFromProject } from '../../lib/session-utils'
+import { createSessionFromProject, createShellInProject } from '../../lib/session-utils'
 import { ProjectIcon } from './ProjectIcon'
 import { ProjectContextMenu } from './ProjectContextMenu'
 import { WorktreeItem } from './WorktreeItem'
 import { generateWorktreeName } from '../../lib/worktree-names'
 import { SessionItem } from './SessionItem'
-import { ChevronRight, Plus, MoreHorizontal, GitBranch, FolderGit2, Server } from 'lucide-react'
+import {
+  ChevronRight,
+  Plus,
+  MoreHorizontal,
+  GitBranch,
+  FolderGit2,
+  Server,
+  Terminal
+} from 'lucide-react'
 import type { ProjectConfig } from '../../../shared/types'
 import { getProjectHostIds, getProjectRemoteHostId } from '../../../shared/types'
 import { MAIN_WORKTREE_SENTINEL } from '../../stores/types'
@@ -60,11 +68,15 @@ export function ProjectItem({
   const [isExpanded, setIsExpanded] = useState(defaultExpanded)
   const [openMenu, setOpenMenu] = useState(false)
   const [creatingSession, setCreatingSession] = useState(false)
+  const [creatingTerminal, setCreatingTerminal] = useState(false)
   const [creatingWorktree, setCreatingWorktree] = useState(false)
   const [creatingMainSession, setCreatingMainSession] = useState(false)
+  const [creatingMainTerminal, setCreatingMainTerminal] = useState(false)
   const creatingSessionLock = useRef(false)
+  const creatingTerminalLock = useRef(false)
   const creatingWorktreeLock = useRef(false)
   const creatingMainSessionLock = useRef(false)
+  const creatingMainTerminalLock = useRef(false)
   const [collapsedBranches, setCollapsedBranches] = useState<Set<string>>(new Set())
   const isRemoteProject = !!getProjectRemoteHostId(project)
   const [isGitRepo, setIsGitRepo] = useState(isRemoteProject)
@@ -225,9 +237,30 @@ export function ProjectItem({
                 </span>
               )}
               <div className="hidden group-hover:flex items-center gap-0.5 ml-auto">
+                <Tooltip label="New terminal" position="right">
+                  <button
+                    type="button"
+                    aria-label="New terminal"
+                    disabled={creatingTerminal}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      if (creatingTerminalLock.current) return
+                      creatingTerminalLock.current = true
+                      setCreatingTerminal(true)
+                      void createShellInProject(project.path, { project }).finally(() => {
+                        creatingTerminalLock.current = false
+                        setCreatingTerminal(false)
+                      })
+                    }}
+                    className="text-gray-500 hover:text-white p-0.5 rounded hover:bg-white/[0.08] transition-colors disabled:opacity-50"
+                  >
+                    <Terminal size={14} strokeWidth={1.5} />
+                  </button>
+                </Tooltip>
                 <Tooltip label="New session" position="right">
                   <button
                     type="button"
+                    aria-label="New session"
                     disabled={creatingSession}
                     onClick={(e) => {
                       e.stopPropagation()
@@ -378,9 +411,35 @@ export function ProjectItem({
                         </span>
                       )}
                       <div className="hidden group-hover/main:flex items-center gap-0.5 ml-auto">
+                        <Tooltip label="New terminal" position="right">
+                          <button
+                            type="button"
+                            aria-label="New terminal"
+                            disabled={creatingMainTerminal}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              if (creatingMainTerminalLock.current) return
+                              creatingMainTerminalLock.current = true
+                              setCreatingMainTerminal(true)
+                              void createShellInProject(mainWt.path, {
+                                project,
+                                worktreePath: mainWt.path,
+                                worktreeName: mainWt.name,
+                                branch: mainWt.branch
+                              }).finally(() => {
+                                creatingMainTerminalLock.current = false
+                                setCreatingMainTerminal(false)
+                              })
+                            }}
+                            className="text-gray-500 hover:text-white p-0.5 rounded hover:bg-white/[0.08] transition-colors disabled:opacity-50"
+                          >
+                            <Terminal size={14} strokeWidth={1.5} />
+                          </button>
+                        </Tooltip>
                         <Tooltip label="New session" position="right">
                           <button
                             type="button"
+                            aria-label="New session"
                             disabled={creatingMainSession}
                             onClick={(e) => {
                               e.stopPropagation()

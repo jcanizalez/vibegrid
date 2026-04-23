@@ -5,9 +5,10 @@ import {
   type RecentSession,
   type CreateTerminalPayload,
   type ProjectConfig,
-  type AgentType
+  type AiAgentType
 } from '../../shared/types'
 import { useAppStore } from '../stores'
+import { toast } from '../components/Toast'
 
 function normalizeComparablePath(p: string): string {
   const normalized = p.replace(/\\/g, '/').replace(/\/+$/, '')
@@ -52,6 +53,21 @@ export function formatRecentSessionActivity(
   session: Pick<RecentSession, 'activityCount' | 'activityLabel'>
 ): string {
   return `${session.activityCount} ${pluralizeActivityLabel(session.activityLabel, session.activityCount)}`
+}
+
+export function formatSessionCount(count: number): string {
+  return count > 0 ? `${count} session${count > 1 ? 's' : ''}` : ''
+}
+
+export function countSessionsByWorktree(
+  terminals: Iterable<{ session: Pick<TerminalSession, 'worktreePath'> }>
+): Map<string, number> {
+  const counts = new Map<string, number>()
+  for (const t of terminals) {
+    const wtPath = t.session.worktreePath
+    if (wtPath) counts.set(wtPath, (counts.get(wtPath) ?? 0) + 1)
+  }
+  return counts
 }
 
 function isDefined<T>(value: T | undefined): value is T {
@@ -139,6 +155,11 @@ export function buildRestorePayload(
   s: TerminalSession,
   resumeSessionId?: string
 ): CreateTerminalPayload {
+  if (s.agentType === 'shell') {
+    throw new Error(
+      'buildRestorePayload: shell sessions restore via createShellTerminal, not createTerminal'
+    )
+  }
   return {
     agentType: s.agentType,
     projectName: s.projectName,
@@ -161,7 +182,7 @@ export function buildRestorePayload(
 export async function createSessionFromProject(
   p: ProjectConfig,
   opts: {
-    agentType?: AgentType
+    agentType?: AiAgentType
     branch?: string
     existingWorktreePath?: string
     useWorktree?: boolean
@@ -185,6 +206,53 @@ export async function createSessionFromProject(
     remoteHostId
   })
   state.addTerminal(session)
+}
+
+export async function createShellInProject(
+  cwd?: string,
+  context?: {
+    project?: ProjectConfig
+    worktreePath?: string
+    worktreeName?: string
+    branch?: string
+  }
+): Promise<void> {
+  try {
+    const session = await window.api.createShellTerminal(cwd)
+    const project = context?.project ?? resolveProjectForPath(cwd)
+    const enriched: TerminalSession = project
+      ? {
+          ...session,
+          projectName: project.name,
+          projectPath: project.path,
+          worktreePath: context?.worktreePath,
+          worktreeName: context?.worktreeName,
+          branch: context?.branch,
+          isWorktree: Boolean(context?.worktreePath && context.worktreePath !== project.path)
+        }
+      : session
+    const state = useAppStore.getState()
+    state.addTerminal(enriched)
+    state.setActiveTabId(enriched.id)
+  } catch (err) {
+    console.error('[createShellInProject] failed:', err)
+    toast.error(`Failed to start terminal: ${err instanceof Error ? err.message : String(err)}`)
+  }
+}
+
+function resolveProjectForPath(p?: string): ProjectConfig | undefined {
+  if (!p) return undefined
+  const projects = useAppStore.getState().config?.projects ?? []
+  const normalized = normalizeComparablePath(p)
+  const match = projects.find((proj) => {
+    const projPath = normalizeComparablePath(proj.path)
+    return (
+      projPath === normalized ||
+      normalized.startsWith(`${projPath}/`) ||
+      isManagedWorktreePath(p, proj.path)
+    )
+  })
+  return match
 }
 
 /**

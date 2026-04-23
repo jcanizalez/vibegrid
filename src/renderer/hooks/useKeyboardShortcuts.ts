@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useAppStore } from '../stores'
 import { StatusFilter } from '../stores/types'
+import { resolveActiveProject, createShellInProject } from '../lib/session-utils'
 
 const STATUS_FILTERS: StatusFilter[] = ['all', 'running', 'waiting', 'idle', 'error']
 const isMac = navigator.platform.toUpperCase().includes('MAC')
@@ -107,10 +108,10 @@ export function useKeyboardShortcuts() {
         return
       }
 
-      // Ctrl+` — toggle terminal panel
       if (e.ctrlKey && e.key === '`') {
         e.preventDefault()
-        state.toggleTerminalPanel()
+        const project = resolveActiveProject()
+        void createShellInProject(project?.path)
         return
       }
 

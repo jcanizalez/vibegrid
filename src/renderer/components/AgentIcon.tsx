@@ -1,8 +1,13 @@
-import { AgentType } from '../../shared/types'
+import { Terminal } from 'lucide-react'
+import { AgentType, AiAgentType } from '../../shared/types'
 
 interface Props {
   agentType: AgentType
   size?: number
+}
+
+function ShellIcon({ size }: { size: number }) {
+  return <Terminal size={size} strokeWidth={1.5} className="text-gray-400" />
 }
 
 function ClaudeIcon({ size }: { size: number }) {
@@ -137,7 +142,7 @@ function GeminiIcon({ size }: { size: number }) {
   )
 }
 
-const ICON_COMPONENTS: Record<AgentType, React.FC<{ size: number }>> = {
+const ICON_COMPONENTS: Record<AiAgentType, React.FC<{ size: number }>> = {
   claude: ClaudeIcon,
   copilot: CopilotIcon,
   codex: CodexIcon,
@@ -146,6 +151,7 @@ const ICON_COMPONENTS: Record<AgentType, React.FC<{ size: number }>> = {
 }
 
 export function AgentIcon({ agentType, size = 16 }: Props) {
+  if (agentType === 'shell') return <ShellIcon size={size} />
   const IconComponent = ICON_COMPONENTS[agentType]
   return <IconComponent size={size} />
 }

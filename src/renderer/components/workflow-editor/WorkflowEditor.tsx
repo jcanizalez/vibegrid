@@ -11,7 +11,7 @@ import {
   WorkflowNode,
   WorkflowEdge,
   TriggerConfig,
-  AgentType,
+  AiAgentType,
   supportsExactSessionResume,
   getProjectRemoteHostId
 } from '../../../shared/types'
@@ -383,7 +383,7 @@ export function WorkflowEditor({ inline = false }: { inline?: boolean } = {}) {
   const handleResumeSession = useCallback(
     async (
       agentSessionId: string,
-      agentType: AgentType,
+      agentType: AiAgentType,
       projectName: string,
       projectPath: string,
       branch?: string,

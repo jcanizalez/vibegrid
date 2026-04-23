@@ -9,7 +9,7 @@ interface Props {
 }
 
 export function AgentStatusIcon({ agentType, status, size = 14 }: Props) {
-  if (status !== 'running') {
+  if (agentType === 'shell' || status !== 'running') {
     return <AgentIcon agentType={agentType} size={size} />
   }
   return <RunningGlyph size={size} className="text-white/85" aria-label="Running" />

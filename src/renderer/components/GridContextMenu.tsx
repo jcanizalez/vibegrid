@@ -1,11 +1,18 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Play, FolderGit2, GitBranch, Plus, ChevronRight } from 'lucide-react'
+import { FolderGit2, GitBranch, Plus, ChevronRight, Terminal } from 'lucide-react'
 import { useAppStore } from '../stores'
-import { type ProjectConfig } from '../../shared/types'
+import { type ProjectConfig, type AiAgentType } from '../../shared/types'
 import { ProjectIcon } from './project-sidebar/ProjectIcon'
-import { resolveActiveProject, createSessionFromProject } from '../lib/session-utils'
+import { AgentIcon } from './AgentIcon'
+import {
+  resolveActiveProject,
+  createSessionFromProject,
+  createShellInProject,
+  countSessionsByWorktree,
+  formatSessionCount
+} from '../lib/session-utils'
 import { useWorkspaceProjects } from '../hooks/useWorkspaceProjects'
 
 interface Props {
@@ -17,9 +24,12 @@ interface SubmenuItem {
   iconElement?: React.ReactNode
   label: string
   detail?: string
-  onClick: () => void
+  onClick?: () => void
   separator?: boolean
+  isHeader?: boolean
 }
+
+type SubmenuKey = 'session-in' | 'terminal-in'
 
 interface MenuItem {
   icon?: React.FC<{ size?: number; className?: string }>
@@ -28,13 +38,13 @@ interface MenuItem {
   onClick?: () => void
   className?: string
   separator?: boolean
-  submenu?: SubmenuItem[]
-  submenuProject?: ProjectConfig
+  shortcut?: string
+  submenuKey?: SubmenuKey
   onSubmenuEnter?: () => void
 }
 
 const MENU_WIDTH = 220
-const SUBMENU_WIDTH = 220
+const SUBMENU_WIDTH = 240
 
 function estimatePanelHeight(items: { separator?: boolean }[]): number {
   const seps = items.filter((i) => i.separator).length
@@ -92,6 +102,8 @@ export function GridContextMenu({ position, onClose }: Props) {
       ? worktreeCache.get(project.path)?.find((wt) => wt.path === activeWorktreePath)
       : undefined
 
+  const defaultAgent: AiAgentType = useAppStore.getState().config?.defaults.defaultAgent ?? 'claude'
+
   const createSession = (
     p: ProjectConfig,
     opts: {
@@ -99,76 +111,84 @@ export function GridContextMenu({ position, onClose }: Props) {
       existingWorktreePath?: string
       useWorktree?: boolean
     } = {}
-  ): Promise<void> => {
+  ): void => {
     onClose()
-    return createSessionFromProject(p, opts)
+    void createSessionFromProject(p, opts)
   }
 
-  // Returns null for non-git projects (whose worktreeCache entry is never
-  // populated because listWorktrees fails). The main worktree is surfaced as
-  // its own entry (with a GitBranch icon) so users don't have to know they
-  // can click the parent project row to launch on main.
-  const buildWorktreeSubmenu = (p: ProjectConfig): SubmenuItem[] | null => {
-    const worktrees = worktreeCache.get(p.path)
-    if (!worktrees || worktrees.length === 0) return null
-    const mainWt = worktrees.find((wt) => wt.isMain)
-    const nonMain = worktrees.filter((wt) => !wt.isMain)
-    const sessionCountByPath = new Map<string, number>()
-    for (const [, t] of terminals) {
-      const wtPath = t.session.worktreePath
-      if (wtPath) sessionCountByPath.set(wtPath, (sessionCountByPath.get(wtPath) ?? 0) + 1)
-    }
-    const formatDetail = (path: string): string => {
-      const count = sessionCountByPath.get(path) ?? 0
-      return count > 0 ? `${count} session${count > 1 ? 's' : ''}` : 'idle'
-    }
-    const formatLabel = (wt: { name: string; branch: string }): string =>
-      wt.name === wt.branch ? wt.name : `${wt.name} (${wt.branch})`
-
+  const buildScopedSubmenu = (mode: 'session' | 'terminal'): SubmenuItem[] => {
     const subs: SubmenuItem[] = []
-    if (mainWt) {
-      subs.push({
-        iconElement: <GitBranch size={12} className="text-gray-400" />,
-        label: mainWt.branch,
-        detail: formatDetail(mainWt.path),
-        onClick: () =>
-          createSession(p, { branch: mainWt.branch, existingWorktreePath: mainWt.path })
-      })
+    const sessionCountByPath = countSessionsByWorktree(terminals.values())
+    const onClickFor = (
+      p: ProjectConfig,
+      wtPath?: string,
+      branch?: string,
+      wtName?: string
+    ): (() => void) => {
+      if (mode === 'session') {
+        return () =>
+          wtPath ? createSession(p, { branch, existingWorktreePath: wtPath }) : createSession(p)
+      }
+      return () => {
+        onClose()
+        void createShellInProject(wtPath ?? p.path, {
+          project: p,
+          worktreePath: wtPath,
+          worktreeName: wtName,
+          branch
+        })
+      }
     }
-    nonMain.forEach((wt, i) => {
+
+    for (const p of workspaceProjects) {
+      const worktrees = worktreeCache.get(p.path)
+      const mainWt = worktrees?.find((wt) => wt.isMain)
+      const nonMain = (worktrees ?? []).filter((wt) => !wt.isMain)
+      const hasWorktrees = mainWt || nonMain.length > 0
+
+      if (!hasWorktrees) {
+        subs.push({
+          iconElement: <ProjectIcon icon={p.icon} color={p.iconColor} size={12} />,
+          label: p.name,
+          onClick: onClickFor(p),
+          separator: subs.length > 0
+        })
+        continue
+      }
+
       subs.push({
-        iconElement: <FolderGit2 size={12} className="text-amber-400/70" />,
-        label: formatLabel(wt),
-        detail: formatDetail(wt.path),
-        onClick: () => createSession(p, { branch: wt.branch, existingWorktreePath: wt.path }),
-        separator: i === 0 && mainWt !== undefined
+        iconElement: <ProjectIcon icon={p.icon} color={p.iconColor} size={12} />,
+        label: p.name,
+        isHeader: true,
+        separator: subs.length > 0
       })
-    })
-    subs.push({
-      iconElement: <Plus size={12} className="text-amber-400/70" />,
-      label: 'New worktree',
-      onClick: () => createSession(p, { useWorktree: true }),
-      separator: subs.length > 0
-    })
+
+      if (mainWt) {
+        subs.push({
+          iconElement: <GitBranch size={12} className="text-gray-400" />,
+          label: mainWt.branch,
+          detail: formatSessionCount(sessionCountByPath.get(mainWt.path) ?? 0),
+          onClick: onClickFor(p, mainWt.path, mainWt.branch, mainWt.name)
+        })
+      }
+      for (const wt of nonMain) {
+        subs.push({
+          iconElement: <FolderGit2 size={12} className="text-amber-400/70" />,
+          label: wt.name,
+          detail: formatSessionCount(sessionCountByPath.get(wt.path) ?? 0),
+          onClick: onClickFor(p, wt.path, wt.branch, wt.name)
+        })
+      }
+    }
     return subs
   }
 
   const items: MenuItem[] = []
 
   if (project) {
-    const quickLabel = activeWorktreePath
-      ? activeWt
-        ? `New session in ${project.name} / ${activeWt.name}`
-        : `New session in ${project.name} (worktree)`
-      : `New session in ${project.name}`
-
     items.push({
-      iconElement: activeWorktreePath ? (
-        <FolderGit2 size={14} className="text-amber-400" />
-      ) : (
-        <ProjectIcon icon={project.icon} color={project.iconColor} size={14} />
-      ),
-      label: quickLabel,
+      iconElement: <AgentIcon agentType={defaultAgent} size={14} />,
+      label: 'New session',
       className: 'text-white font-medium',
       onClick: () =>
         activeWorktreePath
@@ -180,7 +200,7 @@ export function GridContextMenu({ position, onClose }: Props) {
     })
   } else {
     items.push({
-      icon: Play,
+      iconElement: <AgentIcon agentType={defaultAgent} size={14} />,
       label: 'New session',
       className: 'text-white font-medium',
       onClick: () => {
@@ -190,23 +210,42 @@ export function GridContextMenu({ position, onClose }: Props) {
     })
   }
 
-  const shouldSeparateProjects = items.length > 0 && workspaceProjects.length > 0
-  workspaceProjects.forEach((p, i) => {
-    items.push({
-      iconElement: <ProjectIcon icon={p.icon} color={p.iconColor} size={14} />,
-      label: p.name,
-      separator: i === 0 && shouldSeparateProjects,
-      // Click creates a plain session in the project (main worktree).
-      // Hover opens the worktree submenu if the project is a git repo.
-      onClick: () => createSession(p),
-      submenuProject: p,
-      onSubmenuEnter: () => loadWorktrees(p.path)
-    })
+  items.push({
+    iconElement: <Terminal size={14} className="text-gray-400" />,
+    label: 'New terminal',
+    onClick: () => {
+      onClose()
+      const cwd = activeWorktreePath ?? project?.path
+      void createShellInProject(cwd, {
+        project,
+        worktreePath: activeWorktreePath ?? undefined,
+        worktreeName: activeWt?.name,
+        branch: activeWt?.branch
+      })
+    }
   })
+
+  if (workspaceProjects.length > 0) {
+    items.push({
+      iconElement: <AgentIcon agentType={defaultAgent} size={14} />,
+      label: 'New session in…',
+      separator: true,
+      submenuKey: 'session-in',
+      onSubmenuEnter: () => workspaceProjects.forEach((p) => loadWorktrees(p.path))
+    })
+
+    items.push({
+      iconElement: <Terminal size={14} className="text-gray-400" />,
+      label: 'New terminal in…',
+      submenuKey: 'terminal-in',
+      onSubmenuEnter: () => workspaceProjects.forEach((p) => loadWorktrees(p.path))
+    })
+  }
 
   items.push({
     icon: Plus,
     label: 'New session...',
+    shortcut: '⌘N',
     onClick: () => {
       onClose()
       useAppStore.getState().setNewAgentDialogOpen(true)
@@ -214,18 +253,15 @@ export function GridContextMenu({ position, onClose }: Props) {
     separator: true
   })
 
-  const hasSubmenu = (item: MenuItem): boolean =>
-    item.submenuProject !== undefined || item.submenu !== undefined
+  const hasSubmenu = (item: MenuItem): boolean => item.submenuKey !== undefined
 
   const menuHeight = estimatePanelHeight(items)
   const left = Math.max(8, Math.min(position.x, window.innerWidth - MENU_WIDTH - 8))
   const top = Math.max(8, Math.min(position.y, window.innerHeight - menuHeight - 8))
 
   const hoveredItem = hoveredSubmenu !== null ? items[hoveredSubmenu] : null
-  const activeSubmenu = hoveredItem
-    ? hoveredItem.submenuProject
-      ? buildWorktreeSubmenu(hoveredItem.submenuProject)
-      : (hoveredItem.submenu ?? null)
+  const activeSubmenu = hoveredItem?.submenuKey
+    ? buildScopedSubmenu(hoveredItem.submenuKey === 'session-in' ? 'session' : 'terminal')
     : null
 
   let submenuLeft = left + MENU_WIDTH + 4
@@ -265,13 +301,17 @@ export function GridContextMenu({ position, onClose }: Props) {
                 }}
                 onClick={(e) => {
                   e.stopPropagation()
-                  if (item.onClick) {
-                    item.onClick()
-                  } else if (itemHasSubmenu) {
-                    clearHideTimeout()
-                    setHoveredSubmenu(hoveredSubmenu === i ? null : i)
-                    item.onSubmenuEnter?.()
+                  if (itemHasSubmenu) {
+                    if (hoveredSubmenu === i) {
+                      setHoveredSubmenu(null)
+                    } else {
+                      clearHideTimeout()
+                      setHoveredSubmenu(i)
+                      item.onSubmenuEnter?.()
+                    }
+                    return
                   }
+                  item.onClick?.()
                 }}
                 onMouseEnter={() => {
                   if (itemHasSubmenu) {
@@ -294,6 +334,11 @@ export function GridContextMenu({ position, onClose }: Props) {
                     <item.icon size={14} className={item.className ?? 'text-gray-500'} />
                   ))}
                 <span className="flex-1 text-left truncate">{item.label}</span>
+                {item.shortcut && (
+                  <span className="text-[10px] text-gray-600 ml-auto shrink-0">
+                    {item.shortcut}
+                  </span>
+                )}
                 {itemHasSubmenu && (
                   <ChevronRight size={11} className="text-gray-600 ml-auto shrink-0" />
                 )}
@@ -324,27 +369,34 @@ export function GridContextMenu({ position, onClose }: Props) {
           {activeSubmenu.map((sub, j) => (
             <div key={j}>
               {sub.separator && <div className="border-t border-white/[0.06] my-1" />}
-              <button
-                role="menuitem"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  sub.onClick()
-                }}
-                className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-gray-300
-                           hover:bg-white/[0.06] transition-colors"
-              >
-                {sub.iconElement}
-                <span className="flex-1 text-left font-mono truncate">{sub.label}</span>
-                {sub.detail && (
-                  <span
-                    className={`text-[10px] ml-auto shrink-0 ${
-                      sub.detail !== 'idle' ? 'text-green-400/70' : 'text-gray-600'
-                    }`}
-                  >
-                    {sub.detail}
-                  </span>
-                )}
-              </button>
+              {sub.isHeader ? (
+                <div className="flex items-center gap-2 px-3 pt-2 pb-1 text-[10px] font-medium text-gray-500 uppercase tracking-wider">
+                  {sub.iconElement}
+                  {sub.label}
+                </div>
+              ) : (
+                <button
+                  role="menuitem"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    sub.onClick?.()
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 pl-7 py-1.5 text-xs text-gray-300
+                             hover:bg-white/[0.06] transition-colors"
+                >
+                  {sub.iconElement}
+                  <span className="flex-1 text-left font-mono truncate">{sub.label}</span>
+                  {sub.detail && (
+                    <span
+                      className={`text-[10px] ml-auto shrink-0 ${
+                        sub.detail !== 'idle' ? 'text-green-400/70' : 'text-gray-600'
+                      }`}
+                    >
+                      {sub.detail}
+                    </span>
+                  )}
+                </button>
+              )}
             </div>
           ))}
         </motion.div>

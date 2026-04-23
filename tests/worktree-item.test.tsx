@@ -53,9 +53,11 @@ vi.mock('../src/renderer/components/Toast', () => ({
 }))
 
 const mockCreateSession = vi.fn()
+const mockCreateShell = vi.fn().mockResolvedValue(undefined)
 
 vi.mock('../src/renderer/lib/session-utils', () => ({
-  createSessionFromProject: (...args: unknown[]) => mockCreateSession(...args)
+  createSessionFromProject: (...args: unknown[]) => mockCreateSession(...args),
+  createShellInProject: (...args: unknown[]) => mockCreateShell(...args)
 }))
 
 const mockRequestWorktreeDelete = vi.fn()
@@ -132,8 +134,7 @@ describe('WorktreeItem progress-toast handlers', () => {
 
   it('new session button fires loading toast and calls createSessionFromProject', async () => {
     const { container } = renderWorktreeItem()
-    const buttons = Array.from(container.querySelectorAll('button[type="button"]'))
-    const sessionBtn = buttons[0]
+    const sessionBtn = container.querySelector('button[aria-label="New session"]') as HTMLElement
     act(() => {
       fireEvent.click(sessionBtn)
     })
@@ -147,6 +148,39 @@ describe('WorktreeItem progress-toast handlers', () => {
     })
   })
 
+  it('new terminal button calls createShellInProject with worktree path', async () => {
+    const { container } = renderWorktreeItem()
+    const terminalBtn = container.querySelector('button[aria-label="New terminal"]') as HTMLElement
+    expect(terminalBtn).not.toBeNull()
+    act(() => {
+      fireEvent.click(terminalBtn)
+    })
+    await waitFor(() => {
+      expect(mockCreateShell).toHaveBeenCalledWith(
+        worktree.path,
+        expect.objectContaining({ worktreePath: worktree.path })
+      )
+    })
+  })
+
+  it('new terminal ref-lock prevents synchronous double-click from firing twice', async () => {
+    let resolveIt: () => void
+    mockCreateShell.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveIt = resolve
+        })
+    )
+    const { container } = renderWorktreeItem()
+    const terminalBtn = container.querySelector('button[aria-label="New terminal"]') as HTMLElement
+    act(() => {
+      fireEvent.click(terminalBtn)
+      fireEvent.click(terminalBtn)
+    })
+    expect(mockCreateShell).toHaveBeenCalledTimes(1)
+    act(() => resolveIt!())
+  })
+
   it('new session ref-lock prevents a synchronous double-click from firing twice', async () => {
     let resolveIt: () => void
     mockCreateSession.mockImplementation(
@@ -156,7 +190,7 @@ describe('WorktreeItem progress-toast handlers', () => {
         })
     )
     const { container } = renderWorktreeItem()
-    const sessionBtn = container.querySelectorAll('button[type="button"]')[0]
+    const sessionBtn = container.querySelector('button[aria-label="New session"]') as HTMLElement
     act(() => {
       fireEvent.click(sessionBtn)
       fireEvent.click(sessionBtn)

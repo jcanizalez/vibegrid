@@ -1,10 +1,20 @@
 import { useState, useRef } from 'react'
-import { FolderGit2, GitBranch, ChevronRight, Plus, Pencil, Trash2, Check, X } from 'lucide-react'
+import {
+  FolderGit2,
+  GitBranch,
+  ChevronRight,
+  Plus,
+  Pencil,
+  Trash2,
+  Check,
+  X,
+  Terminal
+} from 'lucide-react'
 import { useAppStore } from '../../stores'
 import { Tooltip } from '../Tooltip'
 import { toast } from '../Toast'
 import { withProgressToast } from '../../lib/progress-toast'
-import { createSessionFromProject } from '../../lib/session-utils'
+import { createSessionFromProject, createShellInProject } from '../../lib/session-utils'
 import { requestWorktreeDelete } from '../WorktreeCleanupDialog'
 import type { WorktreeInfo } from '../../stores/types'
 
@@ -33,8 +43,10 @@ export function WorktreeItem({
   const [renaming, setRenaming] = useState(false)
   const [renameValue, setRenameValue] = useState('')
   const [creatingSession, setCreatingSession] = useState(false)
+  const [creatingTerminal, setCreatingTerminal] = useState(false)
   const [removing, setRemoving] = useState(false)
   const creatingSessionLock = useRef(false)
+  const creatingTerminalLock = useRef(false)
   const removingLock = useRef(false)
 
   const wt = worktree
@@ -141,9 +153,36 @@ export function WorktreeItem({
           </span>
         )}
         <div className="hidden group-hover/wt:flex items-center gap-0.5 ml-auto">
+          <Tooltip label="New terminal" position="right">
+            <button
+              type="button"
+              aria-label="New terminal"
+              disabled={creatingTerminal}
+              onClick={(e) => {
+                e.stopPropagation()
+                if (creatingTerminalLock.current) return
+                creatingTerminalLock.current = true
+                setCreatingTerminal(true)
+                const proj = config?.projects.find((p) => p.name === projectName)
+                void createShellInProject(wt.path, {
+                  project: proj,
+                  worktreePath: wt.path,
+                  worktreeName: wt.name,
+                  branch: wt.branch
+                }).finally(() => {
+                  creatingTerminalLock.current = false
+                  setCreatingTerminal(false)
+                })
+              }}
+              className="text-gray-500 hover:text-white p-0.5 rounded hover:bg-white/[0.08] transition-colors disabled:opacity-50"
+            >
+              <Terminal size={14} strokeWidth={1.5} />
+            </button>
+          </Tooltip>
           <Tooltip label="New session" position="right">
             <button
               type="button"
+              aria-label="New session"
               disabled={creatingSession}
               onClick={(e) => {
                 e.stopPropagation()

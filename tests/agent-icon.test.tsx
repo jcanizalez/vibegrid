@@ -6,12 +6,19 @@ import { AgentIcon } from '../src/renderer/components/AgentIcon'
 import type { AgentType } from '../src/shared/types'
 
 describe('AgentIcon', () => {
-  const types: AgentType[] = ['claude', 'copilot', 'codex', 'opencode', 'gemini']
+  const types: AgentType[] = ['claude', 'copilot', 'codex', 'opencode', 'gemini', 'shell']
 
   it.each(types)('renders an svg for %s', (agentType) => {
     const { container } = render(<AgentIcon agentType={agentType} />)
     const svg = container.querySelector('svg')
     expect(svg).toBeInTheDocument()
+  })
+
+  it('renders a terminal icon for shell (not an AI agent icon)', () => {
+    const { container } = render(<AgentIcon agentType="shell" />)
+    const svg = container.querySelector('svg')
+    expect(svg).toBeInTheDocument()
+    expect(svg?.classList.contains('text-gray-400')).toBe(true)
   })
 
   it('defaults to size 16', () => {
