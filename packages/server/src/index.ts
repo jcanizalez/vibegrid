@@ -31,6 +31,11 @@ export async function startServer(
   configManager.init()
   configManager.watchDb()
 
+  // Register built-in connectors
+  const { connectorRegistry } = await import('./connectors')
+  const { githubConnector } = await import('./connectors/github')
+  connectorRegistry.register(githubConnector)
+
   // Load initial config and wire up managers
   const config = configManager.loadConfig()
   ptyManager.setAgentCommands(config.agentCommands)

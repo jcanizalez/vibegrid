@@ -165,6 +165,29 @@ export function registerIpcHandlers(): void {
     requireBridge().request(IPC.SSH_TEST_CONNECTION, host)
   )
 
+  // Connectors
+  safeHandle(IPC.CONNECTOR_LIST, () => requireBridge().request(IPC.CONNECTOR_LIST))
+  safeHandle(IPC.CONNECTOR_GET, (_, id) => requireBridge().request(IPC.CONNECTOR_GET, id))
+  safeHandle(IPC.CONNECTION_LIST, (_, params) =>
+    requireBridge().request(IPC.CONNECTION_LIST, params)
+  )
+  safeHandle(IPC.CONNECTION_CREATE, (_, params) =>
+    requireBridge().request(IPC.CONNECTION_CREATE, params)
+  )
+  safeHandle(IPC.CONNECTION_UPDATE, (_, params) =>
+    requireBridge().request(IPC.CONNECTION_UPDATE, params)
+  )
+  safeHandle(IPC.CONNECTION_DELETE, (_, id) => requireBridge().request(IPC.CONNECTION_DELETE, id))
+  safeHandle(IPC.CONNECTION_SYNC, (_, connectionId) =>
+    requireBridge().request(IPC.CONNECTION_SYNC, connectionId)
+  )
+  safeHandle(IPC.CONNECTION_GET_SOURCE_LINK, (_, taskId) =>
+    requireBridge().request(IPC.CONNECTION_GET_SOURCE_LINK, taskId)
+  )
+  safeHandle(IPC.CONNECTOR_DETECT_REPO, (_, projectPath) =>
+    requireBridge().request(IPC.CONNECTOR_DETECT_REPO, projectPath)
+  )
+
   // ─── Electron-only handlers (stay local) ───────────────────────
 
   safeHandle(IPC.DIALOG_OPEN_DIRECTORY, async (event) => {

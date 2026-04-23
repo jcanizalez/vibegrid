@@ -19,7 +19,10 @@ import {
   RemoteHost,
   TailscaleStatus,
   SessionLog,
-  FileEntry
+  FileEntry,
+  SourceConnection,
+  TaskSourceLink,
+  ConnectorManifest
 } from '../shared/types'
 
 const api = {
@@ -393,7 +396,56 @@ const api = {
   },
   installUpdate: () => ipcRenderer.send(IPC.UPDATE_INSTALL),
   setUpdateChannel: (channel: 'stable' | 'beta') =>
-    ipcRenderer.send(IPC.UPDATE_SET_CHANNEL, channel)
+    ipcRenderer.send(IPC.UPDATE_SET_CHANNEL, channel),
+
+  // Connectors
+  listConnectors: (): Promise<
+    Array<{
+      id: string
+      name: string
+      icon: string
+      capabilities: string[]
+      manifest: ConnectorManifest
+    }>
+  > => ipcRenderer.invoke(IPC.CONNECTOR_LIST),
+
+  getConnector: (
+    id: string
+  ): Promise<{
+    id: string
+    name: string
+    icon: string
+    capabilities: string[]
+    manifest: ConnectorManifest
+  } | null> => ipcRenderer.invoke(IPC.CONNECTOR_GET, id),
+
+  listConnections: (connectorId?: string): Promise<SourceConnection[]> =>
+    ipcRenderer.invoke(IPC.CONNECTION_LIST, { connectorId }),
+
+  createConnection: (
+    params: Omit<
+      SourceConnection,
+      'id' | 'createdAt' | 'lastSyncAt' | 'lastSyncError' | 'syncCursor'
+    >
+  ): Promise<SourceConnection> => ipcRenderer.invoke(IPC.CONNECTION_CREATE, params),
+
+  updateConnection: (
+    id: string,
+    updates: Partial<SourceConnection>
+  ): Promise<SourceConnection | null> => ipcRenderer.invoke(IPC.CONNECTION_UPDATE, { id, updates }),
+
+  deleteConnection: (id: string): Promise<void> => ipcRenderer.invoke(IPC.CONNECTION_DELETE, id),
+
+  syncConnection: (
+    connectionId: string
+  ): Promise<{ created: number; updated: number; error?: string }> =>
+    ipcRenderer.invoke(IPC.CONNECTION_SYNC, connectionId),
+
+  getTaskSourceLink: (taskId: string): Promise<TaskSourceLink | null> =>
+    ipcRenderer.invoke(IPC.CONNECTION_GET_SOURCE_LINK, taskId),
+
+  detectRepo: (projectPath: string): Promise<{ owner: string; repo: string } | null> =>
+    ipcRenderer.invoke(IPC.CONNECTOR_DETECT_REPO, projectPath)
 }
 
 contextBridge.exposeInMainWorld('api', api)

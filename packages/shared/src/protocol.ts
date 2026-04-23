@@ -18,7 +18,10 @@ import type {
   SSHKeyMeta,
   SessionLog,
   SessionEvent,
-  SessionEventType
+  SessionEventType,
+  SourceConnection,
+  TaskSourceLink,
+  ConnectorManifest
 } from './types'
 
 // ─── JSON-RPC 2.0 Envelope Types ────────────────────────────────
@@ -188,6 +191,59 @@ export interface RequestMethods {
   'file:readContent': {
     params: { filePath: string; maxBytes?: number; remoteHostId?: string }
     result: string | null
+  }
+
+  // Connectors
+  'connector:list': {
+    params: void
+    result: Array<{
+      id: string
+      name: string
+      icon: string
+      capabilities: string[]
+      manifest: ConnectorManifest
+    }>
+  }
+  'connector:get': {
+    params: string
+    result: {
+      id: string
+      name: string
+      icon: string
+      capabilities: string[]
+      manifest: ConnectorManifest
+    } | null
+  }
+  'connection:list': {
+    params: { connectorId?: string }
+    result: SourceConnection[]
+  }
+  'connection:create': {
+    params: Omit<
+      SourceConnection,
+      'id' | 'createdAt' | 'lastSyncAt' | 'lastSyncError' | 'syncCursor'
+    >
+    result: SourceConnection
+  }
+  'connection:update': {
+    params: { id: string; updates: Partial<SourceConnection> }
+    result: SourceConnection | null
+  }
+  'connection:delete': {
+    params: string
+    result: void
+  }
+  'connection:sync': {
+    params: string
+    result: { created: number; updated: number; error?: string }
+  }
+  'connection:getSourceLink': {
+    params: string
+    result: TaskSourceLink | null
+  }
+  'connector:detectRepo': {
+    params: string
+    result: { owner: string; repo: string } | null
   }
 }
 
