@@ -9,7 +9,6 @@ import { ICON_MAP } from './project-sidebar/icon-map'
 import { AgentIcon } from './AgentIcon'
 import { executeWorkflow } from '../lib/workflow-execution'
 import {
-  resolveActiveProject,
   createSessionFromProject,
   createShellInProject,
   countSessionsByWorktree,
@@ -60,7 +59,6 @@ export function GridContextMenu({ position, onClose }: Props) {
   const itemRefs = useRef<Map<number, HTMLButtonElement>>(new Map())
   const hideTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const activeWorktreePath = useAppStore((s) => s.activeWorktreePath)
   const worktreeCache = useAppStore((s) => s.worktreeCache)
   const loadWorktrees = useAppStore((s) => s.loadWorktrees)
   const workspaceProjects = useWorkspaceProjects()
@@ -98,13 +96,7 @@ export function GridContextMenu({ position, onClose }: Props) {
     }
   }, [onClose, clearHideTimeout])
 
-  const project = resolveActiveProject()
   const terminals = useAppStore.getState().terminals
-
-  const activeWt =
-    activeWorktreePath && project
-      ? worktreeCache.get(project.path)?.find((wt) => wt.path === activeWorktreePath)
-      : undefined
 
   const defaultAgent: AiAgentType = useAppStore.getState().config?.defaults.defaultAgent ?? 'claude'
 
@@ -189,51 +181,10 @@ export function GridContextMenu({ position, onClose }: Props) {
 
   const items: MenuItem[] = []
 
-  if (project) {
-    items.push({
-      iconElement: <AgentIcon agentType={defaultAgent} size={14} />,
-      label: 'New session',
-      className: 'text-white font-medium',
-      onClick: () =>
-        activeWorktreePath
-          ? createSession(project, {
-              branch: activeWt?.branch,
-              existingWorktreePath: activeWorktreePath
-            })
-          : createSession(project)
-    })
-  } else {
-    items.push({
-      iconElement: <AgentIcon agentType={defaultAgent} size={14} />,
-      label: 'New session',
-      className: 'text-white font-medium',
-      onClick: () => {
-        onClose()
-        useAppStore.getState().setNewAgentDialogOpen(true)
-      }
-    })
-  }
-
-  items.push({
-    iconElement: <Terminal size={14} className="text-gray-400" />,
-    label: 'New terminal',
-    onClick: () => {
-      onClose()
-      const cwd = activeWorktreePath ?? project?.path
-      void createShellInProject(cwd, {
-        project,
-        worktreePath: activeWorktreePath ?? undefined,
-        worktreeName: activeWt?.name,
-        branch: activeWt?.branch
-      })
-    }
-  })
-
   if (workspaceProjects.length > 0) {
     items.push({
       iconElement: <AgentIcon agentType={defaultAgent} size={14} />,
       label: 'New session in…',
-      separator: true,
       submenuKey: 'session-in',
       onSubmenuEnter: () => workspaceProjects.forEach((p) => loadWorktrees(p.path))
     })
@@ -254,7 +205,7 @@ export function GridContextMenu({ position, onClose }: Props) {
       onClose()
       useAppStore.getState().setNewAgentDialogOpen(true)
     },
-    separator: true
+    separator: workspaceProjects.length > 0
   })
 
   if (workspaceWorkflows.length > 0) {

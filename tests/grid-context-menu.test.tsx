@@ -76,67 +76,11 @@ beforeEach(() => {
 })
 
 describe('GridContextMenu', () => {
-  it('renders New session, New terminal, and scoped submenus', () => {
+  it('renders scoped submenus, New session..., and Run workflow', () => {
     render(<GridContextMenu position={{ x: 100, y: 100 }} onClose={vi.fn()} />)
-    expect(screen.getByText('New session')).toBeInTheDocument()
-    expect(screen.getByText('New terminal')).toBeInTheDocument()
     expect(screen.getByText('New session in…')).toBeInTheDocument()
     expect(screen.getByText('New terminal in…')).toBeInTheDocument()
     expect(screen.getByText('New session...')).toBeInTheDocument()
-  })
-
-  it('New session creates agent session in active project', async () => {
-    mockCreateTerminal.mockResolvedValue({
-      id: 'new-term',
-      session: {
-        id: 'new-term',
-        agentType: 'claude',
-        projectName: 'Vorn',
-        projectPath: '/tmp/vorn'
-      },
-      status: 'idle',
-      lastOutputTimestamp: Date.now()
-    })
-
-    const onClose = vi.fn()
-    render(<GridContextMenu position={{ x: 100, y: 100 }} onClose={onClose} />)
-    fireEvent.click(screen.getByText('New session'))
-
-    expect(onClose).toHaveBeenCalled()
-    expect(mockCreateTerminal).toHaveBeenCalledWith(
-      expect.objectContaining({
-        agentType: 'claude',
-        projectName: 'Vorn',
-        projectPath: '/tmp/vorn'
-      })
-    )
-  })
-
-  it('New terminal creates a shell in active project', async () => {
-    const shellSession = {
-      id: 'sh-1',
-      agentType: 'shell' as const,
-      projectName: 'vorn',
-      projectPath: '/tmp/vorn',
-      status: 'running' as const,
-      createdAt: Date.now(),
-      pid: 4321,
-      displayName: 'Shell 1',
-      shellCwd: '/tmp/vorn'
-    }
-    mockCreateShellTerminal.mockResolvedValue(shellSession)
-
-    const addTerminal = vi.fn()
-    const setActiveTabId = vi.fn()
-    useAppStore.setState({ addTerminal, setActiveTabId })
-
-    const onClose = vi.fn()
-    render(<GridContextMenu position={{ x: 100, y: 100 }} onClose={onClose} />)
-    fireEvent.click(screen.getByText('New terminal'))
-    await new Promise((r) => setTimeout(r, 0))
-
-    expect(onClose).toHaveBeenCalled()
-    expect(mockCreateShellTerminal).toHaveBeenCalledWith('/tmp/vorn')
   })
 
   it('"New session in…" submenu groups worktrees under project header', () => {
