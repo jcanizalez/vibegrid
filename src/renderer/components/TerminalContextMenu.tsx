@@ -8,20 +8,13 @@ import {
   pasteToTerminal,
   focusTerminal
 } from '../lib/terminal-registry'
-import { ICON_MAP } from './project-sidebar/icon-map'
-import { executeWorkflow } from '../lib/workflow-execution'
 import { useWorkspaceWorkflows } from '../hooks/useWorkspaceWorkflows'
+import { buildWorkflowMenuItems } from '../lib/workflow-menu-items'
 
 interface Props {
   terminalId: string
   position: { x: number; y: number }
   onClose: () => void
-}
-
-interface SubmenuItem {
-  iconElement?: React.ReactNode
-  label: string
-  onClick: () => void
 }
 
 export function TerminalContextMenu({ terminalId, position, onClose }: Props) {
@@ -91,17 +84,7 @@ export function TerminalContextMenu({ terminalId, position, onClose }: Props) {
   const left = Math.max(8, Math.min(position.x, window.innerWidth - menuWidth - 8))
   const top = Math.max(8, Math.min(position.y, window.innerHeight - menuHeight - 8))
 
-  const workflowSubmenuItems: SubmenuItem[] = workspaceWorkflows.map((wf) => {
-    const WfIcon = ICON_MAP[wf.icon] || Zap
-    return {
-      iconElement: <WfIcon size={12} color={wf.iconColor} />,
-      label: wf.name,
-      onClick: () => {
-        close()
-        executeWorkflow(wf, undefined, { source: 'manual' })
-      }
-    }
-  })
+  const workflowSubmenuItems = buildWorkflowMenuItems(workspaceWorkflows, close)
 
   const submenuWidth = 200
   let submenuLeft = left + menuWidth + 4
@@ -110,8 +93,7 @@ export function TerminalContextMenu({ terminalId, position, onClose }: Props) {
     if (submenuLeft + submenuWidth > window.innerWidth - 8) {
       submenuLeft = left - submenuWidth - 4
     }
-    const subSeps = workflowSubmenuItems.filter((s) => 'separator' in s && s.separator).length
-    const subHeight = workflowSubmenuItems.length * 32 + subSeps * 9 + 16
+    const subHeight = workflowSubmenuItems.length * 32 + 16
     submenuTop = Math.max(8, Math.min(submenuTop, window.innerHeight - subHeight - 8))
   }
 

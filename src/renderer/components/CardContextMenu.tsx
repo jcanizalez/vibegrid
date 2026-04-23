@@ -4,16 +4,15 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Maximize2, Pencil, X, ChevronRight, Zap, Terminal } from 'lucide-react'
 import { useAppStore } from '../stores'
 import { type AiAgentType, getProjectRemoteHostId } from '../../shared/types'
-import { ICON_MAP } from './project-sidebar/icon-map'
 import { AgentIcon } from './AgentIcon'
 import { AGENT_LIST } from '../lib/agent-definitions'
 import { useAgentInstallStatus } from '../hooks/useAgentInstallStatus'
 import { closeTerminalSession } from '../lib/terminal-close'
-import { executeWorkflow } from '../lib/workflow-execution'
 import { toast } from './Toast'
 import { getDisplayName } from '../lib/terminal-display'
 import { useIsMobile } from '../hooks/useIsMobile'
 import { useWorkspaceWorkflows } from '../hooks/useWorkspaceWorkflows'
+import { buildWorkflowMenuItems } from '../lib/workflow-menu-items'
 import { createShellInProject } from '../lib/session-utils'
 
 interface Props {
@@ -107,28 +106,18 @@ export function CardContextMenu({ terminalId, position, onClose }: Props) {
   const createSessionWithAgent = async (agentType: AiAgentType) => {
     onClose()
     const state = useAppStore.getState()
-    if (isWorktree && terminal.session.worktreePath) {
-      const session = await window.api.createTerminal({
-        agentType,
-        projectName,
-        projectPath,
-        branch,
-        existingWorktreePath: terminal.session.worktreePath,
-        remoteHostId
-      })
-      state.addTerminal(session)
-    } else {
-      const session = await window.api.createTerminal({
-        agentType,
-        projectName,
-        projectPath,
-        remoteHostId
-      })
-      state.addTerminal(session)
-    }
+    const session = await window.api.createTerminal({
+      agentType,
+      projectName,
+      projectPath,
+      remoteHostId,
+      ...(isWorktree && terminal.session.worktreePath
+        ? { branch, existingWorktreePath: terminal.session.worktreePath }
+        : {})
+    })
+    state.addTerminal(session)
   }
 
-  // --- Group 1: Expand + Rename ---
   if (!isFocused && layoutMode !== 'tabs') {
     items.push({
       icon: Maximize2,
@@ -149,7 +138,6 @@ export function CardContextMenu({ terminalId, position, onClose }: Props) {
     }
   })
 
-  // --- Group 2: New session + New terminal + New session with… + Run workflow ---
   items.push({
     iconElement: <AgentIcon agentType={defaultAgent} size={14} />,
     label: 'New session',
@@ -189,26 +177,13 @@ export function CardContextMenu({ terminalId, position, onClose }: Props) {
   }
 
   if (workspaceWorkflows.length > 0) {
-    const workflowSubmenuItems: SubmenuItem[] = workspaceWorkflows.map((wf) => {
-      const WfIcon = ICON_MAP[wf.icon] || Zap
-      return {
-        iconElement: <WfIcon size={12} color={wf.iconColor} />,
-        label: wf.name,
-        onClick: () => {
-          onClose()
-          executeWorkflow(wf, undefined, { source: 'manual' })
-        }
-      }
-    })
-
     items.push({
       iconElement: <Zap size={14} className="text-gray-500" />,
       label: 'Run workflow',
-      submenu: workflowSubmenuItems
+      submenu: buildWorkflowMenuItems(workspaceWorkflows, onClose)
     })
   }
 
-  // --- Group 3: Close ---
   items.push({
     icon: X,
     label: 'Close session',

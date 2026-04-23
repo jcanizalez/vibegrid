@@ -5,9 +5,8 @@ import { FolderGit2, GitBranch, Plus, ChevronRight, Terminal, Zap } from 'lucide
 import { useAppStore } from '../stores'
 import { type ProjectConfig, type AiAgentType } from '../../shared/types'
 import { ProjectIcon } from './project-sidebar/ProjectIcon'
-import { ICON_MAP } from './project-sidebar/icon-map'
 import { AgentIcon } from './AgentIcon'
-import { executeWorkflow } from '../lib/workflow-execution'
+import { buildWorkflowMenuItems } from '../lib/workflow-menu-items'
 import {
   createSessionFromProject,
   createShellInProject,
@@ -64,7 +63,6 @@ export function GridContextMenu({ position, onClose }: Props) {
   const workspaceProjects = useWorkspaceProjects()
   const workspaceWorkflows = useWorkspaceWorkflows()
 
-  // Force-refresh worktree data once when the menu mounts
   useEffect(() => {
     workspaceProjects.forEach((p) => loadWorktrees(p.path, true))
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
@@ -246,19 +244,6 @@ export function GridContextMenu({ position, onClose }: Props) {
 
   const hasSubmenu = (item: MenuItem): boolean => item.submenuKey !== undefined
 
-  const buildWorkflowSubmenu = (): SubmenuItem[] =>
-    workspaceWorkflows.map((wf) => {
-      const WfIcon = ICON_MAP[wf.icon] || Zap
-      return {
-        iconElement: <WfIcon size={12} color={wf.iconColor} />,
-        label: wf.name,
-        onClick: () => {
-          onClose()
-          executeWorkflow(wf, undefined, { source: 'manual' })
-        }
-      }
-    })
-
   const menuHeight = estimatePanelHeight(items)
   const left = Math.max(8, Math.min(position.x, window.innerWidth - MENU_WIDTH - 8))
   const top = Math.max(8, Math.min(position.y, window.innerHeight - menuHeight - 8))
@@ -266,7 +251,7 @@ export function GridContextMenu({ position, onClose }: Props) {
   const hoveredItem = hoveredSubmenu !== null ? items[hoveredSubmenu] : null
   const activeSubmenu = hoveredItem?.submenuKey
     ? hoveredItem.submenuKey === 'run-workflow'
-      ? buildWorkflowSubmenu()
+      ? buildWorkflowMenuItems(workspaceWorkflows, onClose)
       : buildScopedSubmenu(hoveredItem.submenuKey === 'session-in' ? 'session' : 'terminal')
     : null
 
