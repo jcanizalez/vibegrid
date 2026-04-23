@@ -235,11 +235,21 @@ export const createUISlice: StateCreator<AppStore, [], [], UISlice> = (set, get)
     }),
 
   setMainViewMode: (mode) => {
-    const config = get().config
-    const extra =
-      mode !== 'sessions'
-        ? { diffSidebarTerminalId: null, focusedTerminalId: null, previewTerminalId: null }
-        : {}
+    const state = get()
+    const config = state.config
+    // mainViewMode is sourced from config.defaults (see ProjectSidebar/SidebarHeader);
+    // the store field isn't synced on setConfig, so compare against config first.
+    const prevMode = config?.defaults?.mainViewMode ?? state.mainViewMode
+    if (prevMode === mode) return
+    const extra: Record<string, unknown> =
+      mode === 'sessions'
+        ? {}
+        : { diffSidebarTerminalId: null, focusedTerminalId: null, previewTerminalId: null }
+    // Preserve editingWorkflowId so the selection survives tab switches,
+    // but close the modal editor when leaving the workflows tab.
+    if (prevMode === 'workflows' && mode !== 'workflows') {
+      extra.isWorkflowEditorOpen = false
+    }
     if (config) {
       const updated = { ...config, defaults: { ...config.defaults, mainViewMode: mode } }
       window.api.saveConfig(updated)
