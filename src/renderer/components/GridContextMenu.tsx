@@ -63,9 +63,13 @@ export function GridContextMenu({ position, onClose }: Props) {
   const workspaceProjects = useWorkspaceProjects()
   const workspaceWorkflows = useWorkspaceWorkflows()
 
+  const didRefreshRef = useRef(false)
   useEffect(() => {
-    workspaceProjects.forEach((p) => loadWorktrees(p.path, true))
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+    if (!didRefreshRef.current && workspaceProjects.length > 0) {
+      didRefreshRef.current = true
+      workspaceProjects.forEach((p) => loadWorktrees(p.path, true))
+    }
+  }, [workspaceProjects, loadWorktrees])
 
   const [hoveredSubmenu, setHoveredSubmenu] = useState<number | null>(null)
 

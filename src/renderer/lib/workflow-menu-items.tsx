@@ -5,6 +5,7 @@ import { executeWorkflow } from './workflow-execution'
 import type { WorkflowDefinition } from '../../shared/types'
 
 export interface WorkflowMenuItem {
+  id: string
   iconElement: ReactNode
   label: string
   detail?: string
@@ -20,6 +21,7 @@ export function buildWorkflowMenuItems(
   return workflows.map((wf) => {
     const WfIcon = ICON_MAP[wf.icon] || Zap
     return {
+      id: wf.id,
       iconElement: <WfIcon size={12} color={wf.iconColor} />,
       label: wf.name,
       onClick: () => {

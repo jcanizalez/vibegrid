@@ -150,12 +150,13 @@ export function CardContextMenu({ terminalId, position, onClose }: Props) {
     label: 'New terminal',
     onClick: () => {
       onClose()
-      const cwd = isWorktree ? terminal.session.worktreePath : projectPath
+      const worktreePath = isWorktree ? terminal.session.worktreePath : undefined
+      const cwd = worktreePath ?? projectPath
       void createShellInProject(cwd, {
         project,
-        worktreePath: isWorktree ? terminal.session.worktreePath : undefined,
-        worktreeName: isWorktree ? terminal.session.worktreeName : undefined,
-        branch
+        worktreePath,
+        worktreeName: worktreePath ? terminal.session.worktreeName : undefined,
+        branch: worktreePath ? branch : undefined
       })
     }
   })

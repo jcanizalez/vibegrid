@@ -177,9 +177,9 @@ export function TerminalContextMenu({ terminalId, position, onClose }: Props) {
           onMouseEnter={clearHideTimeout}
           onMouseLeave={scheduleHide}
         >
-          {workflowSubmenuItems.map((sub, j) => (
+          {workflowSubmenuItems.map((sub) => (
             <button
-              key={j}
+              key={sub.id}
               role="menuitem"
               onClick={(e) => {
                 e.stopPropagation()

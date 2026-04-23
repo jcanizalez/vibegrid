@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, act } from '@testing-library/react'
 import '@testing-library/jest-dom/vitest'
 
 const mockGetTerminalSelection = vi.fn()
@@ -166,6 +166,75 @@ describe('TerminalContextMenu', () => {
       undefined,
       { source: 'manual' }
     )
+  })
+
+  it('toggles workflow submenu on click', () => {
+    const configWithWorkflows = {
+      ...mockConfig,
+      workflows: [
+        {
+          id: 'wf-1',
+          name: 'Deploy',
+          icon: 'Rocket',
+          iconColor: '#ff6600',
+          nodes: [],
+          edges: [],
+          enabled: true,
+          workspaceId: 'personal'
+        }
+      ]
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    useAppStore.setState({ config: configWithWorkflows as any })
+
+    render(
+      <TerminalContextMenu terminalId="term-1" position={{ x: 100, y: 100 }} onClose={vi.fn()} />
+    )
+
+    const trigger = screen.getByText('Run workflow').closest('button')!
+    // Click to open
+    fireEvent.click(trigger)
+    expect(screen.getByText('Deploy')).toBeInTheDocument()
+    // Click again to close
+    fireEvent.click(trigger)
+    expect(screen.queryByText('Deploy')).not.toBeInTheDocument()
+  })
+
+  it('hides workflow submenu on mouse leave after delay', async () => {
+    vi.useFakeTimers()
+    const configWithWorkflows = {
+      ...mockConfig,
+      workflows: [
+        {
+          id: 'wf-1',
+          name: 'Deploy',
+          icon: 'Rocket',
+          iconColor: '#ff6600',
+          nodes: [],
+          edges: [],
+          enabled: true,
+          workspaceId: 'personal'
+        }
+      ]
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    useAppStore.setState({ config: configWithWorkflows as any })
+
+    const { unmount } = render(
+      <TerminalContextMenu terminalId="term-1" position={{ x: 100, y: 100 }} onClose={vi.fn()} />
+    )
+
+    const trigger = screen.getByText('Run workflow').closest('button')!
+    fireEvent.mouseEnter(trigger)
+    expect(screen.getByText('Deploy')).toBeInTheDocument()
+
+    fireEvent.mouseLeave(trigger)
+    await act(() => {
+      vi.advanceTimersByTime(200)
+    })
+    expect(screen.queryByText('Deploy')).not.toBeInTheDocument()
+    unmount()
+    vi.useRealTimers()
   })
 
   it('only shows workflows from the active workspace', () => {

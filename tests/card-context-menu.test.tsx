@@ -205,6 +205,52 @@ describe('CardContextMenu', () => {
     expect(container.innerHTML).toBe('')
   })
 
+  it('New terminal creates shell in project context', () => {
+    mockCreateShellTerminal.mockResolvedValue({
+      id: 'sh-1',
+      agentType: 'shell',
+      projectName: 'Vorn',
+      projectPath: '/tmp/vorn',
+      status: 'running'
+    })
+    const onClose = vi.fn()
+    render(<CardContextMenu terminalId="term-1" position={{ x: 100, y: 100 }} onClose={onClose} />)
+    fireEvent.click(screen.getByText('New terminal'))
+    expect(onClose).toHaveBeenCalled()
+    expect(mockCreateShellTerminal).toHaveBeenCalledWith('/tmp/vorn')
+  })
+
+  it('shows "New session with…" submenu with installed agents', () => {
+    render(<CardContextMenu terminalId="term-1" position={{ x: 100, y: 100 }} onClose={vi.fn()} />)
+    const trigger = screen.getByText('New session with…')
+    expect(trigger).toBeInTheDocument()
+    fireEvent.mouseEnter(trigger.closest('button')!)
+    expect(screen.getByText('Claude Code')).toBeInTheDocument()
+    expect(screen.getByText('GitHub Copilot')).toBeInTheDocument()
+  })
+
+  it('"New session with…" submenu creates session with selected agent', () => {
+    mockCreateTerminal.mockResolvedValue({
+      id: 'new-term',
+      session: {
+        id: 'new-term',
+        agentType: 'copilot',
+        projectName: 'Vorn',
+        projectPath: '/tmp/vorn'
+      },
+      status: 'idle',
+      lastOutputTimestamp: Date.now()
+    })
+    const onClose = vi.fn()
+    render(<CardContextMenu terminalId="term-1" position={{ x: 100, y: 100 }} onClose={onClose} />)
+    fireEvent.mouseEnter(screen.getByText('New session with…').closest('button')!)
+    fireEvent.click(screen.getByText('GitHub Copilot'))
+    expect(onClose).toHaveBeenCalled()
+    expect(mockCreateTerminal).toHaveBeenCalledWith(
+      expect.objectContaining({ agentType: 'copilot' })
+    )
+  })
+
   it('shows "Run workflow" submenu when workspace has workflows', () => {
     const configWithWorkflows = {
       ...mockConfig,

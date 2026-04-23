@@ -101,6 +101,40 @@ describe('GridContextMenu', () => {
     expect(screen.getByText('feat-a')).toBeInTheDocument()
   })
 
+  it('"New session in…" submenu includes "New worktree" option', () => {
+    const cache = new Map()
+    cache.set('/tmp/vorn', [{ path: '/tmp/vorn', branch: 'main', isMain: true, name: 'vorn' }])
+    useAppStore.setState({ worktreeCache: cache })
+
+    render(<GridContextMenu position={{ x: 100, y: 100 }} onClose={vi.fn()} />)
+    fireEvent.mouseEnter(screen.getByText('New session in…').closest('button')!)
+
+    expect(screen.getByText('New worktree')).toBeInTheDocument()
+  })
+
+  it('"New worktree" creates a worktree session on click', async () => {
+    mockListBranches.mockResolvedValue({ current: 'main', branches: [] })
+    mockCreateTerminal.mockResolvedValue({
+      id: 'wt-new',
+      session: { id: 'wt-new', agentType: 'claude', projectName: 'Vorn', projectPath: '/tmp/vorn' },
+      status: 'idle',
+      lastOutputTimestamp: Date.now()
+    })
+
+    const cache = new Map()
+    cache.set('/tmp/vorn', [{ path: '/tmp/vorn', branch: 'main', isMain: true, name: 'vorn' }])
+    useAppStore.setState({ worktreeCache: cache })
+
+    const onClose = vi.fn()
+    render(<GridContextMenu position={{ x: 100, y: 100 }} onClose={onClose} />)
+    fireEvent.mouseEnter(screen.getByText('New session in…').closest('button')!)
+    fireEvent.click(screen.getByText('New worktree'))
+
+    expect(onClose).toHaveBeenCalled()
+    await new Promise((r) => setTimeout(r, 0))
+    expect(mockListBranches).toHaveBeenCalledWith('/tmp/vorn')
+  })
+
   it('"New terminal in…" submenu groups worktrees under project header', () => {
     const cache = new Map()
     cache.set('/tmp/vorn', [
