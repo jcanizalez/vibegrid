@@ -75,11 +75,35 @@ describe('WindowControls', () => {
       return () => {}
     })
     render(<WindowControls />)
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Maximize' })).toBeInTheDocument()
-    )
+    await waitFor(() => expect(notify).toBeDefined())
+    expect(screen.getByRole('button', { name: 'Maximize' })).toBeInTheDocument()
     await act(async () => {
       notify?.(true)
+    })
+    expect(screen.getByRole('button', { name: 'Restore' })).toBeInTheDocument()
+  })
+
+  it('ignores initial isWindowMaximized() result when an event has already fired', async () => {
+    let notify: ((maximized: boolean) => void) | undefined
+    let resolveInitial: ((m: boolean) => void) | undefined
+    isWindowMaximized.mockImplementationOnce(
+      () =>
+        new Promise<boolean>((resolve) => {
+          resolveInitial = resolve
+        })
+    )
+    onWindowMaximizedChange.mockImplementationOnce((cb: (m: boolean) => void) => {
+      notify = cb
+      return () => {}
+    })
+    render(<WindowControls />)
+    await waitFor(() => expect(notify).toBeDefined())
+    await act(async () => {
+      notify?.(true)
+    })
+    expect(screen.getByRole('button', { name: 'Restore' })).toBeInTheDocument()
+    await act(async () => {
+      resolveInitial?.(false)
     })
     expect(screen.getByRole('button', { name: 'Restore' })).toBeInTheDocument()
   })

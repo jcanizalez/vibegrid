@@ -1,13 +1,20 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { isMac, isWeb } from '../lib/platform'
 
 export function WindowControls() {
   const [isMaximized, setIsMaximized] = useState(false)
+  const eventReceivedRef = useRef(false)
 
   useEffect(() => {
     if (isMac || isWeb) return
-    window.api.isWindowMaximized().then(setIsMaximized)
-    return window.api.onWindowMaximizedChange(setIsMaximized)
+    const unsubscribe = window.api.onWindowMaximizedChange((m) => {
+      eventReceivedRef.current = true
+      setIsMaximized(m)
+    })
+    window.api.isWindowMaximized().then((m) => {
+      if (!eventReceivedRef.current) setIsMaximized(m)
+    })
+    return unsubscribe
   }, [])
 
   if (isMac || isWeb) return null
@@ -39,8 +46,8 @@ export function WindowControls() {
             strokeWidth="1"
             className="text-gray-400"
           >
-            <rect x="2.5" y="0.5" width="7" height="7" />
-            <rect x="0.5" y="2.5" width="7" height="7" fill="#1a1a1e" />
+            <path d="M3 1 h6 v6 h-2 M3 1 v2" />
+            <rect x="1" y="3" width="6" height="6" />
           </svg>
         ) : (
           <svg
