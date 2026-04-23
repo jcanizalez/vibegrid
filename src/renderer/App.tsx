@@ -101,6 +101,9 @@ export function App() {
   const isTabToolbarMerged =
     layoutMode === 'tabs' && mainViewMode === 'sessions' && !isMobile && !focusedId && !previewId
 
+  // Hide toolbar when a session is focused/previewed to maximize terminal space
+  const isFocusedFullScreen = !isMobile && (!!focusedId || !!previewId)
+
   // On mobile, auto-close sidebar on initial load
   useEffect(() => {
     if (isMobile && isSidebarOpen) {
@@ -390,7 +393,7 @@ export function App() {
         }
       >
         {/* Top bar — z-46 + opaque bg covers the TerminalHost overlay (z-45) when the grid scrolls up. */}
-        {!isInlineWorkflowEditor && !isTabToolbarMerged && (
+        {!isInlineWorkflowEditor && !isTabToolbarMerged && !isFocusedFullScreen && (
           <div
             className={`titlebar-drag shrink-0 border-b border-white/[0.06] relative z-[46] bg-[#1a1a1e]
                         flex items-center ${isMobile ? 'px-2 justify-between' : 'px-3'} h-[52px]`}
