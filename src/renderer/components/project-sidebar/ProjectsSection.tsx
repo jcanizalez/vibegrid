@@ -4,7 +4,8 @@ import { Tooltip } from '../Tooltip'
 import { ProjectItem } from './ProjectItem'
 import { ProjectsSectionToolbar } from './ProjectsSectionToolbar'
 import { SidebarNavItem } from './SidebarNavItem'
-import { ChevronRight, FolderPlus, Layers } from 'lucide-react'
+import { SidebarSectionHeader } from './SidebarSectionHeader'
+import { FolderPlus, Layers } from 'lucide-react'
 import type { ProjectConfig } from '../../../shared/types'
 import type { SidebarSessionInfo } from './types'
 
@@ -112,22 +113,13 @@ export function ProjectsSection({
 
   return (
     <>
-      {!isCollapsed && (
-        <div className="group/section pt-3 pb-1.5 flex items-center justify-between">
-          <button
-            onClick={() => setSectionCollapsed(!sectionCollapsed)}
-            className="flex items-center gap-1.5 hover:text-gray-300 transition-colors"
-          >
-            <ChevronRight
-              size={10}
-              strokeWidth={2}
-              className={`text-gray-600 transition-transform ${sectionCollapsed ? '' : 'rotate-90'}`}
-            />
-            <span className="text-[11px] font-medium text-gray-500 uppercase tracking-wider">
-              Projects
-            </span>
-          </button>
-          <div className="flex items-center gap-0.5">
+      <SidebarSectionHeader
+        title="Projects"
+        isCollapsed={isCollapsed}
+        sectionCollapsed={sectionCollapsed}
+        onToggle={() => setSectionCollapsed(!sectionCollapsed)}
+        actions={
+          <>
             <ProjectsSectionToolbar />
             <Tooltip label="Add project" position="bottom">
               <button
@@ -137,10 +129,9 @@ export function ProjectsSection({
                 <FolderPlus size={13} strokeWidth={1.5} />
               </button>
             </Tooltip>
-          </div>
-        </div>
-      )}
-      {isCollapsed && <div className="pt-4" />}
+          </>
+        }
+      />
 
       {!sectionCollapsed && (
         <SidebarNavItem

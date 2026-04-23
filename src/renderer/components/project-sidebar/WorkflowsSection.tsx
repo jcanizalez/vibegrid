@@ -4,8 +4,9 @@ import { Tooltip } from '../Tooltip'
 import { WorkflowItem } from './WorkflowItem'
 import { WorkflowFilterToolbar } from './WorkflowFilterToolbar'
 import { WorkflowContextMenu } from './WorkflowContextMenu'
+import { SidebarSectionHeader } from './SidebarSectionHeader'
 import { isScheduledWorkflow } from '../../lib/workflow-helpers'
-import { ChevronRight, Zap } from 'lucide-react'
+import { Zap } from 'lucide-react'
 import type { WorkflowDefinition } from '../../../shared/types'
 
 type ContextMenuState = { id: string; x: number; y: number } | null
@@ -77,22 +78,13 @@ export function WorkflowsSection({
 
   return (
     <>
-      {!isCollapsed && (
-        <div className="group/section pt-3 pb-1.5 flex items-center justify-between">
-          <button
-            onClick={() => setSectionCollapsed(!sectionCollapsed)}
-            className="flex items-center gap-1.5 hover:text-gray-300 transition-colors"
-          >
-            <ChevronRight
-              size={10}
-              strokeWidth={2}
-              className={`text-gray-600 transition-transform ${sectionCollapsed ? '' : 'rotate-90'}`}
-            />
-            <span className="text-[11px] font-medium text-gray-500 uppercase tracking-wider">
-              Workflows
-            </span>
-          </button>
-          <div className="flex items-center gap-0.5">
+      <SidebarSectionHeader
+        title="Workflows"
+        isCollapsed={isCollapsed}
+        sectionCollapsed={sectionCollapsed}
+        onToggle={() => setSectionCollapsed(!sectionCollapsed)}
+        actions={
+          <>
             <WorkflowFilterToolbar />
             <Tooltip label="New workflow" position="bottom">
               <button
@@ -106,10 +98,9 @@ export function WorkflowsSection({
                 <Zap size={13} strokeWidth={1.5} />
               </button>
             </Tooltip>
-          </div>
-        </div>
-      )}
-      {isCollapsed && <div className="pt-4" />}
+          </>
+        }
+      />
 
       {!isCollapsed && !sectionCollapsed && filteredWorkflows.length === 0 && (
         <p className="text-[13px] text-gray-600 px-2.5 py-1">No workflows</p>

@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { useAppStore } from '../../stores'
-import { ChevronRight, Layers } from 'lucide-react'
+import { Layers } from 'lucide-react'
 import { ProjectIcon } from './ProjectIcon'
 import { SidebarNavItem } from './SidebarNavItem'
+import { SidebarSectionHeader } from './SidebarSectionHeader'
 import type { ProjectConfig } from '../../../shared/types'
 
 export function TasksProjectsSection({
@@ -21,24 +22,12 @@ export function TasksProjectsSection({
 
   return (
     <>
-      {!isCollapsed && (
-        <div className="group/section pt-3 pb-1.5 flex items-center justify-between">
-          <button
-            onClick={() => setSectionCollapsed(!sectionCollapsed)}
-            className="flex items-center gap-1.5 hover:text-gray-300 transition-colors"
-          >
-            <ChevronRight
-              size={10}
-              strokeWidth={2}
-              className={`text-gray-600 transition-transform ${sectionCollapsed ? '' : 'rotate-90'}`}
-            />
-            <span className="text-[11px] font-medium text-gray-500 uppercase tracking-wider">
-              Projects
-            </span>
-          </button>
-        </div>
-      )}
-      {isCollapsed && <div className="pt-4" />}
+      <SidebarSectionHeader
+        title="Projects"
+        isCollapsed={isCollapsed}
+        sectionCollapsed={sectionCollapsed}
+        onToggle={() => setSectionCollapsed(!sectionCollapsed)}
+      />
 
       {!sectionCollapsed && (
         <SidebarNavItem

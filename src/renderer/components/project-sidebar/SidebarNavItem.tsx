@@ -6,7 +6,6 @@ export function SidebarNavItem({
   icon,
   label,
   badge,
-  title,
   onClick
 }: {
   isActive: boolean
@@ -14,7 +13,6 @@ export function SidebarNavItem({
   icon: ReactNode
   label: string
   badge?: ReactNode
-  title?: string
   onClick: () => void
 }) {
   return (
@@ -25,7 +23,7 @@ export function SidebarNavItem({
           ? 'bg-white/[0.08] text-white'
           : 'text-gray-300 hover:text-white hover:bg-white/[0.04]'
       } ${isCollapsed ? 'justify-center px-0' : ''}`}
-      title={isCollapsed ? (title ?? label) : undefined}
+      title={isCollapsed ? label : undefined}
     >
       {icon}
       {!isCollapsed && (
