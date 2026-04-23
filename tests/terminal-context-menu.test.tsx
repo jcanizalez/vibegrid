@@ -228,4 +228,52 @@ describe('TerminalContextMenu', () => {
     fireEvent.pointerDown(screen.getByTestId('outside'))
     expect(onClose).toHaveBeenCalledTimes(1)
   })
+
+  it('excludes scheduled workflows from "Run workflow" submenu', () => {
+    const configWithWorkflows = {
+      ...mockConfig,
+      workflows: [
+        {
+          id: 'wf-manual',
+          name: 'Manual Deploy',
+          icon: 'Zap',
+          iconColor: '#fff',
+          nodes: [],
+          edges: [],
+          enabled: true,
+          workspaceId: 'personal'
+        },
+        {
+          id: 'wf-scheduled',
+          name: 'Nightly Build',
+          icon: 'Zap',
+          iconColor: '#fff',
+          nodes: [
+            {
+              id: 'trigger-1',
+              type: 'trigger',
+              config: { triggerType: 'recurring', cron: '0 0 * * *' },
+              position: { x: 0, y: 0 },
+              label: 'Schedule'
+            }
+          ],
+          edges: [],
+          enabled: true,
+          workspaceId: 'personal'
+        }
+      ]
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    useAppStore.setState({ config: configWithWorkflows as any, activeWorkspace: 'personal' })
+
+    render(
+      <TerminalContextMenu terminalId="term-1" position={{ x: 100, y: 100 }} onClose={vi.fn()} />
+    )
+
+    const trigger = screen.getByText('Run workflow')
+    fireEvent.mouseEnter(trigger.closest('button')!)
+
+    expect(screen.getByText('Manual Deploy')).toBeInTheDocument()
+    expect(screen.queryByText('Nightly Build')).not.toBeInTheDocument()
+  })
 })
