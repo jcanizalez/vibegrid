@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { motion } from 'framer-motion'
 import { useAppStore } from '../stores'
@@ -17,24 +17,15 @@ import { buildTooltip } from '../lib/tab-tooltip'
 import { ConfirmPopover } from './ConfirmPopover'
 import { Tooltip } from './Tooltip'
 import { toast } from './Toast'
-import {
-  ChevronDown,
-  FolderOpen,
-  GripVertical,
-  Monitor,
-  ListTodo,
-  Pencil,
-  Plus,
-  RotateCcw,
-  X,
-  Zap
-} from 'lucide-react'
+import { ChevronDown, FolderOpen, GripVertical, Pencil, Plus, X } from 'lucide-react'
 import { GridContextMenu } from './GridContextMenu'
 import { GridToolbar } from './GridToolbar'
-import { RecentSessionsPopover } from './RecentSessionsPopover'
 import { WindowControls } from './WindowControls'
+import { SidebarToggleButton } from './SidebarToggleButton'
+import { MainViewPills } from './MainViewPills'
+import { RecentSessionsButton } from './RecentSessionsButton'
 import { resolveActiveProject, createSessionFromProject } from '../lib/session-utils'
-import { MOD, isMac, isWeb } from '../lib/platform'
+import { MOD, isMac, isWeb, TRAFFIC_LIGHT_PAD_PX } from '../lib/platform'
 
 const DRAG_THRESHOLD = 5
 
@@ -133,9 +124,6 @@ export function TabView() {
   const setDiffSidebar = useAppStore((s) => s.setDiffSidebarTerminalId)
   const tasks = useAppStore((s) => s.config?.tasks)
   const isSidebarOpen = useAppStore((s) => s.isSidebarOpen)
-  const toggleSidebar = useAppStore((s) => s.toggleSidebar)
-  const mainViewMode = useAppStore((s) => s.config?.defaults?.mainViewMode ?? 'sessions')
-  const setMainViewMode = useAppStore((s) => s.setMainViewMode)
   const filteredHeadless = useFilteredHeadless()
   const waitingApprovals = useWaitingApprovals()
 
@@ -147,14 +135,21 @@ export function TabView() {
   const [dragState, setDragState] = useState<DragState | null>(null)
   const [dropTargetIndex, setDropTargetIndex] = useState<number | null>(null)
   const [plusDropdownPos, setPlusDropdownPos] = useState<{ top: number; left: number } | null>(null)
-  const [recentOpen, setRecentOpen] = useState(false)
   const tabRefs = useRef<Map<string, HTMLDivElement>>(new Map())
 
   const isFiltered = statusFilter !== 'all'
   const isManualSort = sortMode === 'manual'
-  const needsTrafficLightPad = !isSidebarOpen && !isWeb
+  const needsTrafficLightPad = isMac && !isSidebarOpen && !isWeb
 
-  // Auto-select first tab if activeTabId is null or not in orderedIds
+  const assignedTaskBySessionId = useMemo(() => {
+    type Task = NonNullable<typeof tasks>[number]
+    const map = new Map<string, Task>()
+    for (const t of tasks ?? []) {
+      if (t.status === 'in_progress' && t.assignedSessionId) map.set(t.assignedSessionId, t)
+    }
+    return map
+  }, [tasks])
+
   useEffect(() => {
     if (orderedIds.length === 0) {
       if (activeTabId !== null) setActiveTabId(null)
@@ -257,7 +252,6 @@ export function TabView() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      {/* Background tray: headless + minimized (above tab bar when tabs exist) */}
       {hasTabs && (
         <BackgroundTray
           headlessSessions={filteredHeadless}
@@ -267,89 +261,25 @@ export function TabView() {
         />
       )}
 
-      {/* Toolbar-merged tab bar — always rendered */}
       <div
         className="titlebar-drag shrink-0 flex items-center border-b border-white/[0.06] bg-[#1a1a1e] relative z-[46]"
-        style={{ minHeight: 40, paddingLeft: needsTrafficLightPad ? '80px' : undefined }}
+        style={{
+          minHeight: 40,
+          paddingLeft: needsTrafficLightPad ? `${TRAFFIC_LIGHT_PAD_PX}px` : undefined
+        }}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerLeave={handlePointerUp}
         onPointerCancel={handlePointerCancel}
       >
-        {/* Left: sidebar toggle + view mode toggles (when sidebar closed) */}
         {!isSidebarOpen && (
           <div className="shrink-0 flex items-center gap-1 pl-2 titlebar-no-drag">
-            <Tooltip
-              label="Toggle sidebar"
-              shortcut={`${isMac ? '⌘' : 'Ctrl+'}B`}
-              position="bottom"
-            >
-              <button
-                onClick={toggleSidebar}
-                className="text-gray-400 hover:text-white active:text-white p-1 transition-colors rounded-md"
-                title="Show sidebar"
-              >
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <rect x="3" y="3" width="18" height="18" rx="2" />
-                  <path d="M9 3v18" />
-                </svg>
-              </button>
-            </Tooltip>
-
+            <SidebarToggleButton />
             <div className="w-px h-4 bg-white/[0.06] mx-0.5" />
-            <div className="flex bg-white/[0.04] rounded-lg p-0.5 gap-0.5">
-              <Tooltip label="Sessions" shortcut={`${isMac ? '⌘' : 'Ctrl+'}S`} position="bottom">
-                <button
-                  onClick={() => setMainViewMode('sessions')}
-                  className={`px-2.5 py-1 rounded-md transition-colors ${
-                    mainViewMode === 'sessions'
-                      ? 'bg-white/[0.1] text-white'
-                      : 'text-gray-500 hover:text-gray-300'
-                  }`}
-                >
-                  <Monitor size={14} strokeWidth={2} />
-                </button>
-              </Tooltip>
-              <Tooltip label="Tasks" shortcut={`${isMac ? '⌘' : 'Ctrl+'}T`} position="bottom">
-                <button
-                  onClick={() => setMainViewMode('tasks')}
-                  className={`px-2.5 py-1 rounded-md transition-colors ${
-                    mainViewMode === 'tasks'
-                      ? 'bg-white/[0.1] text-white'
-                      : 'text-gray-500 hover:text-gray-300'
-                  }`}
-                >
-                  <ListTodo size={14} strokeWidth={2} />
-                </button>
-              </Tooltip>
-              <Tooltip
-                label="Workflows"
-                shortcut={`${isMac ? '⌘⇧' : 'Ctrl+Shift+'}W`}
-                position="bottom"
-              >
-                <button
-                  onClick={() => setMainViewMode('workflows')}
-                  className={`px-2.5 py-1 rounded-md transition-colors ${
-                    mainViewMode === 'workflows'
-                      ? 'bg-white/[0.1] text-white'
-                      : 'text-gray-500 hover:text-gray-300'
-                  }`}
-                >
-                  <Zap size={14} strokeWidth={2} />
-                </button>
-              </Tooltip>
-            </div>
+            <MainViewPills />
           </div>
         )}
 
-        {/* Middle: scrollable tabs */}
         <div
           className="flex-1 flex items-end gap-1 px-1 overflow-x-auto min-w-0 titlebar-no-drag"
           style={{ minHeight: 40 }}
@@ -362,9 +292,7 @@ export function TabView() {
             const isDragTarget = dragState?.isDragging === true && dropTargetIndex === index
             const isDragging = dragState?.isDragging === true && dragState.draggingId === id
 
-            const assignedTask = tasks?.find(
-              (t) => t.assignedSessionId === id && t.status === 'in_progress'
-            )
+            const assignedTask = assignedTaskBySessionId.get(id)
             const displayName = terminal.session.displayName?.trim()
               ? getDisplayName(terminal.session)
               : assignedTask
@@ -549,21 +477,10 @@ export function TabView() {
           )}
         </div>
 
-        {/* Right: toolbar controls */}
         <div className="shrink-0 flex items-center gap-1 px-2 titlebar-no-drag">
           <GridToolbar />
           <div className="w-px h-4 bg-white/[0.06] mx-0.5" />
-          <div className="relative flex items-center">
-            <Tooltip label="Recent sessions" position="bottom">
-              <button
-                onClick={() => setRecentOpen(!recentOpen)}
-                className="p-1 text-gray-400 hover:text-white hover:bg-white/[0.06] rounded-md transition-colors"
-              >
-                <RotateCcw size={16} strokeWidth={1.5} />
-              </button>
-            </Tooltip>
-            <RecentSessionsPopover isOpen={recentOpen} onClose={() => setRecentOpen(false)} />
-          </div>
+          <RecentSessionsButton />
           <WindowControls />
         </div>
       </div>

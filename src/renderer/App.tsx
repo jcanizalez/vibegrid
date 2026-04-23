@@ -23,9 +23,11 @@ import { SessionRestoredBanner } from './components/SessionRestoredBanner'
 import { GridToolbar } from './components/GridToolbar'
 import { ToolbarBreadcrumb } from './components/ToolbarBreadcrumb'
 import { SettingsPage } from './components/SettingsPage'
-import { RecentSessionsPopover } from './components/RecentSessionsPopover'
+import { SidebarToggleButton } from './components/SidebarToggleButton'
+import { MainViewPills } from './components/MainViewPills'
+import { RecentSessionsButton } from './components/RecentSessionsButton'
 import { Tooltip } from './components/Tooltip'
-import { RotateCcw, Monitor, ListTodo, Zap, Plus, Menu } from 'lucide-react'
+import { Plus, Menu } from 'lucide-react'
 import { MobileBottomTabs } from './components/MobileBottomTabs'
 import { TaskToolbar } from './components/TaskToolbar'
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
@@ -49,10 +51,9 @@ import { ToastContainer } from './components/Toast'
 import { AddTaskDialog } from './components/AddTaskDialog'
 import { GridContextMenu } from './components/GridContextMenu'
 import { WindowControls } from './components/WindowControls'
-import { isWeb } from './lib/platform'
+import { isMac, isWeb, TRAFFIC_LIGHT_PAD_PX } from './lib/platform'
 import { useIsMobile } from './hooks/useIsMobile'
 import { resolveResumeSessionId, buildRestorePayload } from './lib/session-utils'
-const isMac = navigator.platform.toUpperCase().includes('MAC')
 
 export function App() {
   const {
@@ -88,8 +89,6 @@ export function App() {
   )
   const setDialogOpen = useAppStore((s) => s.setNewAgentDialogOpen)
   const toggleSidebar = useAppStore((s) => s.toggleSidebar)
-  const setMainViewMode = useAppStore((s) => s.setMainViewMode)
-  const [recentOpen, setRecentOpen] = useState(false)
   const [topPlusMenuPos, setTopPlusMenuPos] = useState<{ x: number; y: number } | null>(null)
   const isMobile = useIsMobile()
   const isInlineWorkflowEditor =
@@ -97,12 +96,11 @@ export function App() {
     !isMobile &&
     (editingWorkflowId !== null || isWorkflowEditorOpen)
 
-  // In tab mode (sessions view, desktop), TabView renders its own toolbar-merged tab bar
   const isTabToolbarMerged =
     layoutMode === 'tabs' && mainViewMode === 'sessions' && !isMobile && !focusedId && !previewId
 
-  // Hide toolbar when a session is focused/previewed to maximize terminal space
-  const isFocusedFullScreen = !isMobile && (!!focusedId || !!previewId)
+  // Only hide toolbar on macOS focused view — Windows/Linux need it for window controls
+  const isFocusedFullScreen = isMac && !isMobile && (!!focusedId || !!previewId)
 
   // On mobile, auto-close sidebar on initial load
   useEffect(() => {
@@ -392,105 +390,38 @@ export function App() {
             : undefined
         }
       >
-        {/* Top bar — z-46 + opaque bg covers the TerminalHost overlay (z-45) when the grid scrolls up. */}
+        {/* z-46 + opaque bg covers the TerminalHost overlay (z-45) when the grid scrolls up. */}
         {!isInlineWorkflowEditor && !isTabToolbarMerged && !isFocusedFullScreen && (
           <div
             className={`titlebar-drag shrink-0 border-b border-white/[0.06] relative z-[46] bg-[#1a1a1e]
                         flex items-center ${isMobile ? 'px-2 justify-between' : 'px-3'} h-[52px]`}
-            style={!isSidebarOpen && !isWeb && !isMobile ? { paddingLeft: '80px' } : undefined}
+            style={
+              !isSidebarOpen && !isWeb && !isMobile
+                ? { paddingLeft: `${TRAFFIC_LIGHT_PAD_PX}px` }
+                : undefined
+            }
           >
             <div className={`flex items-center titlebar-no-drag ${isMobile ? 'gap-2.5' : 'gap-1'}`}>
-              {/* Mobile: always show hamburger. Desktop: show sidebar toggle only when closed */}
-              {(isMobile || !isSidebarOpen) &&
-                (isMobile ? (
-                  <button
-                    onClick={toggleSidebar}
-                    className="text-gray-400 hover:text-white active:text-white p-2 transition-colors rounded-full"
-                    style={{
-                      background: 'var(--glass-bg, transparent)',
-                      backdropFilter: 'var(--glass-blur, none)',
-                      WebkitBackdropFilter: 'var(--glass-blur, none)',
-                      boxShadow: 'var(--glass-shadow, none)'
-                    }}
-                    title="Show sidebar"
-                  >
-                    <Menu size={20} strokeWidth={2} />
-                  </button>
-                ) : (
-                  <Tooltip
-                    label="Toggle sidebar"
-                    shortcut={`${isMac ? '⌘' : 'Ctrl+'}B`}
-                    position="bottom"
-                  >
-                    <button
-                      onClick={toggleSidebar}
-                      className="text-gray-400 hover:text-white active:text-white p-1 transition-colors rounded-md"
-                      title="Show sidebar"
-                    >
-                      <svg
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                      >
-                        <rect x="3" y="3" width="18" height="18" rx="2" />
-                        <path d="M9 3v18" />
-                      </svg>
-                    </button>
-                  </Tooltip>
-                ))}
-              {/* Main view toggle: Sessions / Tasks — shown in top bar only when sidebar is closed (otherwise it's in the sidebar header) */}
+              {isMobile && (
+                <button
+                  onClick={toggleSidebar}
+                  className="text-gray-400 hover:text-white active:text-white p-2 transition-colors rounded-full"
+                  style={{
+                    background: 'var(--glass-bg, transparent)',
+                    backdropFilter: 'var(--glass-blur, none)',
+                    WebkitBackdropFilter: 'var(--glass-blur, none)',
+                    boxShadow: 'var(--glass-shadow, none)'
+                  }}
+                  title="Show sidebar"
+                >
+                  <Menu size={20} strokeWidth={2} />
+                </button>
+              )}
               {!isMobile && !isSidebarOpen && (
                 <>
+                  <SidebarToggleButton />
                   <div className="w-px h-4 bg-white/[0.06] mx-0.5" />
-                  <div className="flex bg-white/[0.04] rounded-lg p-0.5 gap-0.5">
-                    <Tooltip
-                      label="Sessions"
-                      shortcut={`${isMac ? '⌘' : 'Ctrl+'}S`}
-                      position="bottom"
-                    >
-                      <button
-                        onClick={() => setMainViewMode('sessions')}
-                        className={`px-2.5 py-1 rounded-md transition-colors ${
-                          mainViewMode === 'sessions'
-                            ? 'bg-white/[0.1] text-white'
-                            : 'text-gray-500 hover:text-gray-300'
-                        }`}
-                      >
-                        <Monitor size={14} strokeWidth={2} />
-                      </button>
-                    </Tooltip>
-                    <Tooltip label="Tasks" shortcut={`${isMac ? '⌘' : 'Ctrl+'}T`} position="bottom">
-                      <button
-                        onClick={() => setMainViewMode('tasks')}
-                        className={`px-2.5 py-1 rounded-md transition-colors ${
-                          mainViewMode === 'tasks'
-                            ? 'bg-white/[0.1] text-white'
-                            : 'text-gray-500 hover:text-gray-300'
-                        }`}
-                      >
-                        <ListTodo size={14} strokeWidth={2} />
-                      </button>
-                    </Tooltip>
-                    <Tooltip
-                      label="Workflows"
-                      shortcut={`${isMac ? '⌘⇧' : 'Ctrl+Shift+'}W`}
-                      position="bottom"
-                    >
-                      <button
-                        onClick={() => setMainViewMode('workflows')}
-                        className={`px-2.5 py-1 rounded-md transition-colors ${
-                          mainViewMode === 'workflows'
-                            ? 'bg-white/[0.1] text-white'
-                            : 'text-gray-500 hover:text-gray-300'
-                        }`}
-                      >
-                        <Zap size={14} strokeWidth={2} />
-                      </button>
-                    </Tooltip>
-                  </div>
+                  <MainViewPills />
                 </>
               )}
             </div>
@@ -502,24 +433,11 @@ export function App() {
             <div className={`flex items-center titlebar-no-drag ${isMobile ? 'gap-1.5' : 'gap-1'}`}>
               {mainViewMode === 'workflows' && !isMobile ? null : mainViewMode !== 'tasks' ? (
                 <>
-                  {!isMobile && <GridToolbar />}
                   {!isMobile && (
                     <>
+                      <GridToolbar />
                       <div className="w-px h-4 bg-white/[0.06] mx-0.5" />
-                      <div className="relative flex items-center">
-                        <Tooltip label="Recent sessions" position="bottom">
-                          <button
-                            onClick={() => setRecentOpen(!recentOpen)}
-                            className="p-1 text-gray-400 hover:text-white hover:bg-white/[0.06] rounded-md transition-colors"
-                          >
-                            <RotateCcw size={16} strokeWidth={1.5} />
-                          </button>
-                        </Tooltip>
-                        <RecentSessionsPopover
-                          isOpen={recentOpen}
-                          onClose={() => setRecentOpen(false)}
-                        />
-                      </div>
+                      <RecentSessionsButton />
                     </>
                   )}
                   {isMobile ? (
