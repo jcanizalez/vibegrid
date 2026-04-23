@@ -7,7 +7,10 @@ import type { WorkflowDefinition } from '../../shared/types'
 export interface WorkflowMenuItem {
   iconElement: ReactNode
   label: string
+  detail?: string
   onClick: () => void
+  separator?: boolean
+  isHeader?: boolean
 }
 
 export function buildWorkflowMenuItems(
