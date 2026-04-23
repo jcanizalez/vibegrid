@@ -125,6 +125,100 @@ describe('CommandPalette — New Terminal Session action', () => {
   })
 })
 
+describe('CommandPalette — per-project and per-worktree Terminal entries', () => {
+  async function renderAndQuery(q: string) {
+    const result = render(<CommandPalette />)
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 0))
+    })
+    const input = result.container.querySelector('input[placeholder="Type a command..."]')!
+    act(() => {
+      fireEvent.change(input, { target: { value: q } })
+    })
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 0))
+    })
+    return result
+  }
+
+  it('surfaces "Terminal in <project>" when the user types a matching query', async () => {
+    await renderAndQuery('Terminal in vorn')
+    expect(screen.getByText((t) => t.includes('Terminal in vorn'))).toBeInTheDocument()
+  })
+
+  it('clicking "Terminal in <project>" creates a shell in that project path', async () => {
+    const shellSession = {
+      id: 'sh-99',
+      agentType: 'shell' as const,
+      projectName: 'vorn',
+      projectPath: '/tmp/vorn',
+      status: 'running' as const,
+      createdAt: Date.now(),
+      pid: 9999,
+      displayName: 'Shell 1'
+    }
+    mockCreateShellTerminal.mockResolvedValue(shellSession)
+    const addTerminal = vi.fn()
+    const setActiveTabId = vi.fn()
+    act(() => {
+      useAppStore.setState({ addTerminal, setActiveTabId })
+    })
+
+    await renderAndQuery('Terminal in vorn')
+    const entry = screen.getByText((t) => t.includes('Terminal in vorn'))
+    fireEvent.click(entry)
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 0))
+    })
+
+    expect(mockCreateShellTerminal).toHaveBeenCalledWith('/tmp/vorn')
+    expect(addTerminal).toHaveBeenCalledWith(shellSession)
+  })
+
+  it('clicking a worktree Terminal entry creates a shell in the worktree path', async () => {
+    mockIsGitRepo.mockResolvedValue(true)
+    const nonMainWt = {
+      path: '/tmp/vorn/.vorn-worktrees/vorn/feature-a',
+      branch: 'feature-a',
+      name: 'feature-a',
+      isMain: false,
+      isDirty: false
+    }
+    const shellSession = {
+      id: 'sh-100',
+      agentType: 'shell' as const,
+      projectName: 'feature-a',
+      projectPath: nonMainWt.path,
+      status: 'running' as const,
+      createdAt: Date.now(),
+      pid: 10000,
+      displayName: 'Shell 1'
+    }
+    mockCreateShellTerminal.mockResolvedValue(shellSession)
+    const addTerminal = vi.fn()
+    const setActiveTabId = vi.fn()
+    act(() => {
+      useAppStore.setState({
+        addTerminal,
+        setActiveTabId,
+        worktreeCache: new Map([['/tmp/vorn', [nonMainWt]]])
+      })
+    })
+
+    const { container } = await renderAndQuery('feature-a')
+    const entry = Array.from(container.querySelectorAll('[data-cmd-index]')).find(
+      (el) => el.textContent?.includes('Terminal in vorn') && el.textContent?.includes('feature-a')
+    )
+    expect(entry).toBeDefined()
+    fireEvent.click(entry!)
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 0))
+    })
+
+    expect(mockCreateShellTerminal).toHaveBeenCalledWith(nonMainWt.path)
+  })
+})
+
 describe('CommandPalette — shell terminal entry uses the Shell label', () => {
   it('labels shell sessions as Shell (no AGENT_DEFINITIONS lookup)', () => {
     act(() => {

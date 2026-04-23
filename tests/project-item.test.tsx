@@ -52,10 +52,11 @@ vi.mock('../src/renderer/components/Toast', () => ({
 }))
 
 const mockCreateSession = vi.fn()
+const mockCreateShell = vi.fn().mockResolvedValue(undefined)
 
 vi.mock('../src/renderer/lib/session-utils', () => ({
   createSessionFromProject: (...args: unknown[]) => mockCreateSession(...args),
-  createShellInProject: vi.fn().mockResolvedValue(undefined)
+  createShellInProject: (...args: unknown[]) => mockCreateShell(...args)
 }))
 
 const mockCreateWorktree = vi.fn()
@@ -183,6 +184,54 @@ describe('ProjectItem progress-toast handlers', () => {
     })
     await waitFor(() => {
       expect(mockUpdate).toHaveBeenCalledWith('toast-id', 'permission denied', 'error')
+    })
+  })
+
+  it('new terminal button calls createShellInProject with project.path', async () => {
+    const { container } = renderProjectItem()
+    await waitFor(() => expect(mockIsGitRepo).toHaveBeenCalled())
+    const terminalBtn = container.querySelector('button[aria-label="New terminal"]') as HTMLElement
+    expect(terminalBtn).not.toBeNull()
+    act(() => {
+      fireEvent.click(terminalBtn)
+    })
+    await waitFor(() => {
+      expect(mockCreateShell).toHaveBeenCalledWith(project.path)
+    })
+  })
+
+  it('new terminal button ref-lock prevents synchronous double-click from firing twice', async () => {
+    let resolveIt: () => void
+    mockCreateShell.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveIt = resolve
+        })
+    )
+    const { container } = renderProjectItem()
+    await waitFor(() => expect(mockIsGitRepo).toHaveBeenCalled())
+    const terminalBtn = container.querySelector('button[aria-label="New terminal"]') as HTMLElement
+    act(() => {
+      fireEvent.click(terminalBtn)
+      fireEvent.click(terminalBtn)
+    })
+    expect(mockCreateShell).toHaveBeenCalledTimes(1)
+    act(() => resolveIt!())
+  })
+
+  it('main-worktree terminal button calls createShellInProject with mainWt.path', async () => {
+    const { container } = renderProjectItem({ viewMode: 'worktrees' })
+    await waitFor(() => expect(mockIsGitRepo).toHaveBeenCalled())
+    // Two "New terminal" buttons render: project-row and main-worktree-row.
+    // The main-worktree one lives under the expanded worktrees list.
+    const terminalBtns = container.querySelectorAll('button[aria-label="New terminal"]')
+    expect(terminalBtns.length).toBeGreaterThanOrEqual(2)
+    const mainTerminalBtn = terminalBtns[terminalBtns.length - 1] as HTMLElement
+    act(() => {
+      fireEvent.click(mainTerminalBtn)
+    })
+    await waitFor(() => {
+      expect(mockCreateShell).toHaveBeenCalledWith(mainWorktree.path)
     })
   })
 

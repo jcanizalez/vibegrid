@@ -156,6 +156,7 @@ export function WorktreeItem({
           <Tooltip label="New terminal" position="right">
             <button
               type="button"
+              aria-label="New terminal"
               disabled={creatingTerminal}
               onClick={(e) => {
                 e.stopPropagation()
@@ -175,6 +176,7 @@ export function WorktreeItem({
           <Tooltip label="New session" position="right">
             <button
               type="button"
+              aria-label="New session"
               disabled={creatingSession}
               onClick={(e) => {
                 e.stopPropagation()

@@ -240,6 +240,7 @@ export function ProjectItem({
                 <Tooltip label="New terminal" position="right">
                   <button
                     type="button"
+                    aria-label="New terminal"
                     disabled={creatingTerminal}
                     onClick={(e) => {
                       e.stopPropagation()
@@ -259,6 +260,7 @@ export function ProjectItem({
                 <Tooltip label="New session" position="right">
                   <button
                     type="button"
+                    aria-label="New session"
                     disabled={creatingSession}
                     onClick={(e) => {
                       e.stopPropagation()
@@ -412,6 +414,7 @@ export function ProjectItem({
                         <Tooltip label="New terminal" position="right">
                           <button
                             type="button"
+                            aria-label="New terminal"
                             disabled={creatingMainTerminal}
                             onClick={(e) => {
                               e.stopPropagation()
@@ -431,6 +434,7 @@ export function ProjectItem({
                         <Tooltip label="New session" position="right">
                           <button
                             type="button"
+                            aria-label="New session"
                             disabled={creatingMainSession}
                             onClick={(e) => {
                               e.stopPropagation()

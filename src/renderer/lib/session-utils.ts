@@ -8,6 +8,7 @@ import {
   type AiAgentType
 } from '../../shared/types'
 import { useAppStore } from '../stores'
+import { toast } from '../components/Toast'
 
 function normalizeComparablePath(p: string): string {
   const normalized = p.replace(/\\/g, '/').replace(/\/+$/, '')
@@ -208,10 +209,15 @@ export async function createSessionFromProject(
 }
 
 export async function createShellInProject(cwd?: string): Promise<void> {
-  const session = await window.api.createShellTerminal(cwd)
-  const state = useAppStore.getState()
-  state.addTerminal(session)
-  state.setActiveTabId(session.id)
+  try {
+    const session = await window.api.createShellTerminal(cwd)
+    const state = useAppStore.getState()
+    state.addTerminal(session)
+    state.setActiveTabId(session.id)
+  } catch (err) {
+    console.error('[createShellInProject] failed:', err)
+    toast.error(`Failed to start terminal: ${err instanceof Error ? err.message : String(err)}`)
+  }
 }
 
 /**
