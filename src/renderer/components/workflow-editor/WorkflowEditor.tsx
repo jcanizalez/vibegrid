@@ -5,7 +5,7 @@ import { ICON_MAP } from '../project-sidebar/icon-map'
 import { PROJECT_ICON_OPTIONS, ICON_COLOR_PALETTE } from '../../lib/project-icons'
 import { Tooltip } from '../Tooltip'
 import { useAppStore } from '../../stores'
-import { isWeb, TRAFFIC_LIGHT_PAD_PX } from '../../lib/platform'
+import { isMac, TRAFFIC_LIGHT_PAD_PX } from '../../lib/platform'
 import { SidebarToggleButton } from '../SidebarToggleButton'
 import { MainViewPills } from '../MainViewPills'
 import { WindowControls } from '../WindowControls'
@@ -434,7 +434,7 @@ export function WorkflowEditor({ inline = false }: { inline?: boolean } = {}) {
       <div
         className={`shrink-0 h-[40px] flex items-center justify-between px-3 border-b border-white/[0.08] titlebar-drag`}
         style={
-          inline && !isSidebarOpen && !isWeb
+          inline && !isSidebarOpen && isMac
             ? { paddingLeft: `${TRAFFIC_LIGHT_PAD_PX}px` }
             : undefined
         }
