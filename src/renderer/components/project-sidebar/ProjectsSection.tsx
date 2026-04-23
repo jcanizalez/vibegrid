@@ -3,7 +3,9 @@ import { useAppStore } from '../../stores'
 import { Tooltip } from '../Tooltip'
 import { ProjectItem } from './ProjectItem'
 import { ProjectsSectionToolbar } from './ProjectsSectionToolbar'
-import { ChevronRight, FolderPlus, Layers } from 'lucide-react'
+import { SidebarNavItem } from './SidebarNavItem'
+import { SidebarSectionHeader } from './SidebarSectionHeader'
+import { FolderPlus, Layers } from 'lucide-react'
 import type { ProjectConfig } from '../../../shared/types'
 import type { SidebarSessionInfo } from './types'
 
@@ -111,22 +113,13 @@ export function ProjectsSection({
 
   return (
     <>
-      {!isCollapsed && (
-        <div className="group/section pt-3 pb-1.5 flex items-center justify-between">
-          <button
-            onClick={() => setSectionCollapsed(!sectionCollapsed)}
-            className="flex items-center gap-1.5 hover:text-gray-300 transition-colors"
-          >
-            <ChevronRight
-              size={10}
-              strokeWidth={2}
-              className={`text-gray-600 transition-transform ${sectionCollapsed ? '' : 'rotate-90'}`}
-            />
-            <span className="text-[11px] font-medium text-gray-500 uppercase tracking-wider">
-              Projects
-            </span>
-          </button>
-          <div className="flex items-center gap-0.5">
+      <SidebarSectionHeader
+        title="Projects"
+        isCollapsed={isCollapsed}
+        sectionCollapsed={sectionCollapsed}
+        onToggle={() => setSectionCollapsed(!sectionCollapsed)}
+        actions={
+          <>
             <ProjectsSectionToolbar />
             <Tooltip label="Add project" position="bottom">
               <button
@@ -136,32 +129,22 @@ export function ProjectsSection({
                 <FolderPlus size={13} strokeWidth={1.5} />
               </button>
             </Tooltip>
-          </div>
-        </div>
-      )}
-      {isCollapsed && <div className="pt-4" />}
+          </>
+        }
+      />
 
       {!sectionCollapsed && (
-        <button
+        <SidebarNavItem
+          isActive={activeProject === null}
+          isCollapsed={isCollapsed}
+          icon={<Layers size={iconSize} strokeWidth={1.5} />}
+          label="All Projects"
+          badge={workspaceTerminalCount}
           onClick={() => {
             setActiveProject(null)
             setFocusedTerminal(null)
           }}
-          className={`w-full text-left px-2 py-1.5 rounded-md text-[13px] transition-colors flex items-center gap-2 ${
-            activeProject === null
-              ? 'bg-white/[0.08] text-white'
-              : 'text-gray-300 hover:text-white hover:bg-white/[0.04]'
-          } ${isCollapsed ? 'justify-center px-0' : ''}`}
-          title={isCollapsed ? 'All Projects' : undefined}
-        >
-          <Layers size={iconSize} strokeWidth={1.5} className="shrink-0" />
-          {!isCollapsed && (
-            <>
-              All Projects
-              <span className="text-gray-500 text-xs ml-auto">{workspaceTerminalCount}</span>
-            </>
-          )}
-        </button>
+        />
       )}
       {!isCollapsed && !sectionCollapsed && workspaceProjects.length === 0 && (
         <p className="text-[13px] text-gray-600 px-2.5 py-1">No projects</p>
