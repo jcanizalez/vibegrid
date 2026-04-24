@@ -127,10 +127,16 @@ export function WorkflowEditor({ inline = false }: { inline?: boolean } = {}) {
       return
     }
     let cancelled = false
+    // Per-connection so a single dead connection doesn't blank out the
+    // autocomplete for healthy ones — each id resolves independently.
     Promise.all(
-      connectionIdsKey.split(',').map(async (id) => {
-        const actions = await window.api.listConnectionActions(id)
-        return [id, actions] as const
+      connectionIdsKey.split(',').map(async (id): Promise<[string, ConnectorActionDef[]]> => {
+        try {
+          const actions = await window.api.listConnectionActions(id)
+          return [id, actions]
+        } catch {
+          return [id, []]
+        }
       })
     ).then((entries) => {
       if (!cancelled) setConnectionActions(new Map(entries))

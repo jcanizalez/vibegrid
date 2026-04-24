@@ -645,7 +645,9 @@ function McpToolsPanel({
   const [refreshError, setRefreshError] = useState<string | null>(null)
   const [selectedTool, setSelectedTool] = useState<McpTool | null>(null)
 
-  const tools = (connection.filters.discoveredTools as McpTool[]) ?? []
+  const tools = Array.isArray(connection.filters.discoveredTools)
+    ? (connection.filters.discoveredTools as McpTool[])
+    : []
 
   const handleRefresh = async () => {
     setRefreshing(true)
@@ -726,7 +728,11 @@ function McpToolsPanel({
       )}
 
       {selectedTool && (
+        // Key by tool name so switching to a different tool remounts the
+        // dialog with a fresh args stub + cleared result, instead of leaving
+        // the previous tool's state behind.
         <InvokeToolDialog
+          key={selectedTool.name}
           connectionId={connection.id}
           tool={selectedTool}
           onClose={() => setSelectedTool(null)}

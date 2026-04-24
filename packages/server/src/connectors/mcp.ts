@@ -235,7 +235,7 @@ export const mcpConnector: VornConnector = {
         }
       ],
       // Actions are per-connection (discovered via tools/list). The static
-      // list stays empty; callers query `connection:listMcpTools` instead.
+      // list stays empty; callers query `connection:listActions` instead.
       actions: []
     }
   },
