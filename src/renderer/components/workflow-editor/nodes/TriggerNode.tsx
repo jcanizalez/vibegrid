@@ -85,7 +85,7 @@ export function TriggerNode({ label, config, selected, onClick }: Props) {
     >
       <div className="flex items-center gap-2">
         {connectorId ? (
-          <ConnectorIcon connectorId={connectorId} size={14} className="text-blue-400 shrink-0" />
+          <ConnectorIcon connectorId={connectorId} size={14} className="text-gray-400 shrink-0" />
         ) : (
           <Icon size={14} className="text-blue-400 shrink-0" strokeWidth={2} />
         )}
