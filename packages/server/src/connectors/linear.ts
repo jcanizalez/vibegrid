@@ -120,6 +120,9 @@ async function resolveTeamId(apiKey: string, teamKey: string): Promise<string | 
 }
 
 async function resolveCompletedStateId(apiKey: string, teamId: string): Promise<string | null> {
+  // orderBy: position so the lowest-position completed state ("Done" in
+  // Linear's defaults) is at index 0. Fetch a generous page so we don't miss
+  // it if a team has many post-done states (Merged, Released, Shipped, etc.).
   const data = await linearGraphQL<{
     workflowStates: { nodes: Array<{ id: string; type: string; position: number }> }
   }>(
@@ -127,15 +130,15 @@ async function resolveCompletedStateId(apiKey: string, teamId: string): Promise<
     `query CompletedStates($teamId: ID!) {
        workflowStates(
          filter: { team: { id: { eq: $teamId } }, type: { eq: "completed" } }
-         first: 5
+         orderBy: position
+         first: 50
        ) { nodes { id type position } }
      }`,
     { teamId }
   )
   const nodes = data.workflowStates.nodes
   if (!nodes.length) return null
-  // Prefer the lowest-position completed state (Linear orders "Done" before
-  // post-done states like "Merged" / "Released").
+  // Defensive client-side sort in case the server ever returns out of order.
   return nodes.slice().sort((a, b) => a.position - b.position)[0].id
 }
 

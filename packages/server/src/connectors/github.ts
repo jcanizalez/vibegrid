@@ -9,8 +9,7 @@ import type {
   TaskStatus
 } from '@vornrun/shared/types'
 import log from '../logger'
-import { getSafeEnv } from '../process-utils'
-import { resolveGhPath, GhNotFoundError } from './gh-cli'
+import { resolveGhPath, GhNotFoundError, getGhEnv } from './gh-cli'
 
 const execFileAsync = promisify(execFile)
 
@@ -30,7 +29,7 @@ function isTransientErr(err: unknown): boolean {
 async function gh(args: string[], cwd?: string, input?: string): Promise<string> {
   const ghPath = resolveGhPath()
   if (!ghPath) throw new GhNotFoundError()
-  const env = getSafeEnv()
+  const env = getGhEnv()
   const run = async () => {
     if (input !== undefined) {
       return runWithStdin(ghPath, args, input, cwd, env)
@@ -72,17 +71,39 @@ function runWithStdin(
   env: Record<string, string>
 ): Promise<string> {
   return new Promise((resolve, reject) => {
-    const child = spawn(ghPath, args, { cwd, timeout: 15_000, env })
+    // Note: child_process.spawn doesn't honor `timeout` (unlike execFile), so
+    // we enforce it with an explicit timer. Without this, a `gh` subprocess
+    // blocking on e.g. a hung credential helper would hang poll/exec forever.
+    const child = spawn(ghPath, args, { cwd, env })
     let stdout = ''
     let stderr = ''
+    let settled = false
+    const timer = setTimeout(() => {
+      if (settled) return
+      settled = true
+      try {
+        child.kill('SIGTERM')
+      } catch {
+        /* already exited */
+      }
+      reject(new Error('gh command timed out after 15s'))
+    }, 15_000)
     child.stdout.on('data', (d) => {
       stdout += d.toString()
     })
     child.stderr.on('data', (d) => {
       stderr += d.toString()
     })
-    child.on('error', reject)
+    child.on('error', (err) => {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
+      reject(err)
+    })
     child.on('close', (code) => {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
       if (code === 0) return resolve(stdout)
       reject(new Error(`gh exited with code ${code}: ${stderr.trim() || 'no stderr'}`))
     })

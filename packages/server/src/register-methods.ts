@@ -845,8 +845,7 @@ export function registerAllMethods(): void {
     const results: Array<{ connectorId: string; authed: boolean; message?: string }> = []
     for (const c of connectorRegistry.list()) {
       if (c.id === 'github') {
-        const { resolveGhPath, ghInstallHint } = await import('./connectors/gh-cli')
-        const { getSafeEnv } = await import('./process-utils')
+        const { resolveGhPath, ghInstallHint, getGhEnv } = await import('./connectors/gh-cli')
         const ghPath = resolveGhPath()
         if (!ghPath) {
           results.push({
@@ -862,11 +861,15 @@ export function registerAllMethods(): void {
           const execFileAsync = promisify(execFile)
           await execFileAsync(ghPath, ['auth', 'status'], {
             timeout: 5_000,
-            env: getSafeEnv()
+            env: getGhEnv()
           })
           results.push({ connectorId: c.id, authed: true })
-        } catch {
-          // gh is installed but not authenticated (or auth expired).
+        } catch (err) {
+          // gh is installed but the status probe failed. The common case is
+          // "not signed in"; anything else we surface in logs so it's not
+          // silently lost.
+          const msg = err instanceof Error ? err.message : String(err)
+          log.warn(`[connector:status] gh auth status failed: ${msg}`)
           results.push({
             connectorId: c.id,
             authed: false,

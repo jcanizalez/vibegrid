@@ -7,7 +7,10 @@ import { getSafeEnv } from './process-utils'
 // aren't visible to `spawn('name', …)`. We resolve the absolute path once
 // from the user's resolved shell env and reuse it.
 
-const cache = new Map<string, string | null>()
+// Cache only successful lookups — if the user installs `gh` or `git` mid-
+// session, we want the next probe to discover it rather than reporting
+// "not found" until app restart.
+const cache = new Map<string, string>()
 
 function find(name: string): string | null {
   const env = getSafeEnv()
@@ -33,12 +36,16 @@ function find(name: string): string | null {
 
 /**
  * Look up an executable by name on the user's PATH (login-shell PATH via
- * `getSafeEnv()`). On Windows also tries `.exe` and `.cmd` suffixes. Result
- * is cached per-name until `resetResolveCache()` is called.
+ * `getSafeEnv()`). On Windows also tries `.exe` and `.cmd` suffixes.
+ * Successful lookups are cached; misses are re-probed so a fresh install
+ * is picked up without an app restart.
  */
 export function resolveExecutable(name: string): string | null {
-  if (!cache.has(name)) cache.set(name, find(name))
-  return cache.get(name) ?? null
+  const hit = cache.get(name)
+  if (hit) return hit
+  const found = find(name)
+  if (found) cache.set(name, found)
+  return found
 }
 
 export function resetResolveCache(name?: string): void {
