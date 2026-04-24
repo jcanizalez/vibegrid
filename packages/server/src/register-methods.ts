@@ -686,7 +686,10 @@ export function registerAllMethods(): void {
         dbDeleteWorkflow(wf.id)
       }
     }
-    // task_source_links cascade via FK. Tasks themselves stay (become "local").
+    // task_source_links cascade via FK. Tasks themselves stay and retain
+    // their source_connector_id / source_external_id metadata — so a later
+    // connection add + backfill can re-adopt them via the orphan dedup path
+    // in upsertExternalItem instead of creating duplicates.
     dbDeleteSourceConnection(id)
     // Forget any decrypted plaintext for this connection.
     clearDecryptedCreds(id)

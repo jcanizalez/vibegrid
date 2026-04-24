@@ -45,6 +45,7 @@ const KanbanIcon = (
 
 export function TaskToolbar() {
   const [open, setOpen] = useState(false)
+  const [connectorNames, setConnectorNames] = useState<Record<string, string>>({})
   const ref = useRef<HTMLDivElement>(null)
 
   const taskStatusFilter = useAppStore((s) => s.taskStatusFilter)
@@ -59,6 +60,17 @@ export function TaskToolbar() {
   const connectorIds = new Set(
     (config?.tasks || []).map((t) => t.sourceConnectorId).filter(Boolean) as string[]
   )
+
+  // Resolve pretty display names once the filter dropdown is opened — uses
+  // connector manifests so we show "GitHub" instead of a naive "Github".
+  useEffect(() => {
+    if (!open || connectorIds.size === 0) return
+    window.api.listConnectors().then((connectors) => {
+      const names: Record<string, string> = {}
+      for (const c of connectors) names[c.id] = c.name
+      setConnectorNames(names)
+    })
+  }, [open, connectorIds.size])
 
   const setViewMode = (mode: TaskViewMode): void => {
     if (!config || taskViewMode === mode) return
@@ -181,7 +193,7 @@ export function TaskToolbar() {
                     size={10}
                     className={taskSourceFilter === cid ? 'text-white' : 'text-gray-500'}
                   />
-                  {cid.charAt(0).toUpperCase() + cid.slice(1)}
+                  {connectorNames[cid] || cid.charAt(0).toUpperCase() + cid.slice(1)}
                 </button>
               ))}
             </div>

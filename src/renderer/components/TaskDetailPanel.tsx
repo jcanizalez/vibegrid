@@ -734,11 +734,13 @@ export function TaskDetailPanel() {
           />
         </div>
 
-        {/* Source reference */}
+        {/* Source reference — real href so middle-click, copy-link, and
+             screen readers announce the destination. Electron opens it in
+             the system browser via openExternal. */}
         {task?.sourceConnectorId && task.sourceExternalUrl && (
           <div className="px-4 pb-2">
             <a
-              href="#"
+              href={task.sourceExternalUrl}
               onClick={(e) => {
                 e.preventDefault()
                 window.api.openExternal(task.sourceExternalUrl!)

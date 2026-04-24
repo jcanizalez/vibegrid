@@ -31,8 +31,10 @@ export type StatusFilter = AgentStatus | 'all'
 export type TaskStatusFilter = 'all' | 'todo' | 'in_progress' | 'in_review' | 'done' | 'cancelled'
 
 /** Filter tasks by source: 'all' shows everything, 'local' shows only local tasks,
- *  or a connector ID (e.g. 'github') shows only tasks from that connector. */
-export type TaskSourceFilter = 'all' | 'local' | string
+ *  or a connector ID (e.g. 'github') shows only tasks from that connector.
+ *  The `string & {}` branch preserves the literals for autocomplete while still
+ *  accepting arbitrary connector ids. */
+export type TaskSourceFilter = 'all' | 'local' | (string & {})
 export type ProjectSortMode = 'manual' | 'name' | 'recent'
 export type WorkflowFilter = 'all' | 'manual' | 'scheduled'
 export type WorktreeSortMode = 'name' | 'recent'
