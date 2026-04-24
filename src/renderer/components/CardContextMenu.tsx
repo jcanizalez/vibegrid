@@ -1,15 +1,12 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Maximize2, Pencil, X, ChevronRight, Zap, Terminal } from 'lucide-react'
+import { ChevronRight, Zap, Terminal } from 'lucide-react'
 import { useAppStore } from '../stores'
 import { type AiAgentType, getProjectRemoteHostId } from '../../shared/types'
 import { AgentIcon } from './AgentIcon'
 import { AGENT_LIST } from '../lib/agent-definitions'
 import { useAgentInstallStatus } from '../hooks/useAgentInstallStatus'
-import { closeTerminalSession } from '../lib/terminal-close'
-import { toast } from './Toast'
-import { getDisplayName } from '../lib/terminal-display'
 import { useIsMobile } from '../hooks/useIsMobile'
 import { useWorkspaceWorkflows } from '../hooks/useWorkspaceWorkflows'
 import { buildWorkflowMenuItems } from '../lib/workflow-menu-items'
@@ -45,9 +42,7 @@ export function CardContextMenu({ terminalId, position, onClose }: Props) {
   const submenuRef = useRef<HTMLDivElement>(null)
   const hideTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
   const terminal = useAppStore((s) => s.terminals.get(terminalId))
-  const focusedId = useAppStore((s) => s.focusedTerminalId)
   const config = useAppStore((s) => s.config)
-  const layoutMode = useAppStore((s) => s.config?.defaults?.layoutMode ?? 'grid')
   const isMobile = useIsMobile()
   const workspaceWorkflows = useWorkspaceWorkflows()
   const { status: agentInstallStatus } = useAgentInstallStatus()
@@ -90,8 +85,6 @@ export function CardContextMenu({ terminalId, position, onClose }: Props) {
 
   if (!terminal) return null
 
-  const isFocused = focusedId === terminalId
-
   const project = config?.projects.find((p) => p.name === terminal.session.projectName)
   const remoteHostId = project ? getProjectRemoteHostId(project) : undefined
   const projectPath = terminal.session.projectPath
@@ -118,30 +111,9 @@ export function CardContextMenu({ terminalId, position, onClose }: Props) {
     state.addTerminal(session)
   }
 
-  if (!isFocused && layoutMode !== 'tabs') {
-    items.push({
-      icon: Maximize2,
-      label: 'Expand',
-      onClick: () => {
-        useAppStore.getState().setFocusedTerminal(terminalId)
-        onClose()
-      }
-    })
-  }
-
-  items.push({
-    icon: Pencil,
-    label: 'Rename',
-    onClick: () => {
-      useAppStore.getState().setRenamingTerminalId(terminalId)
-      onClose()
-    }
-  })
-
   items.push({
     iconElement: <AgentIcon agentType={defaultAgent} size={14} />,
     label: 'New session',
-    separator: true,
     onClick: () => createSessionWithAgent(defaultAgent)
   })
 
@@ -184,20 +156,6 @@ export function CardContextMenu({ terminalId, position, onClose }: Props) {
       submenu: buildWorkflowMenuItems(workspaceWorkflows, onClose)
     })
   }
-
-  items.push({
-    icon: X,
-    label: 'Close session',
-    onClick: async () => {
-      onClose()
-      const name = getDisplayName(terminal.session)
-      if (focusedId === terminalId) useAppStore.getState().setFocusedTerminal(null)
-      await closeTerminalSession(terminalId)
-      toast.success(`Session "${name}" closed`)
-    },
-    separator: true,
-    className: 'text-red-400'
-  })
 
   const menuWidth = 220
   const separators = items.filter((i) => i.separator).length

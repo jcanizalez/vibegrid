@@ -1,8 +1,10 @@
-import { FolderOpen, Maximize2, Minimize2, Minus, X } from 'lucide-react'
+import { FolderOpen, Maximize2, Minimize2, Minus, MoreHorizontal, X } from 'lucide-react'
+import { useState, useRef } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { useAppStore } from '../../stores'
 import { Tooltip } from '../Tooltip'
 import { ConfirmPopover } from '../ConfirmPopover'
+import { CardContextMenu } from '../CardContextMenu'
 import { closeTerminalSession } from '../../lib/terminal-close'
 import { toast } from '../Toast'
 import { getDisplayName } from '../../lib/terminal-display'
@@ -24,6 +26,8 @@ export function CardActionCluster({ terminalId, variant }: Props) {
       toggleMinimized: s.toggleMinimized
     }))
   )
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null)
+  const moreRef = useRef<HTMLButtonElement>(null)
 
   if (!terminal) return null
 
@@ -53,6 +57,18 @@ export function CardActionCluster({ terminalId, variant }: Props) {
     toast.success(`Session "${name}" closed`)
   }
 
+  const handleMore = (e: React.MouseEvent): void => {
+    e.stopPropagation()
+    if (contextMenu) {
+      setContextMenu(null)
+      return
+    }
+    const rect = moreRef.current?.getBoundingClientRect()
+    if (rect) {
+      setContextMenu({ x: rect.left, y: rect.bottom + 4 })
+    }
+  }
+
   const showMinimize = variant === 'mini'
   const isFocused = variant === 'focused'
   // In focused mode the header sits at the top of the window, so top-positioned
@@ -63,6 +79,19 @@ export function CardActionCluster({ terminalId, variant }: Props) {
 
   return (
     <div className="flex items-center gap-0.5 shrink-0">
+      <Tooltip label="More actions" position={tooltipPos}>
+        <button
+          ref={moreRef}
+          type="button"
+          onClick={handleMore}
+          onPointerDown={(e) => e.stopPropagation()}
+          className={btn}
+          aria-label="More actions"
+        >
+          <MoreHorizontal size={14} strokeWidth={2} />
+        </button>
+      </Tooltip>
+
       <Tooltip label="Browse files" position={tooltipPos}>
         <button
           type="button"
@@ -121,6 +150,14 @@ export function CardActionCluster({ terminalId, variant }: Props) {
           </button>
         </Tooltip>
       </ConfirmPopover>
+
+      {contextMenu && (
+        <CardContextMenu
+          terminalId={terminalId}
+          position={contextMenu}
+          onClose={() => setContextMenu(null)}
+        />
+      )}
     </div>
   )
 }
