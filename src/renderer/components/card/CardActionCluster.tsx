@@ -72,6 +72,19 @@ export function CardActionCluster({ terminalId, variant }: Props) {
 
   return (
     <div className="flex items-center gap-0.5 shrink-0">
+      <Tooltip label="More actions" position="top">
+        <button
+          ref={moreRef}
+          type="button"
+          onClick={handleMore}
+          onPointerDown={(e) => e.stopPropagation()}
+          className={btn}
+          aria-label="More actions"
+        >
+          <MoreHorizontal size={14} strokeWidth={2} />
+        </button>
+      </Tooltip>
+
       <Tooltip label="Browse files" position="top">
         <button
           type="button"
@@ -130,19 +143,6 @@ export function CardActionCluster({ terminalId, variant }: Props) {
           </button>
         </Tooltip>
       </ConfirmPopover>
-
-      <Tooltip label="More actions" position="top">
-        <button
-          ref={moreRef}
-          type="button"
-          onClick={handleMore}
-          onPointerDown={(e) => e.stopPropagation()}
-          className={btn}
-          aria-label="More actions"
-        >
-          <MoreHorizontal size={14} strokeWidth={2} />
-        </button>
-      </Tooltip>
 
       {contextMenu && (
         <CardContextMenu
