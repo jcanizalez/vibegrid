@@ -14,6 +14,14 @@ Object.defineProperty(window, 'api', {
   writable: true
 })
 
+class MockResizeObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+;(globalThis as unknown as { ResizeObserver: typeof MockResizeObserver }).ResizeObserver =
+  MockResizeObserver
+
 // Stub AgentCard with forwardRef so GridView's ref callback (which calls
 // cardRefs.current.set(id, el)) actually fires.
 vi.mock('../src/renderer/components/AgentCard', () => ({
@@ -54,6 +62,7 @@ vi.mock('../src/renderer/hooks/useFilteredHeadless', () => ({
 
 import { useAppStore } from '../src/renderer/stores'
 import { GridView } from '../src/renderer/components/GridView'
+import { pickAutoLayout } from '../src/renderer/lib/auto-grid-layout'
 
 const mockConfig = {
   projects: [
@@ -128,5 +137,118 @@ describe('GridView', () => {
     useAppStore.setState({ sortMode: 'created' })
     render(<GridView />)
     expect(screen.getByTestId('card-term-a').dataset.dragTarget).toBe('no')
+  })
+})
+
+describe('pickAutoLayout', () => {
+  const W = 1920
+  const H = 1080
+
+  it('n=0 returns 1x1 fit', () => {
+    expect(pickAutoLayout(0, W, H)).toEqual({ cols: 1, rows: 1, mode: 'fit' })
+  })
+
+  it('n=1 is a single fullscreen card', () => {
+    expect(pickAutoLayout(1, W, H)).toEqual({ cols: 1, rows: 1, mode: 'fit' })
+    expect(pickAutoLayout(1, 800, 600)).toEqual({ cols: 1, rows: 1, mode: 'fit' })
+  })
+
+  it('n=2 splits the screen into two columns', () => {
+    expect(pickAutoLayout(2, W, H)).toEqual({ cols: 2, rows: 1, mode: 'fit' })
+  })
+
+  it('n=3 splits into three columns', () => {
+    expect(pickAutoLayout(3, W, H)).toEqual({ cols: 3, rows: 1, mode: 'fit' })
+  })
+
+  it('n=4 on 1920x1080 prefers 2x2 over 4x1', () => {
+    const layout = pickAutoLayout(4, W, H)
+    expect(layout.mode).toBe('fit')
+    expect(layout.cols).toBe(2)
+    expect(layout.rows).toBe(2)
+  })
+
+  it('n=6 on 1920x1080 picks 3x2', () => {
+    expect(pickAutoLayout(6, W, H)).toEqual({ cols: 3, rows: 2, mode: 'fit' })
+  })
+
+  it('n=6 on MacBook Pro retina (~2200x1400) picks 3x2, not 2x3', () => {
+    // Regression: earlier aspect target 16:10 picked 2 cols × 3 rows (wide-short
+    // cards) on this viewport. Squarer target should give 3 cols × 2 rows.
+    expect(pickAutoLayout(6, 2200, 1400)).toEqual({ cols: 3, rows: 2, mode: 'fit' })
+  })
+
+  it('n=9 on 1920x1080 packs into 3x3 fit', () => {
+    expect(pickAutoLayout(9, W, H)).toEqual({ cols: 3, rows: 3, mode: 'fit' })
+  })
+
+  it('n=10 on 1920x1080 fits in 4x3 (4-col cap on landscape)', () => {
+    const layout = pickAutoLayout(10, W, H)
+    expect(layout.mode).toBe('fit')
+    expect(layout.cols).toBe(4)
+    expect(layout.rows).toBe(3)
+  })
+
+  it('n=6 on a small-ish laptop window (1230x860) picks 3x2', () => {
+    // Regression: earlier comfy threshold 480px blocked 3 cols here, forcing 2x3.
+    // With the hard min (320), 1230/320=3 cols is allowed, and 3x2 wins.
+    expect(pickAutoLayout(6, 1230, 860)).toEqual({ cols: 3, rows: 2, mode: 'fit' })
+  })
+
+  it('n=10 on a laptop window (1230x860) spills to scroll — 4 rows too short', () => {
+    // Row cap: 860/280=3 rows, cols cap: 1230/320=3 cols → 3x3=9 fit cap.
+    // Prevents the 3x4 layout where each row would be ~215px tall.
+    const layout = pickAutoLayout(10, 1230, 860)
+    expect(layout.mode).toBe('scroll')
+  })
+
+  it('n=10 on a small window (1000x700) scrolls (cap is lower)', () => {
+    // 1000/320=3 cols, 700/280=2 rows → 3x2 = 6 cap; n=10 spills.
+    const layout = pickAutoLayout(10, 1000, 700)
+    expect(layout.mode).toBe('scroll')
+  })
+
+  it('n=16 on a 4K monitor packs into 4x4 fit', () => {
+    // 2560x1440 is comfortable for 4 cols (640 wide) and 4 rows (360 tall)
+    const layout = pickAutoLayout(16, 2560, 1440)
+    expect(layout).toEqual({ cols: 4, rows: 4, mode: 'fit' })
+  })
+
+  it('n=12 on a 4K monitor packs into 4x3 fit', () => {
+    const layout = pickAutoLayout(12, 2560, 1440)
+    expect(layout.mode).toBe('fit')
+    expect(layout.cols).toBe(4)
+    expect(layout.rows).toBe(3)
+  })
+
+  it('n=17 on a 4K monitor spills to scroll (fit cap is 16)', () => {
+    const layout = pickAutoLayout(17, 2560, 1440)
+    expect(layout.mode).toBe('scroll')
+  })
+
+  it('fit mode never exceeds 4x4 even on huge viewports', () => {
+    for (let n = 1; n <= 16; n++) {
+      const layout = pickAutoLayout(n, 5120, 2880)
+      if (layout.mode === 'fit') {
+        expect(layout.cols).toBeLessThanOrEqual(4)
+        expect(layout.rows).toBeLessThanOrEqual(4)
+      }
+    }
+  })
+
+  it('falls back to scroll when cards would be unusably small', () => {
+    const layout = pickAutoLayout(20, 1280, 720)
+    expect(layout.mode).toBe('scroll')
+    expect(layout.cols).toBeGreaterThanOrEqual(1)
+    expect(layout.cols).toBeLessThanOrEqual(4)
+    expect(layout.rows).toBe(Math.ceil(20 / layout.cols))
+  })
+
+  it('never exceeds the card count in columns', () => {
+    for (let n = 1; n <= 12; n++) {
+      const layout = pickAutoLayout(n, W, H)
+      expect(layout.cols).toBeLessThanOrEqual(n)
+      expect(layout.cols * layout.rows).toBeGreaterThanOrEqual(n)
+    }
   })
 })

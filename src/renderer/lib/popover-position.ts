@@ -23,12 +23,10 @@ export interface PopoverPosition {
   placement: 'top' | 'bottom'
 }
 
+import { clamp } from './math'
+
 const VIEWPORT_MARGIN = 8
 const POPOVER_GAP = 6
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), max)
-}
 
 export function calculatePopoverPosition(
   anchor: AnchorRect,
