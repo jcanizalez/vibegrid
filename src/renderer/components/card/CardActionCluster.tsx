@@ -59,6 +59,10 @@ export function CardActionCluster({ terminalId, variant }: Props) {
 
   const handleMore = (e: React.MouseEvent): void => {
     e.stopPropagation()
+    if (contextMenu) {
+      setContextMenu(null)
+      return
+    }
     const rect = moreRef.current?.getBoundingClientRect()
     if (rect) {
       setContextMenu({ x: rect.right - 220, y: rect.bottom + 4 })
