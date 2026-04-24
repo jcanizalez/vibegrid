@@ -31,12 +31,22 @@ export function CallConnectorActionNodeForm({
   }, [])
 
   useEffect(() => {
+    let cancelled = false
+    // Clear immediately so the picker doesn't briefly show the previous
+    // connection's actions while the new fetch is in flight.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setActions([])
     if (!config.connectionId) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setActions([])
-      return
+      return () => {
+        cancelled = true
+      }
     }
-    window.api.listConnectionActions(config.connectionId).then(setActions)
+    window.api.listConnectionActions(config.connectionId).then((next) => {
+      if (!cancelled) setActions(next)
+    })
+    return () => {
+      cancelled = true
+    }
   }, [config.connectionId])
 
   const contextVars = TEMPLATE_VARIABLES.filter((v) => {
