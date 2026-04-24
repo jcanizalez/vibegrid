@@ -53,7 +53,15 @@ async function syncOne(
     const plain = tryDecrypt(raw)
     if (plain !== undefined) decrypted[f.key] = plain
   }
-  if (Object.keys(decrypted).length === 0) return
+  // Always push the current view even if empty. Otherwise, when a user
+  // clears a password field (or its ciphertext fails to decrypt), the
+  // server's in-memory Map would retain the previous plaintext and
+  // `applyDecryptedCreds()` would keep overlaying stale secrets. Clearing
+  // keeps the store in sync with what's actually in the DB.
+  if (Object.keys(decrypted).length === 0) {
+    await bridge.request(IPC.CREDENTIALS_CLEAR_DECRYPTED, { connectionId: conn.id })
+    return
+  }
   await bridge.request(IPC.CREDENTIALS_SET_DECRYPTED, {
     connectionId: conn.id,
     fields: decrypted
