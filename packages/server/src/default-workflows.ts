@@ -115,7 +115,7 @@ export function buildConnectorSeededWorkflow(
   return {
     id,
     name: event.name,
-    icon: 'Plug',
+    icon: connection.connectorId,
     iconColor: '#64748b',
     enabled: true,
     workspaceId: 'personal',
