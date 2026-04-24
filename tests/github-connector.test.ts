@@ -122,7 +122,9 @@ describe('github connector — listItems()', () => {
       assignee: 'user+alias'
     })
     const [cmd, args] = execFileMock.mock.calls[0]
-    expect(cmd).toBe('gh')
+    // resolveGhPath() may return an absolute path (/usr/bin/gh, /opt/homebrew/bin/gh)
+    // or the bare name when not on PATH in the test runner.
+    expect(cmd).toMatch(/(?:^|[/\\])gh(?:\.(?:exe|cmd))?$/)
     const endpoint = args[1] as string
     expect(endpoint).toContain(encodeURIComponent('owner with space'))
     expect(endpoint).toContain(encodeURIComponent('repo/has/slash'))
