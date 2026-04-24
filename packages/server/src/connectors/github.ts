@@ -9,6 +9,7 @@ import type {
   TaskStatus
 } from '@vornrun/shared/types'
 import log from '../logger'
+import { resolveGhPath, GhNotFoundError, getGhEnv } from './gh-cli'
 
 const execFileAsync = promisify(execFile)
 
@@ -26,13 +27,17 @@ function isTransientErr(err: unknown): boolean {
  * so gh's non-zero exit reasons (e.g. rate limiting, auth) surface in logs.
  */
 async function gh(args: string[], cwd?: string, input?: string): Promise<string> {
+  const ghPath = resolveGhPath()
+  if (!ghPath) throw new GhNotFoundError()
+  const env = getGhEnv()
   const run = async () => {
     if (input !== undefined) {
-      return runWithStdin(args, input, cwd)
+      return runWithStdin(ghPath, args, input, cwd, env)
     }
-    const { stdout } = await execFileAsync('gh', args, {
+    const { stdout } = await execFileAsync(ghPath, args, {
       timeout: 15_000,
       maxBuffer: 10 * 1024 * 1024,
+      env,
       ...(cwd && { cwd })
     })
     return stdout
@@ -58,19 +63,47 @@ async function gh(args: string[], cwd?: string, input?: string): Promise<string>
 
 /** Run `gh` feeding `input` on stdin. Used by `gh api --input -` paths so we
  *  never interpolate untrusted body values into shell arguments. */
-function runWithStdin(args: string[], input: string, cwd?: string): Promise<string> {
+function runWithStdin(
+  ghPath: string,
+  args: string[],
+  input: string,
+  cwd: string | undefined,
+  env: Record<string, string>
+): Promise<string> {
   return new Promise((resolve, reject) => {
-    const child = spawn('gh', args, { cwd, timeout: 15_000 })
+    // Note: child_process.spawn doesn't honor `timeout` (unlike execFile), so
+    // we enforce it with an explicit timer. Without this, a `gh` subprocess
+    // blocking on e.g. a hung credential helper would hang poll/exec forever.
+    const child = spawn(ghPath, args, { cwd, env })
     let stdout = ''
     let stderr = ''
+    let settled = false
+    const timer = setTimeout(() => {
+      if (settled) return
+      settled = true
+      try {
+        child.kill('SIGTERM')
+      } catch {
+        /* already exited */
+      }
+      reject(new Error('gh command timed out after 15s'))
+    }, 15_000)
     child.stdout.on('data', (d) => {
       stdout += d.toString()
     })
     child.stderr.on('data', (d) => {
       stderr += d.toString()
     })
-    child.on('error', reject)
+    child.on('error', (err) => {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
+      reject(err)
+    })
     child.on('close', (code) => {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
       if (code === 0) return resolve(stdout)
       reject(new Error(`gh exited with code ${code}: ${stderr.trim() || 'no stderr'}`))
     })
