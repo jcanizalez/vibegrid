@@ -37,9 +37,16 @@ const importLinear = async () =>
   (await import('../packages/server/src/connectors/linear')).linearConnector
 
 describe('linear connector — describe()', () => {
-  it('advertises tasks + triggers (no actions)', async () => {
+  it('advertises tasks, triggers, and actions', async () => {
     const linear = await importLinear()
-    expect(linear.capabilities).toEqual(['tasks', 'triggers'])
+    expect(linear.capabilities).toEqual(['tasks', 'triggers', 'actions'])
+  })
+
+  it('declares commentOnIssue / createIssue / closeIssue actions', async () => {
+    const linear = await importLinear()
+    const manifest = linear.describe()
+    const types = manifest.actions?.map((a) => a.type)
+    expect(types).toEqual(['commentOnIssue', 'createIssue', 'closeIssue'])
   })
 
   it('declares apiKey as a required password auth field', async () => {
@@ -184,10 +191,121 @@ describe('linear connector — poll()', () => {
 })
 
 describe('linear connector — execute()', () => {
-  it('returns success:false for any action (not implemented yet)', async () => {
+  it('createIssue: resolves teamKey to teamId then calls issueCreate', async () => {
+    fetchMock
+      .mockResolvedValueOnce(okResponse({ teams: { nodes: [{ id: 'team-uuid' }] } }))
+      .mockResolvedValueOnce(
+        okResponse({
+          issueCreate: {
+            success: true,
+            issue: { id: 'i', identifier: 'ENG-42', url: 'https://linear.app/i/ENG-42' }
+          }
+        })
+      )
     const linear = await importLinear()
-    const result = await linear.execute!('createIssue', { apiKey: 'k' })
+    const result = await linear.execute!('createIssue', {
+      apiKey: 'k',
+      teamKey: 'ENG',
+      title: 'New bug',
+      description: 'desc'
+    })
+    expect(result.success).toBe(true)
+    expect(result.output).toEqual({
+      identifier: 'ENG-42',
+      url: 'https://linear.app/i/ENG-42'
+    })
+    const createBody = JSON.parse((fetchMock.mock.calls[1][1] as RequestInit).body as string)
+    expect(createBody.variables.input).toEqual({
+      teamId: 'team-uuid',
+      title: 'New bug',
+      description: 'desc'
+    })
+  })
+
+  it('createIssue: fails when title is missing', async () => {
+    const linear = await importLinear()
+    const result = await linear.execute!('createIssue', { apiKey: 'k', teamKey: 'ENG' })
     expect(result.success).toBe(false)
-    expect(result.error).toMatch(/not implemented/)
+    expect(result.error).toMatch(/title is required/)
+  })
+
+  it('createIssue: fails when teamKey is missing (not on connection or call)', async () => {
+    const linear = await importLinear()
+    const result = await linear.execute!('createIssue', { apiKey: 'k', title: 't' })
+    expect(result.success).toBe(false)
+    expect(result.error).toMatch(/teamKey is required/)
+  })
+
+  it('commentOnIssue: resolves identifier to UUID then calls commentCreate', async () => {
+    fetchMock
+      .mockResolvedValueOnce(okResponse({ issues: { nodes: [{ id: 'issue-uuid' }] } }))
+      .mockResolvedValueOnce(
+        okResponse({
+          commentCreate: { success: true, comment: { id: 'c', url: 'https://linear.app/c/1' } }
+        })
+      )
+    const linear = await importLinear()
+    const result = await linear.execute!('commentOnIssue', {
+      apiKey: 'k',
+      identifier: 'ENG-1',
+      body: 'thanks'
+    })
+    expect(result.success).toBe(true)
+    const commentBody = JSON.parse((fetchMock.mock.calls[1][1] as RequestInit).body as string)
+    expect(commentBody.variables.input).toEqual({ issueId: 'issue-uuid', body: 'thanks' })
+  })
+
+  it('commentOnIssue: fails when issue identifier not found', async () => {
+    fetchMock.mockResolvedValue(okResponse({ issues: { nodes: [] } }))
+    const linear = await importLinear()
+    const result = await linear.execute!('commentOnIssue', {
+      apiKey: 'k',
+      identifier: 'ENG-999',
+      body: 'hi'
+    })
+    expect(result.success).toBe(false)
+    expect(result.error).toMatch(/not found/)
+  })
+
+  it('closeIssue: picks lowest-position completed state on the issue team', async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        okResponse({
+          issues: {
+            nodes: [{ id: 'issue-uuid', team: { id: 'team-uuid', key: 'ENG' } }]
+          }
+        })
+      )
+      .mockResolvedValueOnce(
+        okResponse({
+          workflowStates: {
+            nodes: [
+              { id: 'state-released', type: 'completed', position: 200 },
+              { id: 'state-done', type: 'completed', position: 100 }
+            ]
+          }
+        })
+      )
+      .mockResolvedValueOnce(
+        okResponse({
+          issueUpdate: { success: true, issue: { id: 'issue-uuid', state: { name: 'Done' } } }
+        })
+      )
+    const linear = await importLinear()
+    const result = await linear.execute!('closeIssue', {
+      apiKey: 'k',
+      identifier: 'ENG-1'
+    })
+    expect(result.success).toBe(true)
+    const updateBody = JSON.parse((fetchMock.mock.calls[2][1] as RequestInit).body as string)
+    expect(updateBody.variables.id).toBe('issue-uuid')
+    expect(updateBody.variables.input).toEqual({ stateId: 'state-done' })
+  })
+
+  it('returns an error for unknown action types', async () => {
+    const linear = await importLinear()
+    const result = await linear.execute!('noSuchAction', { apiKey: 'k' })
+    expect(result.success).toBe(false)
+    expect(result.error).toMatch(/Unknown action/)
   })
 })
