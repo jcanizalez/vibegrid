@@ -259,11 +259,11 @@ describe('CardStatusBar — bottom VS Code style strip', () => {
   })
 })
 
-describe('TabView no longer renders CardStatusBar (unified sessions panel)', () => {
-  it('omits the bottom branch chip — metadata lives in the tab tooltip instead', () => {
+describe('TabView renders CardStatusBar below the active terminal', () => {
+  it('renders the bottom branch chip so it matches grid and focused views', () => {
     render(<TabView />)
-    // The "Switch branch" button only exists inside CardStatusBar, so none should render.
-    expect(screen.queryByRole('button', { name: /Switch branch/ })).not.toBeInTheDocument()
+    // The "Switch branch" button only exists inside CardStatusBar.
+    expect(screen.getByRole('button', { name: /Switch branch/ })).toBeInTheDocument()
     // The tab itself still carries the branch in its `title` tooltip attribute.
     const tab = screen.getByRole('tab')
     expect(tab.querySelector('[title*="Branch: main"]')).toBeTruthy()
@@ -568,7 +568,11 @@ describe('TabView merged toolbar controls', () => {
       })
     })
     render(<TabView />)
-    expect(screen.getByText('Fix auth bug')).toBeInTheDocument()
+    // Title appears both in the tab label and in the CardStatusBar task pill.
+    const matches = screen.getAllByText('Fix auth bug')
+    expect(matches.length).toBeGreaterThan(0)
+    const tab = screen.getByRole('tab')
+    expect(tab.textContent).toContain('Fix auth bug')
   })
 
   it('clicks new session button and opens dialog when no project', () => {
