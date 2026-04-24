@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { SourceConnection, WorkflowDefinition } from '../../../shared/types'
 import { ICON_MAP } from './icon-map'
 import { useAppStore } from '../../stores'
@@ -56,19 +56,12 @@ export function WorkflowItem({
   // For connector-seeded workflows, resolve the source connector so we can
   // show its brand icon instead of the generic Plug. The connector id isn't
   // in the workflow row itself; we look it up via the connection record.
-  const connectorWf = parseConnectorWorkflowId(workflow.id)
+  const connectorWf = useMemo(() => parseConnectorWorkflowId(workflow.id), [workflow.id])
   const [connectorId, setConnectorId] = useState<string | null>(null)
   useEffect(() => {
     if (!connectorWf) {
-      // Reset outside of the synchronous effect body to satisfy the
-      // react-hooks/set-state-in-effect rule.
-      let cancelled = false
-      queueMicrotask(() => {
-        if (!cancelled) setConnectorId(null)
-      })
-      return () => {
-        cancelled = true
-      }
+      setConnectorId(null)
+      return
     }
     let cancelled = false
     window.api.listConnections().then((conns: SourceConnection[]) => {
@@ -79,7 +72,7 @@ export function WorkflowItem({
     return () => {
       cancelled = true
     }
-  }, [connectorWf?.connectionId, connectorWf])
+  }, [connectorWf])
 
   const WfIcon = ICON_MAP[workflow.icon] || Zap
   const isScheduled = isScheduledWorkflow(workflow)
