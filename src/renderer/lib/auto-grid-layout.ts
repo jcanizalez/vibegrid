@@ -31,8 +31,12 @@ export type AutoLayout = { cols: number; rows: number; mode: 'fit' | 'scroll' }
 export function pickAutoLayout(n: number, W: number, H: number): AutoLayout {
   if (n <= 0) return { cols: 1, rows: 1, mode: 'fit' }
   if (n === 1) return { cols: 1, rows: 1, mode: 'fit' }
-  if (n === 2) return { cols: 2, rows: 1, mode: 'fit' }
-  if (n === 3) return { cols: 3, rows: 1, mode: 'fit' }
+  // Prefer a single row for 2 and 3 cards — but only when the viewport is
+  // wide enough that each card still meets the usable-width floor. On a
+  // narrow viewport we fall through to the scoring loop, which may stack
+  // vertically or spill to scroll instead of producing unreadably thin tiles.
+  if (n === 2 && W / 2 >= AUTO_MIN_CARD_W) return { cols: 2, rows: 1, mode: 'fit' }
+  if (n === 3 && W / 3 >= AUTO_MIN_CARD_W) return { cols: 3, rows: 1, mode: 'fit' }
 
   const maxCols = clamp(Math.floor(W / AUTO_MIN_CARD_W), 1, AUTO_HARD_MAX_COLS)
   const maxRows = clamp(Math.floor(H / AUTO_ROW_FIT_MIN_H), 1, AUTO_HARD_MAX_ROWS)

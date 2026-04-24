@@ -1,3 +1,5 @@
+import { clamp } from './math'
+
 export interface AnchorRect {
   top: number
   left: number
@@ -22,8 +24,6 @@ export interface PopoverPosition {
   left: number
   placement: 'top' | 'bottom'
 }
-
-import { clamp } from './math'
 
 const VIEWPORT_MARGIN = 8
 const POPOVER_GAP = 6

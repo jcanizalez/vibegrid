@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { forwardRef } from 'react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, beforeAll, afterAll } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import '@testing-library/jest-dom/vitest'
 
@@ -19,8 +19,12 @@ class MockResizeObserver {
   unobserve() {}
   disconnect() {}
 }
-;(globalThis as unknown as { ResizeObserver: typeof MockResizeObserver }).ResizeObserver =
-  MockResizeObserver
+beforeAll(() => {
+  vi.stubGlobal('ResizeObserver', MockResizeObserver)
+})
+afterAll(() => {
+  vi.unstubAllGlobals()
+})
 
 // Stub AgentCard with forwardRef so GridView's ref callback (which calls
 // cardRefs.current.set(id, el)) actually fires.
