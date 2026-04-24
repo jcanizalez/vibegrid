@@ -93,6 +93,27 @@ describe('getOrStartClient', () => {
     expect(transportInstances).toHaveLength(1)
   })
 
+  it('does not race two spawns when concurrent callers hit a cache miss', async () => {
+    let resolveConnect: (() => void) | undefined
+    clientConnect.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveConnect = resolve
+        })
+    )
+    const { getOrStartClient } = await importClients()
+    const c = conn({ command: 'echo', args: '[]', env: '{}' })
+    // Two parallel callers — both should share the same in-flight startup
+    // and end up using the same single transport.
+    const p1 = getOrStartClient(c)
+    const p2 = getOrStartClient(c)
+    expect(transportInstances).toHaveLength(1)
+    resolveConnect?.()
+    const [a, b] = await Promise.all([p1, p2])
+    expect(a).toBe(b)
+    expect(transportInstances).toHaveLength(1)
+  })
+
   it('merges decrypted secretEnv on top of plaintext env', async () => {
     clientConnect.mockResolvedValue(undefined)
     const { setDecryptedCreds } = await importDecrypted()

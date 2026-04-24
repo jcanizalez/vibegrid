@@ -189,7 +189,7 @@ describe('invokeMcpTool', () => {
     expect(result.error).toBe('path not allowed')
   })
 
-  it('drops empty-string optional fields so servers can fall back to defaults', async () => {
+  it('drops empty-string optional non-string fields so servers can fall back to defaults', async () => {
     const callTool = vi.fn().mockResolvedValue({ content: [] })
     getOrStartClientMock.mockResolvedValue({ callTool })
     const { invokeMcpTool } = await importMcp()
@@ -209,6 +209,48 @@ describe('invokeMcpTool', () => {
       { maxCount: '' }
     )
     expect(callTool).toHaveBeenCalledWith({ name: 'do', arguments: {} })
+  })
+
+  it('preserves empty strings for string-typed fields', async () => {
+    const callTool = vi.fn().mockResolvedValue({ content: [] })
+    getOrStartClientMock.mockResolvedValue({ callTool })
+    const { invokeMcpTool } = await importMcp()
+    await invokeMcpTool(
+      conn({
+        discoveredTools: [
+          {
+            name: 'do',
+            inputSchema: { type: 'object', properties: { search: { type: 'string' } } }
+          }
+        ]
+      }),
+      'do',
+      { search: '' }
+    )
+    expect(callTool).toHaveBeenCalledWith({ name: 'do', arguments: { search: '' } })
+  })
+
+  it('preserves empty strings on required non-string fields so the MCP server surfaces its own validation error', async () => {
+    const callTool = vi.fn().mockResolvedValue({ content: [] })
+    getOrStartClientMock.mockResolvedValue({ callTool })
+    const { invokeMcpTool } = await importMcp()
+    await invokeMcpTool(
+      conn({
+        discoveredTools: [
+          {
+            name: 'do',
+            inputSchema: {
+              type: 'object',
+              properties: { count: { type: 'number' } },
+              required: ['count']
+            }
+          }
+        ]
+      }),
+      'do',
+      { count: '' }
+    )
+    expect(callTool).toHaveBeenCalledWith({ name: 'do', arguments: { count: '' } })
   })
 
   it('returns a failure result when the client itself throws', async () => {

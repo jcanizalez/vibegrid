@@ -97,15 +97,30 @@ function coerceMcpArgs(
       out[key] = value
       continue
     }
-    // Empty-string + optional field → omit entirely so the MCP server can
-    // fall back to its own default rather than rejecting `""` for a number.
-    if (value === '') continue
+    // Empty-string handling depends on the declared type. For strings we
+    // keep `""` (the user may legitimately want to send an empty value, or
+    // wants the server to surface its own validation error). For non-string
+    // types `""` is never a valid coerced payload — dropping the key lets
+    // the MCP server apply its own default for optional fields, and lets
+    // its validator complain explicitly for required ones rather than us
+    // forwarding an obviously-wrong value.
+    if (value === '' && t !== undefined && t !== 'string') {
+      if (!schemaRequired(inputSchema, key)) continue
+    }
     if (t === 'number' || t === 'integer') {
+      if (value === '') {
+        out[key] = value
+        continue
+      }
       const n = Number(value)
       out[key] = Number.isFinite(n) ? n : value
     } else if (t === 'boolean') {
       out[key] = value === 'true' ? true : value === 'false' ? false : value
     } else if (t === 'object' || t === 'array') {
+      if (value === '') {
+        out[key] = value
+        continue
+      }
       try {
         out[key] = JSON.parse(value)
       } catch {

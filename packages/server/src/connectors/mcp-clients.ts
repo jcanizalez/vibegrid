@@ -24,6 +24,9 @@ interface LiveClient {
 }
 
 const clients = new Map<string, LiveClient>()
+// In-flight startups, so two concurrent `getOrStartClient` calls for the
+// same connection share one spawn instead of racing two children.
+const pending = new Map<string, Promise<Client>>()
 
 function tryParseJson<T>(raw: unknown, guard: (v: unknown) => v is T, fallback: T): T {
   if (typeof raw !== 'string' || raw === '') return fallback
@@ -68,7 +71,17 @@ function buildSpawnConfig(conn: SourceConnection): {
 export async function getOrStartClient(conn: SourceConnection): Promise<Client> {
   const existing = clients.get(conn.id)
   if (existing) return existing.client
+  const inFlight = pending.get(conn.id)
+  if (inFlight) return inFlight
 
+  const startup = startClient(conn).finally(() => {
+    pending.delete(conn.id)
+  })
+  pending.set(conn.id, startup)
+  return startup
+}
+
+async function startClient(conn: SourceConnection): Promise<Client> {
   const { command, args, env } = buildSpawnConfig(conn)
   // Inherit PATH and friends from the parent via getSafeEnv() — same
   // sanitization the rest of the server uses for child processes — so
