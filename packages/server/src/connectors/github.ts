@@ -1,4 +1,4 @@
-import { execFile } from 'node:child_process'
+import { execFile, spawn } from 'node:child_process'
 import { promisify } from 'node:util'
 import type {
   VornConnector,
@@ -12,19 +12,71 @@ import log from '../logger'
 
 const execFileAsync = promisify(execFile)
 
-async function gh(args: string[], cwd?: string): Promise<string> {
-  try {
+const TRANSIENT_CODES = new Set(['ETIMEDOUT', 'ENETDOWN', 'ENETUNREACH', 'ECONNRESET'])
+
+function isTransientErr(err: unknown): boolean {
+  if (!err || typeof err !== 'object') return false
+  const code = (err as { code?: string }).code
+  return typeof code === 'string' && TRANSIENT_CODES.has(code)
+}
+
+/**
+ * Run `gh` with a 15s timeout. One retry on transient network errors so a
+ * flaky WiFi blip doesn't kill a poll. Captures stderr into the error message
+ * so gh's non-zero exit reasons (e.g. rate limiting, auth) surface in logs.
+ */
+async function gh(args: string[], cwd?: string, input?: string): Promise<string> {
+  const run = async () => {
+    if (input !== undefined) {
+      return runWithStdin(args, input, cwd)
+    }
     const { stdout } = await execFileAsync('gh', args, {
-      timeout: 30_000,
+      timeout: 15_000,
       maxBuffer: 10 * 1024 * 1024,
       ...(cwd && { cwd })
     })
     return stdout
+  }
+  try {
+    return await run()
   } catch (err: unknown) {
+    if (isTransientErr(err)) {
+      log.warn(`[github-connector] transient error, retrying once: ${String(err)}`)
+      try {
+        return await run()
+      } catch (retryErr) {
+        const msg = retryErr instanceof Error ? retryErr.message : String(retryErr)
+        log.error(`[github-connector] gh command failed after retry: gh ${args.join(' ')} — ${msg}`)
+        throw new Error(`gh command failed: ${msg}`, { cause: retryErr })
+      }
+    }
     const msg = err instanceof Error ? err.message : String(err)
     log.error(`[github-connector] gh command failed: gh ${args.join(' ')} — ${msg}`)
     throw new Error(`gh command failed: ${msg}`, { cause: err })
   }
+}
+
+/** Run `gh` feeding `input` on stdin. Used by `gh api --input -` paths so we
+ *  never interpolate untrusted body values into shell arguments. */
+function runWithStdin(args: string[], input: string, cwd?: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const child = spawn('gh', args, { cwd, timeout: 15_000 })
+    let stdout = ''
+    let stderr = ''
+    child.stdout.on('data', (d) => {
+      stdout += d.toString()
+    })
+    child.stderr.on('data', (d) => {
+      stderr += d.toString()
+    })
+    child.on('error', reject)
+    child.on('close', (code) => {
+      if (code === 0) return resolve(stdout)
+      reject(new Error(`gh exited with code ${code}: ${stderr.trim() || 'no stderr'}`))
+    })
+    child.stdin.write(input)
+    child.stdin.end()
+  })
 }
 
 /** Detect owner/repo from a git repo path using gh CLI */
@@ -45,6 +97,12 @@ export async function detectRepoSlug(
   }
 }
 
+/**
+ * Invoke the GitHub REST API via `gh api`. For non-GET requests with a body,
+ * the JSON body is piped over stdin using `--input -`, which side-steps shell
+ * escaping entirely — no interpolation of untrusted values into `-f` flags,
+ * no injection surface even if the body contains quotes/semicolons/newlines.
+ */
 async function ghApi(
   endpoint: string,
   method = 'GET',
@@ -54,12 +112,13 @@ async function ghApi(
   if (method !== 'GET') {
     args.push('-X', method)
   }
-  if (body) {
-    for (const [key, value] of Object.entries(body)) {
-      args.push('-f', `${key}=${String(value)}`)
-    }
+  let result: string
+  if (body && Object.keys(body).length > 0) {
+    args.push('--input', '-')
+    result = await gh(args, undefined, JSON.stringify(body))
+  } else {
+    result = await gh(args)
   }
-  const result = await gh(args)
   return result.trim() ? JSON.parse(result) : null
 }
 
@@ -265,19 +324,15 @@ export const githubConnector: VornConnector = {
         }
       ],
       actions: [
-        {
-          type: 'syncTasks',
-          label: 'Sync Issues',
-          description: 'Pull GitHub issues into the task board',
-          configFields: []
-        },
+        // Note: owner/repo are sourced from the connection's filters and
+        // merged in server-side before connector.execute() runs — they're
+        // deliberately not duplicated in these configFields so the action
+        // form stays focused on per-call args.
         {
           type: 'createIssue',
           label: 'Create Issue',
-          description: 'Create a new GitHub issue',
+          description: 'Create a new GitHub issue in the connected repo',
           configFields: [
-            { key: 'owner', label: 'Owner', type: 'text', required: true },
-            { key: 'repo', label: 'Repository', type: 'text', required: true },
             {
               key: 'title',
               label: 'Title',
@@ -286,21 +341,20 @@ export const githubConnector: VornConnector = {
               supportsTemplates: true
             },
             { key: 'body', label: 'Body', type: 'textarea', supportsTemplates: true },
-            { key: 'labels', label: 'Labels', type: 'text' }
+            { key: 'labels', label: 'Labels', type: 'text', placeholder: 'bug,enhancement' }
           ]
         },
         {
           type: 'closeIssue',
           label: 'Close Issue',
-          description: 'Close a GitHub issue',
+          description: 'Close an issue in the connected repo',
           configFields: [
-            { key: 'owner', label: 'Owner', type: 'text', required: true },
-            { key: 'repo', label: 'Repository', type: 'text', required: true },
             {
               key: 'number',
               label: 'Issue #',
               type: 'text',
               required: true,
+              placeholder: '{{connectorItem.externalId}}',
               supportsTemplates: true
             }
           ]
@@ -308,15 +362,14 @@ export const githubConnector: VornConnector = {
         {
           type: 'commentOnIssue',
           label: 'Comment on Issue',
-          description: 'Add a comment to a GitHub issue',
+          description: 'Post a comment on an issue in the connected repo',
           configFields: [
-            { key: 'owner', label: 'Owner', type: 'text', required: true },
-            { key: 'repo', label: 'Repository', type: 'text', required: true },
             {
               key: 'number',
               label: 'Issue #',
               type: 'text',
               required: true,
+              placeholder: '{{connectorItem.externalId}}',
               supportsTemplates: true
             },
             {
@@ -331,10 +384,16 @@ export const githubConnector: VornConnector = {
       ],
       defaultWorkflows: [
         {
-          name: 'Sync GitHub Issues',
-          trigger: 'recurring',
-          cron: '*/5 * * * *',
-          actionType: 'syncTasks'
+          name: 'GitHub: Issue Created',
+          event: 'issueCreated',
+          defaultCronFromMinutes: 5,
+          downstream: 'createTaskFromItem'
+        },
+        {
+          name: 'GitHub: PR Opened',
+          event: 'prOpened',
+          defaultCronFromMinutes: 5,
+          downstream: 'createTaskFromItem'
         }
       ]
     }

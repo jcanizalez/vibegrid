@@ -8,8 +8,11 @@ const CONNECTOR_ICONS: Record<string, React.FC<{ size: number; className?: strin
     </svg>
   ),
   linear: ({ size, className }) => (
-    <svg viewBox="0 0 16 16" width={size} height={size} className={className} fill="currentColor">
-      <path d="M0.856 8.972L7.028 15.144C3.291 14.618 0.382 11.709 0.856 8.972ZM0.254 7.396L8.604 15.746C12.758 15.09 15.09 12.758 15.746 8.604L7.396 0.254C3.242 0.91 0.91 3.242 0.254 7.396ZM8.972 0.856L15.144 7.028C14.618 3.291 11.709 0.382 8.972 0.856Z" />
+    <svg viewBox="0 0 24 24" width={size} height={size} className={className} fill="currentColor">
+      <path d="M3.03509 12.9431C3.24245 14.9227 4.10472 16.8468 5.62188 18.364C7.13904 19.8811 9.0631 20.7434 11.0428 20.9508L3.03509 12.9431Z" />
+      <path d="M3 11.4938L12.4921 20.9858C13.2976 20.9407 14.0981 20.7879 14.8704 20.5273L3.4585 9.11548C3.19793 9.88771 3.0451 10.6883 3 11.4938Z" />
+      <path d="M3.86722 8.10999L15.8758 20.1186C16.4988 19.8201 17.0946 19.4458 17.6493 18.9956L4.99021 6.33659C4.54006 6.89125 4.16573 7.487 3.86722 8.10999Z" />
+      <path d="M5.66301 5.59517C9.18091 2.12137 14.8488 2.135 18.3498 5.63604C21.8508 9.13708 21.8645 14.8049 18.3907 18.3228L5.66301 5.59517Z" />
     </svg>
   )
 }
@@ -40,30 +43,35 @@ export function SourceBadge({
   url?: string
   label?: string
 }) {
-  const badge = (
-    <span className="inline-flex items-center gap-0.5">
+  const inner = (
+    <>
       <ConnectorIcon connectorId={connectorId} size={11} className="text-gray-500" />
       {label && <span className="text-[10px] text-gray-500">{label}</span>}
-    </span>
+      {url && (
+        <ExternalLink
+          size={9}
+          className="text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity"
+        />
+      )}
+    </>
   )
 
   if (url) {
     return (
       <Tooltip label={`Open in ${connectorId}`}>
-        <a
-          href="#"
+        <button
+          type="button"
           onClick={(e) => {
-            e.preventDefault()
             e.stopPropagation()
             window.api.openExternal(url)
           }}
-          className="inline-flex items-center hover:text-gray-300 transition-colors"
+          className="group inline-flex items-center gap-0.5 hover:text-gray-300 transition-colors"
         >
-          {badge}
-        </a>
+          {inner}
+        </button>
       </Tooltip>
     )
   }
 
-  return badge
+  return <span className="inline-flex items-center gap-0.5">{inner}</span>
 }

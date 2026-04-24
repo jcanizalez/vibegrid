@@ -1,11 +1,21 @@
-import { useRef } from 'react'
-import type { WorkflowDefinition } from '../../../shared/types'
+import { useEffect, useRef, useState } from 'react'
+import type { SourceConnection, WorkflowDefinition } from '../../../shared/types'
 import { ICON_MAP } from './icon-map'
 import { useAppStore } from '../../stores'
 import { isScheduledWorkflow } from '../../lib/workflow-helpers'
 import { executeWorkflow } from '../../lib/workflow-execution'
 import { Zap, Play, MoreHorizontal } from 'lucide-react'
 import { Tooltip } from '../Tooltip'
+import { ConnectorIcon } from '../ConnectorIcon'
+
+/** Parse a seeded-connector workflow id: `connector:{connectionId}:{event}`. */
+function parseConnectorWorkflowId(id: string): { connectionId: string; event: string } | null {
+  if (!id.startsWith('connector:')) return null
+  const rest = id.slice('connector:'.length)
+  const colon = rest.indexOf(':')
+  if (colon === -1) return null
+  return { connectionId: rest.slice(0, colon), event: rest.slice(colon + 1) }
+}
 
 type DotColor = 'blue' | 'gray' | 'red' | 'amber' | null
 
@@ -42,6 +52,34 @@ export function WorkflowItem({
   const setWorkflowEditorOpen = useAppStore((s) => s.setWorkflowEditorOpen)
   const isSelected = useAppStore((s) => s.editingWorkflowId === workflow.id)
   const moreRef = useRef<HTMLButtonElement>(null)
+
+  // For connector-seeded workflows, resolve the source connector so we can
+  // show its brand icon instead of the generic Plug. The connector id isn't
+  // in the workflow row itself; we look it up via the connection record.
+  const connectorWf = parseConnectorWorkflowId(workflow.id)
+  const [connectorId, setConnectorId] = useState<string | null>(null)
+  useEffect(() => {
+    if (!connectorWf) {
+      // Reset outside of the synchronous effect body to satisfy the
+      // react-hooks/set-state-in-effect rule.
+      let cancelled = false
+      queueMicrotask(() => {
+        if (!cancelled) setConnectorId(null)
+      })
+      return () => {
+        cancelled = true
+      }
+    }
+    let cancelled = false
+    window.api.listConnections().then((conns: SourceConnection[]) => {
+      if (cancelled) return
+      const match = conns.find((c) => c.id === connectorWf.connectionId)
+      setConnectorId(match?.connectorId ?? null)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [connectorWf?.connectionId, connectorWf])
 
   const WfIcon = ICON_MAP[workflow.icon] || Zap
   const isScheduled = isScheduledWorkflow(workflow)
@@ -86,7 +124,11 @@ export function WorkflowItem({
         <span className="absolute left-0 top-1 bottom-1 w-px bg-white rounded-full" />
       )}
       <span className="relative shrink-0">
-        <WfIcon size={iconSize} color={workflow.iconColor || '#6b7280'} strokeWidth={1.5} />
+        {connectorId ? (
+          <ConnectorIcon connectorId={connectorId} size={iconSize} className="text-gray-400" />
+        ) : (
+          <WfIcon size={iconSize} color={workflow.iconColor || '#6b7280'} strokeWidth={1.5} />
+        )}
         {dot && !isCollapsed && (
           <span
             className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full border border-[#1a1a2e] ${DOT_CLASSES[dot]}`}

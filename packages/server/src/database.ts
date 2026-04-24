@@ -1400,6 +1400,33 @@ export function dbGetTaskSourceLinkByExternalId(
   return row ? rowToTaskSourceLink(row) : null
 }
 
+/**
+ * Fallback lookup for orphan re-linking: find a task whose own
+ * sourceConnectorId/sourceExternalId matches, even if its task_source_links
+ * row is missing (e.g. because a prior connection was deleted and cascaded
+ * the link). Used by the import path to re-adopt existing tasks instead of
+ * creating duplicates.
+ */
+export function dbFindTaskByConnectorExternalId(
+  connectorId: string,
+  externalId: string
+): TaskConfig | null {
+  const row = getDb()
+    .prepare('SELECT * FROM tasks WHERE source_connector_id = ? AND source_external_id = ? LIMIT 1')
+    .get(connectorId, externalId) as
+    | {
+        id: string
+        project_name: string
+        title: string
+        description: string
+        status: string
+        [k: string]: unknown
+      }
+    | undefined
+  if (!row) return null
+  return dbGetTask(row.id)
+}
+
 export function dbListTaskSourceLinks(connectionId: string): TaskSourceLink[] {
   const rows = getDb()
     .prepare('SELECT * FROM task_source_links WHERE connection_id = ?')
@@ -1561,6 +1588,25 @@ export function dbListWorkflows(): WorkflowDefinition[] {
     workspace_id: string | null
   }>
   return rows.map(rowToWorkflow)
+}
+
+export function dbGetWorkflow(id: string): WorkflowDefinition | null {
+  const row = getDb().prepare('SELECT * FROM workflows WHERE id = ?').get(id) as
+    | {
+        id: string
+        name: string
+        icon: string
+        icon_color: string
+        nodes: string
+        edges: string
+        enabled: number
+        last_run_at: string | null
+        last_run_status: string | null
+        stagger_delay_ms: number | null
+        workspace_id: string | null
+      }
+    | undefined
+  return row ? rowToWorkflow(row) : null
 }
 
 export function dbInsertWorkflow(workflow: WorkflowDefinition): void {

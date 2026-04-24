@@ -1,4 +1,4 @@
-import { Zap, Clock, Calendar, ListPlus, ArrowRightLeft, type LucideIcon } from 'lucide-react'
+import { Zap, Clock, Calendar, ListPlus, ArrowRightLeft, Plug, type LucideIcon } from 'lucide-react'
 import type { TriggerConfig } from '../../../../shared/types'
 
 interface Props {
@@ -13,7 +13,8 @@ const TRIGGER_ICONS: Record<string, LucideIcon> = {
   once: Calendar,
   recurring: Clock,
   taskCreated: ListPlus,
-  taskStatusChanged: ArrowRightLeft
+  taskStatusChanged: ArrowRightLeft,
+  connectorPoll: Plug
 }
 const DEFAULT_ICON = Zap
 
@@ -35,6 +36,8 @@ function getSubtitle(config: TriggerConfig): string {
       const project = config.projectFilter ? ` · ${config.projectFilter}` : ''
       return transition + project
     }
+    case 'connectorPoll':
+      return `${config.event} · ${config.cron}`
   }
 }
 

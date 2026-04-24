@@ -282,9 +282,19 @@ const api = {
   getScheduleNextRun: (workflowId: string): Promise<string | null> =>
     ipcRenderer.invoke(IPC.SCHEDULER_GET_NEXT_RUN, workflowId),
 
-  onSchedulerExecute: (callback: (event: { workflowId: string }) => void) => {
-    const listener = (_: Electron.IpcRendererEvent, event: { workflowId: string }): void =>
-      callback(event)
+  onSchedulerExecute: (
+    callback: (event: {
+      workflowId: string
+      connectorItem?: import('../../packages/shared/src/types').ConnectorItemContext
+    }) => void
+  ) => {
+    const listener = (
+      _: Electron.IpcRendererEvent,
+      event: {
+        workflowId: string
+        connectorItem?: import('../../packages/shared/src/types').ConnectorItemContext
+      }
+    ): void => callback(event)
     ipcRenderer.on(IPC.SCHEDULER_EXECUTE, listener)
     return () => {
       ipcRenderer.removeListener(IPC.SCHEDULER_EXECUTE, listener)
@@ -444,16 +454,44 @@ const api = {
 
   deleteConnection: (id: string): Promise<void> => ipcRenderer.invoke(IPC.CONNECTION_DELETE, id),
 
-  syncConnection: (
+  runWorkflowManual: (workflowId: string): Promise<void> =>
+    ipcRenderer.invoke(IPC.WORKFLOW_RUN_MANUAL, { workflowId }),
+
+  backfillConnection: (
     connectionId: string
-  ): Promise<{ created: number; updated: number; error?: string }> =>
-    ipcRenderer.invoke(IPC.CONNECTION_SYNC, connectionId),
+  ): Promise<{ imported: number; updated: number; error?: string }> =>
+    ipcRenderer.invoke(IPC.CONNECTION_BACKFILL, { connectionId }),
+
+  executeConnectorAction: (params: {
+    connectionId: string
+    action: string
+    args: Record<string, unknown>
+  }): Promise<{ success: boolean; output?: Record<string, unknown>; error?: string }> =>
+    ipcRenderer.invoke(IPC.CONNECTION_EXECUTE_ACTION, params),
+
+  upsertTaskFromItem: (params: {
+    connectionId: string
+    item: import('../../packages/shared/src/types').ConnectorItemContext
+    initialStatus: import('../../packages/shared/src/types').TaskStatus
+    project?: string
+  }): Promise<{ taskId: string; created: boolean }> =>
+    ipcRenderer.invoke(IPC.CONNECTION_UPSERT_FROM_ITEM, params),
 
   getTaskSourceLink: (taskId: string): Promise<TaskSourceLink | null> =>
     ipcRenderer.invoke(IPC.CONNECTION_GET_SOURCE_LINK, taskId),
 
   detectRepo: (projectPath: string): Promise<{ owner: string; repo: string } | null> =>
-    ipcRenderer.invoke(IPC.CONNECTOR_DETECT_REPO, projectPath)
+    ipcRenderer.invoke(IPC.CONNECTOR_DETECT_REPO, projectPath),
+
+  seedConnectorWorkflow: (
+    connectionId: string,
+    event: string
+  ): Promise<{ workflowId: string; created: boolean }> =>
+    ipcRenderer.invoke(IPC.CONNECTOR_SEED_WORKFLOW, { connectionId, event }),
+
+  getConnectorStatus: (): Promise<
+    Array<{ connectorId: string; authed: boolean; message?: string }>
+  > => ipcRenderer.invoke(IPC.CONNECTOR_STATUS)
 }
 
 contextBridge.exposeInMainWorld('api', api)

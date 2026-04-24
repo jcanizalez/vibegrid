@@ -60,15 +60,30 @@ import {
   dbDeleteSourceConnection,
   dbGetTaskSourceLink,
   dbGetTaskSourceLinkByExternalId,
+  dbFindTaskByConnectorExternalId,
   dbInsertTaskSourceLink,
   dbUpdateTaskSourceLink,
   dbInsertTask,
   dbUpdateTask,
   dbGetMaxTaskOrder,
-  dbSignalChange
+  dbSignalChange,
+  dbInsertWorkflow,
+  dbDeleteWorkflow,
+  dbGetWorkflow,
+  dbListWorkflows
 } from './database'
-import { connectorRegistry } from './connectors'
+import {
+  connectorRegistry,
+  setDecryptedCreds,
+  clearDecryptedCreds,
+  applyDecryptedCreds
+} from './connectors'
 import { detectRepoSlug } from './connectors/github'
+import {
+  buildConnectorSeededWorkflow,
+  connectorSeededWorkflowId,
+  connectorSeededWorkflowIdPrefix
+} from './default-workflows'
 import { stripAnsi } from './ansi-strip'
 import { executeScript, scriptRunnerEvents } from './script-runner'
 import { getTailscaleStatus, clearBinaryCache } from './tailscale'
@@ -543,7 +558,22 @@ export function registerAllMethods(): void {
       createdAt: new Date().toISOString()
     }
     dbInsertSourceConnection(conn)
+
+    // Seed visible + editable default workflows from the connector manifest.
+    const connector = connectorRegistry.get(conn.connectorId)
+    if (connector) {
+      const manifest = connector.describe()
+      for (const event of manifest.defaultWorkflows ?? []) {
+        const wfId = connectorSeededWorkflowId(conn.id, event.event)
+        if (dbGetWorkflow(wfId)) continue
+        const wf = buildConnectorSeededWorkflow(conn, manifest, event)
+        dbInsertWorkflow(wf)
+        log.info(`[connector] seeded workflow ${wfId} for connection ${conn.id}`)
+      }
+    }
+
     dbSignalChange()
+    configManager.notifyChanged()
     return conn
   })
 
@@ -554,65 +584,86 @@ export function registerAllMethods(): void {
   })
 
   registerMethod('connection:delete', (id) => {
+    // Delete any seeded workflows tied to this connection. User-created
+    // workflows that reference this connection stay — deleting a connection
+    // should never silently remove a workflow the user built by hand.
+    const prefix = connectorSeededWorkflowIdPrefix(id)
+    for (const wf of dbListWorkflows()) {
+      if (wf.id.startsWith(prefix)) {
+        dbDeleteWorkflow(wf.id)
+      }
+    }
+    // task_source_links cascade via FK. Tasks themselves stay (become "local").
     dbDeleteSourceConnection(id)
+    // Forget any decrypted plaintext for this connection.
+    clearDecryptedCreds(id)
     dbSignalChange()
+    configManager.notifyChanged()
   })
 
-  registerMethod('connection:sync', async (connectionId) => {
-    const conn = dbGetSourceConnection(connectionId)
-    if (!conn) return { created: 0, updated: 0, error: 'Connection not found' }
+  registerMethod('workflow:runManual', ({ workflowId }) => {
+    scheduler.triggerWorkflow(workflowId)
+  })
 
+  registerMethod('credentials:setDecrypted', ({ connectionId, fields }) => {
+    setDecryptedCreds(connectionId, fields)
+  })
+
+  registerMethod('credentials:clearDecrypted', ({ connectionId }) => {
+    clearDecryptedCreds(connectionId)
+  })
+
+  registerMethod('connection:executeAction', async ({ connectionId, action, args }) => {
+    const conn = dbGetSourceConnection(connectionId)
+    if (!conn) return { success: false, error: `Connection ${connectionId} not found` }
+    const connector = connectorRegistry.get(conn.connectorId)
+    if (!connector?.execute) {
+      return {
+        success: false,
+        error: `Connector ${conn.connectorId} does not support actions`
+      }
+    }
+    // Merge auth (from decrypted store) + connection filters + call-specific args.
+    // Call args take precedence so users can override e.g. repo per-call.
+    const mergedArgs = { ...applyDecryptedCreds(conn), ...args }
+    try {
+      return await connector.execute(action, mergedArgs)
+    } catch (err) {
+      return {
+        success: false,
+        error: err instanceof Error ? err.message : String(err)
+      }
+    }
+  })
+
+  /**
+   * One-shot backfill for a connection. Calls listItems() (not poll()) so it
+   * bypasses the "since now" cursor and pulls everything matching the current
+   * filters. Uses the same upsert+link logic as the workflow path so field
+   * ownership stays consistent.
+   */
+  registerMethod('connection:backfill', async ({ connectionId }) => {
+    const conn = dbGetSourceConnection(connectionId)
+    if (!conn) return { imported: 0, updated: 0, error: 'Connection not found' }
     const connector = connectorRegistry.get(conn.connectorId)
     if (!connector?.listItems) {
       return {
-        created: 0,
+        imported: 0,
         updated: 0,
-        error: `Connector "${conn.connectorId}" not found or has no task source`
+        error: `Connector ${conn.connectorId} does not support listItems()`
       }
     }
 
-    try {
-      const items = await connector.listItems(conn.filters)
-      let created = 0
-      let updated = 0
-      const now = new Date().toISOString()
-      const projectName = conn.executionProject || conn.name
+    let imported = 0
+    let updated = 0
+    const now = new Date().toISOString()
+    const projectName = conn.executionProject || conn.name
 
+    try {
+      const items = await connector.listItems(applyDecryptedCreds(conn))
       for (const item of items) {
         const existingLink = dbGetTaskSourceLinkByExternalId(conn.id, item.externalId)
-
-        if (!existingLink) {
-          // Create new task + link
-          const mappedStatus = conn.statusMapping[item.status] || ('todo' as TaskStatus)
-          const maxOrder = dbGetMaxTaskOrder(projectName)
-          const task: TaskConfig = {
-            id: crypto.randomUUID(),
-            projectName,
-            title: item.title,
-            description: item.description,
-            status: mappedStatus,
-            order: maxOrder + 1,
-            createdAt: now,
-            updatedAt: now,
-            sourceConnectorId: conn.connectorId,
-            sourceExternalId: item.externalId,
-            sourceExternalUrl: item.url
-          }
-          dbInsertTask(task)
-          dbInsertTaskSourceLink({
-            taskId: task.id,
-            connectionId: conn.id,
-            connectorId: conn.connectorId,
-            externalId: item.externalId,
-            externalUrl: item.url,
-            sourceStatusRaw: item.status,
-            sourceUpdatedAt: item.updatedAt,
-            lastSyncedAt: now,
-            conflictState: 'none'
-          })
-          created++
-        } else {
-          // Update upstream-owned fields only (title, description)
+        if (existingLink) {
           dbUpdateTask(existingLink.taskId, {
             title: item.title,
             description: item.description,
@@ -626,21 +677,77 @@ export function registerAllMethods(): void {
             lastSyncedAt: now
           })
           updated++
+          continue
         }
-      }
 
-      dbUpdateSourceConnection(conn.id, {
-        lastSyncAt: now,
-        lastSyncError: undefined
-      })
+        // Fallback: orphaned task from a prior connection. Re-adopt it.
+        const orphan = dbFindTaskByConnectorExternalId(conn.connectorId, item.externalId)
+        if (orphan) {
+          dbUpdateTask(orphan.id, {
+            title: item.title,
+            description: item.description,
+            updatedAt: now,
+            sourceExternalUrl: item.url,
+            sourceExternalId: item.externalId
+          })
+          dbInsertTaskSourceLink({
+            taskId: orphan.id,
+            connectionId: conn.id,
+            connectorId: conn.connectorId,
+            externalId: item.externalId,
+            externalUrl: item.url,
+            sourceStatusRaw: item.status,
+            sourceUpdatedAt: item.updatedAt,
+            lastSyncedAt: now,
+            conflictState: 'none'
+          })
+          updated++
+          log.info(
+            `[connection:backfill] re-adopted orphan task ${orphan.id} for ${conn.connectorId}:${item.externalId}`
+          )
+          continue
+        }
+
+        // Genuinely new: create task + link.
+        const mappedStatus = conn.statusMapping?.[item.status] || ('todo' as TaskStatus)
+        const maxOrder = dbGetMaxTaskOrder(projectName)
+        const taskId = crypto.randomUUID()
+        const task: TaskConfig = {
+          id: taskId,
+          projectName,
+          title: item.title,
+          description: item.description,
+          status: mappedStatus,
+          order: maxOrder + 1,
+          createdAt: now,
+          updatedAt: now,
+          sourceConnectorId: conn.connectorId,
+          sourceExternalId: item.externalId,
+          sourceExternalUrl: item.url
+        }
+        dbInsertTask(task)
+        dbInsertTaskSourceLink({
+          taskId,
+          connectionId: conn.id,
+          connectorId: conn.connectorId,
+          externalId: item.externalId,
+          externalUrl: item.url,
+          sourceStatusRaw: item.status,
+          sourceUpdatedAt: item.updatedAt,
+          lastSyncedAt: now,
+          conflictState: 'none'
+        })
+        imported++
+      }
+      dbUpdateSourceConnection(conn.id, { lastSyncAt: now, lastSyncError: undefined })
       dbSignalChange()
       configManager.notifyChanged()
-
-      return { created, updated }
-    } catch (err: unknown) {
+      return { imported, updated }
+    } catch (err) {
       const errorMsg = err instanceof Error ? err.message : String(err)
       dbUpdateSourceConnection(conn.id, { lastSyncError: errorMsg })
-      return { created: 0, updated: 0, error: errorMsg }
+      dbSignalChange()
+      return { imported, updated, error: errorMsg }
     }
   })
 
@@ -648,8 +755,150 @@ export function registerAllMethods(): void {
     return dbGetTaskSourceLink(taskId)
   })
 
+  registerMethod('connection:upsertFromItem', ({ connectionId, item, initialStatus, project }) => {
+    const conn = dbGetSourceConnection(connectionId)
+    if (!conn) throw new Error(`connection ${connectionId} not found`)
+
+    const now = new Date().toISOString()
+    const projectName = project || conn.executionProject || conn.name
+    const sourceStatusRaw = typeof item.raw?.status === 'string' ? item.raw.status : ''
+    const sourceUpdatedAt = typeof item.raw?.updatedAt === 'string' ? item.raw.updatedAt : now
+
+    // Primary dedup: is there a link row for this connection + external id?
+    const existing = dbGetTaskSourceLinkByExternalId(conn.id, item.externalId)
+    if (existing) {
+      dbUpdateTask(existing.taskId, {
+        title: item.title,
+        description: item.body ?? '',
+        updatedAt: now,
+        sourceExternalUrl: item.externalUrl,
+        sourceExternalId: item.externalId
+      })
+      dbUpdateTaskSourceLink(existing.taskId, {
+        sourceStatusRaw,
+        sourceUpdatedAt,
+        lastSyncedAt: now
+      })
+      dbUpdateSourceConnection(conn.id, { lastSyncAt: now })
+      dbSignalChange()
+      configManager.notifyChanged()
+      return { taskId: existing.taskId, created: false }
+    }
+
+    // Fallback dedup: a prior connection was deleted and cascaded the link,
+    // but the task still carries the source fields. Re-adopt it into the
+    // current connection instead of creating a duplicate.
+    const orphan = dbFindTaskByConnectorExternalId(conn.connectorId, item.externalId)
+    if (orphan) {
+      dbUpdateTask(orphan.id, {
+        title: item.title,
+        description: item.body ?? '',
+        updatedAt: now,
+        sourceExternalUrl: item.externalUrl,
+        sourceExternalId: item.externalId
+      })
+      dbInsertTaskSourceLink({
+        taskId: orphan.id,
+        connectionId: conn.id,
+        connectorId: conn.connectorId,
+        externalId: item.externalId,
+        externalUrl: item.externalUrl ?? '',
+        sourceStatusRaw,
+        sourceUpdatedAt,
+        lastSyncedAt: now,
+        conflictState: 'none'
+      })
+      dbUpdateSourceConnection(conn.id, { lastSyncAt: now })
+      dbSignalChange()
+      configManager.notifyChanged()
+      log.info(
+        `[connection:upsertFromItem] re-adopted orphan task ${orphan.id} for ${conn.connectorId}:${item.externalId}`
+      )
+      return { taskId: orphan.id, created: false }
+    }
+
+    // Create path.
+    const taskId = crypto.randomUUID()
+    const maxOrder = dbGetMaxTaskOrder(projectName)
+    const task: TaskConfig = {
+      id: taskId,
+      projectName,
+      title: item.title,
+      description: item.body ?? '',
+      status: initialStatus,
+      order: maxOrder + 1,
+      createdAt: now,
+      updatedAt: now,
+      sourceConnectorId: conn.connectorId,
+      sourceExternalId: item.externalId,
+      ...(item.externalUrl && { sourceExternalUrl: item.externalUrl })
+    }
+    dbInsertTask(task)
+    dbInsertTaskSourceLink({
+      taskId,
+      connectionId: conn.id,
+      connectorId: conn.connectorId,
+      externalId: item.externalId,
+      externalUrl: item.externalUrl ?? '',
+      sourceStatusRaw,
+      sourceUpdatedAt,
+      lastSyncedAt: now,
+      conflictState: 'none'
+    })
+    dbUpdateSourceConnection(conn.id, { lastSyncAt: now })
+    dbSignalChange()
+    configManager.notifyChanged()
+    return { taskId, created: true }
+  })
+
   registerMethod('connector:detectRepo', (projectPath) => {
     return detectRepoSlug(projectPath)
+  })
+
+  registerMethod('connector:seedWorkflow', ({ connectionId, event }) => {
+    const conn = dbGetSourceConnection(connectionId)
+    if (!conn) throw new Error(`connection ${connectionId} not found`)
+    const connector = connectorRegistry.get(conn.connectorId)
+    if (!connector) throw new Error(`connector ${conn.connectorId} not registered`)
+    const manifest = connector.describe()
+    const eventDef = manifest.defaultWorkflows?.find((e) => e.event === event)
+    if (!eventDef) throw new Error(`event ${event} not defined by connector ${conn.connectorId}`)
+
+    const wfId = connectorSeededWorkflowId(conn.id, event)
+    if (dbGetWorkflow(wfId)) {
+      return { workflowId: wfId, created: false }
+    }
+    const wf = buildConnectorSeededWorkflow(conn, manifest, eventDef)
+    dbInsertWorkflow(wf)
+    dbSignalChange()
+    configManager.notifyChanged()
+    return { workflowId: wfId, created: true }
+  })
+
+  registerMethod('connector:status', async () => {
+    const results: Array<{ connectorId: string; authed: boolean; message?: string }> = []
+    for (const c of connectorRegistry.list()) {
+      if (c.id === 'github') {
+        // Probe gh auth status non-interactively.
+        try {
+          const { execFile } = await import('node:child_process')
+          const { promisify } = await import('node:util')
+          const execFileAsync = promisify(execFile)
+          await execFileAsync('gh', ['auth', 'status'], { timeout: 5_000 })
+          results.push({ connectorId: c.id, authed: true })
+        } catch (err) {
+          results.push({
+            connectorId: c.id,
+            authed: false,
+            message:
+              err instanceof Error ? err.message : 'gh auth status failed — run `gh auth login`'
+          })
+        }
+      } else {
+        results.push({ connectorId: c.id, authed: true })
+      }
+    }
+    return results
   })
 
   // Wire manager events → broadcast to WS clients

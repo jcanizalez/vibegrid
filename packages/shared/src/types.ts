@@ -259,11 +259,21 @@ export interface ConnectorManifest {
   statusMapping?: ConnectorStatusOption[]
   triggers?: ConnectorTriggerDef[]
   actions?: ConnectorActionDef[]
+  /**
+   * Declarative default workflows seeded when a connection is created. Each
+   * entry becomes a real WorkflowDefinition with a `connectorPoll` trigger and
+   * a `createTaskFromItem` node — fully visible and editable in the workflow
+   * editor. The seeded workflow's id is stable
+   * (`connector:{connectionId}:{event}`) so delete sticks.
+   */
   defaultWorkflows?: Array<{
     name: string
-    trigger: 'recurring'
-    cron: string
-    actionType: string
+    /** Event key matching one of `triggers[].type`. */
+    event: string
+    /** Default cron derived from this minute interval when the workflow is seeded. */
+    defaultCronFromMinutes: number
+    /** The downstream node the seeded workflow wires to. Only one supported today. */
+    downstream: 'createTaskFromItem'
   }>
 }
 
@@ -346,6 +356,20 @@ export interface SessionLog {
 
 // --- Workflow engine types (Logic Apps-style) ---
 
+/** A single external item pulled by a connector poll and fanned out as its own
+ *  workflow execution. Kept small and serializable so the engine's existing
+ *  persist-and-resume pattern keeps working. */
+export interface ConnectorItemContext {
+  connectionId: string
+  connectorId: string
+  externalId: string
+  externalUrl?: string
+  title: string
+  body?: string
+  /** Full upstream payload for downstream template expansion. */
+  raw: Record<string, unknown>
+}
+
 // Execution context passed from triggers to the execution engine
 export interface WorkflowExecutionContext {
   task?: TaskConfig
@@ -354,9 +378,17 @@ export interface WorkflowExecutionContext {
     fromStatus?: TaskStatus
     toStatus?: TaskStatus
   }
+  connectorItem?: ConnectorItemContext
 }
 
-export type WorkflowNodeType = 'trigger' | 'launchAgent' | 'script' | 'condition' | 'approval'
+export type WorkflowNodeType =
+  | 'trigger'
+  | 'launchAgent'
+  | 'script'
+  | 'condition'
+  | 'approval'
+  | 'createTaskFromItem'
+  | 'callConnectorAction'
 
 export interface WorkflowNodePosition {
   x: number
@@ -386,12 +418,23 @@ export interface TaskStatusChangedTriggerConfig {
   fromStatus?: TaskStatus
   toStatus?: TaskStatus
 }
+/** Polls a connector on cron. Scheduler calls connector.poll(), updates the
+ *  connection's cursor, and fires one workflow execution per new item. */
+export interface ConnectorPollTriggerConfig {
+  triggerType: 'connectorPoll'
+  connectionId: string
+  /** Event type from the connector manifest — e.g. 'issueCreated'. */
+  event: string
+  cron: string
+  timezone?: string
+}
 export type TriggerConfig =
   | ManualTriggerConfig
   | OnceTriggerConfig
   | RecurringTriggerConfig
   | TaskCreatedTriggerConfig
   | TaskStatusChangedTriggerConfig
+  | ConnectorPollTriggerConfig
 
 /**
  * Agent type as used in a launchAgent workflow node. A concrete AgentType runs
@@ -454,12 +497,44 @@ export interface ApprovalConfig {
   timeoutMs?: number
 }
 
+/**
+ * Upsert a task from `context.connectorItem`. Used as the default downstream
+ * of a `connectorPoll` trigger — creates a new task on first sight, updates
+ * upstream-owned fields on re-sync. Field ownership: upstream owns
+ * title/description; local owns status/assignedAgent/sessionId.
+ */
+export interface CreateTaskFromItemConfig {
+  nodeType: 'createTaskFromItem'
+  /** Project the task lands in. `'fromConnection'` = use the connection's
+   *  executionProject (or its name as a fallback). */
+  project: 'fromConnection' | string
+  /** Status for newly-created tasks. Re-syncs never overwrite local status. */
+  initialStatus: TaskStatus
+}
+
+/**
+ * Invoke a manifest-declared connector action (createIssue, closeIssue,
+ * commentOnIssue, etc.) with template-rendered args against the connection's
+ * stored auth. Template variables like `{{task.title}}` or
+ * `{{connectorItem.externalId}}` are resolved from the execution context.
+ */
+export interface CallConnectorActionConfig {
+  nodeType: 'callConnectorAction'
+  connectionId: string
+  /** Action type from manifest.actions[].type — e.g. 'commentOnIssue'. */
+  action: string
+  /** Raw args map; values support template placeholders. */
+  args: Record<string, string>
+}
+
 export type WorkflowNodeConfig =
   | TriggerConfig
   | LaunchAgentConfig
   | ScriptConfig
   | ConditionConfig
   | ApprovalConfig
+  | CreateTaskFromItemConfig
+  | CallConnectorActionConfig
 
 export interface WorkflowNode {
   id: string
@@ -814,9 +889,16 @@ export const IPC = {
   CONNECTION_CREATE: 'connection:create',
   CONNECTION_UPDATE: 'connection:update',
   CONNECTION_DELETE: 'connection:delete',
-  CONNECTION_SYNC: 'connection:sync',
   CONNECTION_GET_SOURCE_LINK: 'connection:getSourceLink',
-  CONNECTOR_DETECT_REPO: 'connector:detectRepo'
+  CONNECTOR_DETECT_REPO: 'connector:detectRepo',
+  CONNECTOR_SEED_WORKFLOW: 'connector:seedWorkflow',
+  CONNECTOR_STATUS: 'connector:status',
+  CONNECTION_UPSERT_FROM_ITEM: 'connection:upsertFromItem',
+  WORKFLOW_RUN_MANUAL: 'workflow:runManual',
+  CONNECTION_BACKFILL: 'connection:backfill',
+  CREDENTIALS_SET_DECRYPTED: 'credentials:setDecrypted',
+  CREDENTIALS_CLEAR_DECRYPTED: 'credentials:clearDecrypted',
+  CONNECTION_EXECUTE_ACTION: 'connection:executeAction'
 } as const
 
 export interface PermissionSuggestion {

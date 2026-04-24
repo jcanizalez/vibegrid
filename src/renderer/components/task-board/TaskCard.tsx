@@ -1,6 +1,6 @@
 import { TaskConfig } from '../../../shared/types'
 import { AgentIcon } from '../AgentIcon'
-import { SourceBadge, ConnectorIcon } from '../ConnectorIcon'
+import { SourceBadge } from '../ConnectorIcon'
 import {
   STATUS_ICON,
   STATUS_ICON_COLOR,
@@ -52,36 +52,26 @@ export function TaskCard({
   if (variant === 'kanban') {
     return (
       <div
-        className={`group relative bg-white/[0.04] border border-white/[0.06] rounded-lg overflow-hidden
-                     hover:bg-white/[0.06] hover:border-white/[0.1] hover:shadow-md
-                     transition-all duration-150
+        className={`group relative bg-white/[0.04] border border-white/[0.06] rounded-sm overflow-hidden
+                     hover:bg-white/[0.06] hover:border-white/[0.1]
+                     transition-colors duration-150
                      ${task.status === 'cancelled' ? 'opacity-60' : ''} ${onSelect ? 'cursor-pointer' : ''}`}
         onClick={onSelect}
       >
         <div className="px-3.5 py-3">
           {/* Top row: short ID + source badge + menu */}
           <div className="flex items-center justify-between mb-1.5">
-            <span className="flex items-center gap-1">
+            <span className="flex items-center gap-1.5">
               <span className="text-[10px] text-gray-500 font-medium">{shortId}</span>
               {task.sourceConnectorId && task.sourceExternalId && (
-                <span className="flex items-center gap-0.5 text-[10px] text-gray-500">
-                  <ConnectorIcon
+                <>
+                  <span className="text-[10px] text-gray-600">·</span>
+                  <SourceBadge
                     connectorId={task.sourceConnectorId}
-                    size={10}
-                    className="text-gray-500"
+                    url={task.sourceExternalUrl}
+                    label={`#${task.sourceExternalId}`}
                   />
-                  <a
-                    href="#"
-                    onClick={(e) => {
-                      e.preventDefault()
-                      e.stopPropagation()
-                      if (task.sourceExternalUrl) window.api.openExternal(task.sourceExternalUrl)
-                    }}
-                    className="hover:text-gray-300 transition-colors"
-                  >
-                    #{task.sourceExternalId}
-                  </a>
-                </span>
+                </>
               )}
             </span>
             <div
@@ -184,7 +174,7 @@ export function TaskCard({
         {task.status === 'in_review' && onReviewDiff && (
           <button
             onClick={onReviewDiff}
-            className="p-1 text-gray-600 hover:text-purple-400 rounded transition-colors"
+            className="p-1 text-gray-600 hover:text-gray-200 rounded-sm transition-colors"
             title="Review diff"
           >
             <FileCode size={12} strokeWidth={2} />
@@ -193,7 +183,7 @@ export function TaskCard({
         {task.status === 'in_review' && onComplete && (
           <button
             onClick={onComplete}
-            className="p-1 text-gray-600 hover:text-green-400 rounded transition-colors"
+            className="p-1 text-gray-600 hover:text-gray-200 rounded-sm transition-colors"
             title="Mark as done"
           >
             <CheckCircle2 size={12} strokeWidth={2} />
@@ -202,7 +192,7 @@ export function TaskCard({
         {task.status === 'cancelled' && onReopen && (
           <button
             onClick={onReopen}
-            className="p-1 text-gray-600 hover:text-amber-400 rounded transition-colors"
+            className="p-1 text-gray-600 hover:text-gray-200 rounded-sm transition-colors"
             title="Reopen task"
           >
             <RotateCcw size={12} strokeWidth={2} />
@@ -211,7 +201,7 @@ export function TaskCard({
         {onOpenSession && (
           <button
             onClick={onOpenSession}
-            className={`p-1 text-gray-600 rounded transition-colors ${sessionIsLive ? 'hover:text-violet-400' : 'hover:text-amber-400'}`}
+            className="p-1 text-gray-600 hover:text-gray-200 rounded-sm transition-colors"
             title={sessionIsLive ? 'Focus session' : 'Resume session'}
           >
             {sessionIsLive ? (
@@ -223,7 +213,7 @@ export function TaskCard({
         )}
         <button
           onClick={onEdit}
-          className="p-1 text-gray-600 hover:text-white rounded transition-colors"
+          className="p-1 text-gray-600 hover:text-gray-200 rounded-sm transition-colors"
           title="Edit task"
         >
           <Pencil size={12} strokeWidth={2} />
@@ -231,7 +221,7 @@ export function TaskCard({
         {task.status !== 'cancelled' && task.status !== 'done' && onCancel && (
           <button
             onClick={onCancel}
-            className="p-1 text-gray-600 hover:text-red-400 rounded transition-colors"
+            className="p-1 text-gray-600 hover:text-gray-200 rounded-sm transition-colors"
             title="Cancel task"
           >
             <XCircle size={12} strokeWidth={2} />
@@ -243,7 +233,7 @@ export function TaskCard({
           onConfirm={onDelete}
         >
           <button
-            className="p-1 text-gray-600 hover:text-red-400 rounded transition-colors"
+            className="p-1 text-gray-600 hover:text-gray-200 rounded-sm transition-colors"
             title="Delete task"
           >
             <Trash2 size={12} strokeWidth={2} />

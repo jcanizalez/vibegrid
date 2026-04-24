@@ -34,7 +34,9 @@ export async function startServer(
   // Register built-in connectors
   const { connectorRegistry } = await import('./connectors')
   const { githubConnector } = await import('./connectors/github')
+  const { linearConnector } = await import('./connectors/linear')
   connectorRegistry.register(githubConnector)
+  connectorRegistry.register(linearConnector)
 
   // Load initial config and wire up managers
   const config = configManager.loadConfig()
