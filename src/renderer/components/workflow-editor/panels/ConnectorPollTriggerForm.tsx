@@ -5,6 +5,7 @@ import type {
   ConnectorManifest
 } from '../../../../shared/types'
 import { SelectPicker } from '../../SelectPicker'
+import { ConnectorIcon } from '../../ConnectorIcon'
 
 interface Props {
   config: ConnectorPollTriggerConfig
@@ -41,7 +42,8 @@ export function ConnectorPollTriggerForm({ config, onChange }: Props) {
           value={config.connectionId}
           options={connections.map((c) => ({
             value: c.id,
-            label: c.name
+            label: c.name,
+            icon: <ConnectorIcon connectorId={c.connectorId} size={14} className="text-gray-400" />
           }))}
           onChange={(v) => onChange({ ...config, connectionId: v, event: '' })}
           variant="form"
