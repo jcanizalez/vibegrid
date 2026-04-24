@@ -7,3 +7,4 @@ coverage/
 *.tsbuildinfo
 .yarn/install-state.gz
 .mcp.json
+hooks.json

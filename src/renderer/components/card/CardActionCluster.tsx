@@ -65,7 +65,7 @@ export function CardActionCluster({ terminalId, variant }: Props) {
     }
     const rect = moreRef.current?.getBoundingClientRect()
     if (rect) {
-      setContextMenu({ x: rect.right - 220, y: rect.bottom + 4 })
+      setContextMenu({ x: rect.left, y: rect.bottom + 4 })
     }
   }
 

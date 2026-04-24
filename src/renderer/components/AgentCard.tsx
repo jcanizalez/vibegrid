@@ -98,9 +98,6 @@ export const AgentCard = memo(
         onPointerDown={() => {
           if (!isSelected && !isFocused) setSelected(terminalId)
         }}
-        onContextMenu={(e) => {
-          e.preventDefault()
-        }}
       >
         <CardHeader
           terminalId={terminalId}
