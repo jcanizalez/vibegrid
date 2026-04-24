@@ -14,8 +14,7 @@ function find(name: string): string | null {
   const pathEnv = env.PATH || env.Path || process.env.PATH || ''
   if (!pathEnv) return null
   const sep = process.platform === 'win32' ? ';' : ':'
-  const candidates =
-    process.platform === 'win32' ? [`${name}.exe`, `${name}.cmd`, name] : [name]
+  const candidates = process.platform === 'win32' ? [`${name}.exe`, `${name}.cmd`, name] : [name]
   for (const rawDir of pathEnv.split(sep)) {
     const dir = rawDir.trim()
     if (!dir) continue
