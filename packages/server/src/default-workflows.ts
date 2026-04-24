@@ -8,19 +8,10 @@ import type {
   CreateTaskFromItemConfig,
   TaskStatus
 } from '@vornrun/shared/types'
+import { connectorSeededWorkflowId } from '@vornrun/shared/types'
 
 /** Stable id of the seeded "Default Task Workflow". */
 export const DEFAULT_TASK_WORKFLOW_ID = 'system:default-task-workflow'
-
-/** Stable id for a connector-seeded workflow tied to a (connection × event). */
-export function connectorSeededWorkflowId(connectionId: string, event: string): string {
-  return `connector:${connectionId}:${event}`
-}
-
-/** Prefix used to find all seeded workflows for a given connection. */
-export function connectorSeededWorkflowIdPrefix(connectionId: string): string {
-  return `connector:${connectionId}:`
-}
 
 /**
  * Factory for the default task workflow seeded on first launch.

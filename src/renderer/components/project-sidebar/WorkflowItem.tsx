@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { SourceConnection, WorkflowDefinition } from '../../../shared/types'
+import { parseConnectorWorkflowId } from '../../../shared/types'
 import { ICON_MAP } from './icon-map'
 import { useAppStore } from '../../stores'
 import { isScheduledWorkflow } from '../../lib/workflow-helpers'
@@ -7,15 +8,6 @@ import { executeWorkflow } from '../../lib/workflow-execution'
 import { Zap, Play, MoreHorizontal } from 'lucide-react'
 import { Tooltip } from '../Tooltip'
 import { ConnectorIcon } from '../ConnectorIcon'
-
-/** Parse a seeded-connector workflow id: `connector:{connectionId}:{event}`. */
-function parseConnectorWorkflowId(id: string): { connectionId: string; event: string } | null {
-  if (!id.startsWith('connector:')) return null
-  const rest = id.slice('connector:'.length)
-  const colon = rest.indexOf(':')
-  if (colon === -1) return null
-  return { connectionId: rest.slice(0, colon), event: rest.slice(colon + 1) }
-}
 
 type DotColor = 'blue' | 'gray' | 'red' | 'amber' | null
 
@@ -59,10 +51,9 @@ export function WorkflowItem({
   const connectorWf = useMemo(() => parseConnectorWorkflowId(workflow.id), [workflow.id])
   const [connectorId, setConnectorId] = useState<string | null>(null)
   useEffect(() => {
-    if (!connectorWf) {
-      setConnectorId(null)
-      return
-    }
+    // workflow.id is stable per mount so we only need the resolve branch;
+    // the non-connector case is simply never setting connectorId.
+    if (!connectorWf) return
     let cancelled = false
     window.api.listConnections().then((conns: SourceConnection[]) => {
       if (cancelled) return

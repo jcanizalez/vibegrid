@@ -189,6 +189,28 @@ export interface TaskConfig {
 /** Origin of a task mutation — only 'user' fires workflow triggers. */
 export type MutationOrigin = 'user' | 'sync' | 'system'
 
+/** Stable id for a connector-seeded workflow tied to a (connection × event). */
+export function connectorSeededWorkflowId(connectionId: string, event: string): string {
+  return `connector:${connectionId}:${event}`
+}
+
+/** Prefix used to find all seeded workflows for a given connection. */
+export function connectorSeededWorkflowIdPrefix(connectionId: string): string {
+  return `connector:${connectionId}:`
+}
+
+/** Inverse of connectorSeededWorkflowId — parses the id back into its parts,
+ *  or returns null if the id isn't a seeded-connector id. */
+export function parseConnectorWorkflowId(
+  id: string
+): { connectionId: string; event: string } | null {
+  if (!id.startsWith('connector:')) return null
+  const rest = id.slice('connector:'.length)
+  const colon = rest.indexOf(':')
+  if (colon === -1) return null
+  return { connectionId: rest.slice(0, colon), event: rest.slice(colon + 1) }
+}
+
 // -- Connector interface --
 
 export interface ExternalItem {

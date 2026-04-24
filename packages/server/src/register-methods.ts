@@ -26,7 +26,7 @@ import {
   RemoteHost,
   getProjectRemoteHostId
 } from '@vornrun/shared/types'
-import type { SourceConnection, TaskConfig, TaskStatus } from '@vornrun/shared/types'
+import type { SourceConnection, TaskStatus } from '@vornrun/shared/types'
 import * as gitUtils from './git-utils'
 import { listDir, readFileContent } from './file-utils'
 import {
@@ -79,11 +79,8 @@ import {
   applyDecryptedCreds
 } from './connectors'
 import { detectRepoSlug } from './connectors/github'
-import {
-  buildConnectorSeededWorkflow,
-  connectorSeededWorkflowId,
-  connectorSeededWorkflowIdPrefix
-} from './default-workflows'
+import { buildConnectorSeededWorkflow } from './default-workflows'
+import { connectorSeededWorkflowId, connectorSeededWorkflowIdPrefix } from '@vornrun/shared/types'
 import { stripAnsi } from './ansi-strip'
 import { executeScript, scriptRunnerEvents } from './script-runner'
 import { getTailscaleStatus, clearBinaryCache } from './tailscale'
@@ -126,6 +123,102 @@ function stopOutputFlushIfIdle(): void {
 function bufferSessionOutput(sessionId: string, data: string): void {
   const chunks = outputBuffers.get(sessionId)
   if (chunks) chunks.push(stripAnsi(data))
+}
+
+/**
+ * Upsert an external connector item into the task board. Three-tier dedup:
+ *   1. Link exists (same conn + external id) → update task fields + link.
+ *   2. Orphan task exists (prior link cascade-deleted) → re-adopt under
+ *      the current connection so we don't make duplicates.
+ *   3. Neither → create a fresh task + link.
+ * Shared by `connection:upsertFromItem` (per-item workflow fan-out) and
+ * `connection:backfill` (manual bulk import). Caller handles the
+ * `lastSyncAt` bump and notify/signal plumbing.
+ */
+function upsertExternalItem(
+  conn: SourceConnection,
+  item: {
+    externalId: string
+    title: string
+    description: string
+    externalUrl: string
+    sourceStatusRaw: string
+    sourceUpdatedAt: string
+  },
+  opts: { projectName: string; initialStatus: TaskStatus; now: string }
+): { taskId: string; created: boolean } {
+  const { projectName, initialStatus, now } = opts
+
+  const existing = dbGetTaskSourceLinkByExternalId(conn.id, item.externalId)
+  if (existing) {
+    dbUpdateTask(existing.taskId, {
+      title: item.title,
+      description: item.description,
+      updatedAt: now,
+      sourceExternalUrl: item.externalUrl,
+      sourceExternalId: item.externalId
+    })
+    dbUpdateTaskSourceLink(existing.taskId, {
+      sourceStatusRaw: item.sourceStatusRaw,
+      sourceUpdatedAt: item.sourceUpdatedAt,
+      lastSyncedAt: now
+    })
+    return { taskId: existing.taskId, created: false }
+  }
+
+  const orphan = dbFindTaskByConnectorExternalId(conn.connectorId, item.externalId)
+  if (orphan) {
+    dbUpdateTask(orphan.id, {
+      title: item.title,
+      description: item.description,
+      updatedAt: now,
+      sourceExternalUrl: item.externalUrl,
+      sourceExternalId: item.externalId
+    })
+    dbInsertTaskSourceLink({
+      taskId: orphan.id,
+      connectionId: conn.id,
+      connectorId: conn.connectorId,
+      externalId: item.externalId,
+      externalUrl: item.externalUrl,
+      sourceStatusRaw: item.sourceStatusRaw,
+      sourceUpdatedAt: item.sourceUpdatedAt,
+      lastSyncedAt: now,
+      conflictState: 'none'
+    })
+    log.info(
+      `[upsertExternalItem] re-adopted orphan task ${orphan.id} for ${conn.connectorId}:${item.externalId}`
+    )
+    return { taskId: orphan.id, created: false }
+  }
+
+  const taskId = crypto.randomUUID()
+  const maxOrder = dbGetMaxTaskOrder(projectName)
+  dbInsertTask({
+    id: taskId,
+    projectName,
+    title: item.title,
+    description: item.description,
+    status: initialStatus,
+    order: maxOrder + 1,
+    createdAt: now,
+    updatedAt: now,
+    sourceConnectorId: conn.connectorId,
+    sourceExternalId: item.externalId,
+    ...(item.externalUrl && { sourceExternalUrl: item.externalUrl })
+  })
+  dbInsertTaskSourceLink({
+    taskId,
+    connectionId: conn.id,
+    connectorId: conn.connectorId,
+    externalId: item.externalId,
+    externalUrl: item.externalUrl,
+    sourceStatusRaw: item.sourceStatusRaw,
+    sourceUpdatedAt: item.sourceUpdatedAt,
+    lastSyncedAt: now,
+    conflictState: 'none'
+  })
+  return { taskId, created: true }
 }
 
 function logSessionEvent(
@@ -662,82 +755,21 @@ export function registerAllMethods(): void {
     try {
       const items = await connector.listItems(applyDecryptedCreds(conn))
       for (const item of items) {
-        const existingLink = dbGetTaskSourceLinkByExternalId(conn.id, item.externalId)
-        if (existingLink) {
-          dbUpdateTask(existingLink.taskId, {
-            title: item.title,
-            description: item.description,
-            updatedAt: now,
-            sourceExternalUrl: item.url,
-            sourceExternalId: item.externalId
-          })
-          dbUpdateTaskSourceLink(existingLink.taskId, {
-            sourceStatusRaw: item.status,
-            sourceUpdatedAt: item.updatedAt,
-            lastSyncedAt: now
-          })
-          updated++
-          continue
-        }
-
-        // Fallback: orphaned task from a prior connection. Re-adopt it.
-        const orphan = dbFindTaskByConnectorExternalId(conn.connectorId, item.externalId)
-        if (orphan) {
-          dbUpdateTask(orphan.id, {
-            title: item.title,
-            description: item.description,
-            updatedAt: now,
-            sourceExternalUrl: item.url,
-            sourceExternalId: item.externalId
-          })
-          dbInsertTaskSourceLink({
-            taskId: orphan.id,
-            connectionId: conn.id,
-            connectorId: conn.connectorId,
+        const initialStatus = conn.statusMapping?.[item.status] || ('todo' as TaskStatus)
+        const result = upsertExternalItem(
+          conn,
+          {
             externalId: item.externalId,
+            title: item.title,
+            description: item.description,
             externalUrl: item.url,
             sourceStatusRaw: item.status,
-            sourceUpdatedAt: item.updatedAt,
-            lastSyncedAt: now,
-            conflictState: 'none'
-          })
-          updated++
-          log.info(
-            `[connection:backfill] re-adopted orphan task ${orphan.id} for ${conn.connectorId}:${item.externalId}`
-          )
-          continue
-        }
-
-        // Genuinely new: create task + link.
-        const mappedStatus = conn.statusMapping?.[item.status] || ('todo' as TaskStatus)
-        const maxOrder = dbGetMaxTaskOrder(projectName)
-        const taskId = crypto.randomUUID()
-        const task: TaskConfig = {
-          id: taskId,
-          projectName,
-          title: item.title,
-          description: item.description,
-          status: mappedStatus,
-          order: maxOrder + 1,
-          createdAt: now,
-          updatedAt: now,
-          sourceConnectorId: conn.connectorId,
-          sourceExternalId: item.externalId,
-          sourceExternalUrl: item.url
-        }
-        dbInsertTask(task)
-        dbInsertTaskSourceLink({
-          taskId,
-          connectionId: conn.id,
-          connectorId: conn.connectorId,
-          externalId: item.externalId,
-          externalUrl: item.url,
-          sourceStatusRaw: item.status,
-          sourceUpdatedAt: item.updatedAt,
-          lastSyncedAt: now,
-          conflictState: 'none'
-        })
-        imported++
+            sourceUpdatedAt: item.updatedAt
+          },
+          { projectName, initialStatus, now }
+        )
+        if (result.created) imported++
+        else updated++
       }
       dbUpdateSourceConnection(conn.id, { lastSyncAt: now, lastSyncError: undefined })
       dbSignalChange()
@@ -760,95 +792,26 @@ export function registerAllMethods(): void {
     if (!conn) throw new Error(`connection ${connectionId} not found`)
 
     const now = new Date().toISOString()
-    const projectName = project || conn.executionProject || conn.name
-    const sourceStatusRaw = typeof item.raw?.status === 'string' ? item.raw.status : ''
-    const sourceUpdatedAt = typeof item.raw?.updatedAt === 'string' ? item.raw.updatedAt : now
-
-    // Primary dedup: is there a link row for this connection + external id?
-    const existing = dbGetTaskSourceLinkByExternalId(conn.id, item.externalId)
-    if (existing) {
-      dbUpdateTask(existing.taskId, {
-        title: item.title,
-        description: item.body ?? '',
-        updatedAt: now,
-        sourceExternalUrl: item.externalUrl,
-        sourceExternalId: item.externalId
-      })
-      dbUpdateTaskSourceLink(existing.taskId, {
-        sourceStatusRaw,
-        sourceUpdatedAt,
-        lastSyncedAt: now
-      })
-      dbUpdateSourceConnection(conn.id, { lastSyncAt: now })
-      dbSignalChange()
-      configManager.notifyChanged()
-      return { taskId: existing.taskId, created: false }
-    }
-
-    // Fallback dedup: a prior connection was deleted and cascaded the link,
-    // but the task still carries the source fields. Re-adopt it into the
-    // current connection instead of creating a duplicate.
-    const orphan = dbFindTaskByConnectorExternalId(conn.connectorId, item.externalId)
-    if (orphan) {
-      dbUpdateTask(orphan.id, {
-        title: item.title,
-        description: item.body ?? '',
-        updatedAt: now,
-        sourceExternalUrl: item.externalUrl,
-        sourceExternalId: item.externalId
-      })
-      dbInsertTaskSourceLink({
-        taskId: orphan.id,
-        connectionId: conn.id,
-        connectorId: conn.connectorId,
+    const result = upsertExternalItem(
+      conn,
+      {
         externalId: item.externalId,
+        title: item.title,
+        description: item.body ?? '',
         externalUrl: item.externalUrl ?? '',
-        sourceStatusRaw,
-        sourceUpdatedAt,
-        lastSyncedAt: now,
-        conflictState: 'none'
-      })
-      dbUpdateSourceConnection(conn.id, { lastSyncAt: now })
-      dbSignalChange()
-      configManager.notifyChanged()
-      log.info(
-        `[connection:upsertFromItem] re-adopted orphan task ${orphan.id} for ${conn.connectorId}:${item.externalId}`
-      )
-      return { taskId: orphan.id, created: false }
-    }
-
-    // Create path.
-    const taskId = crypto.randomUUID()
-    const maxOrder = dbGetMaxTaskOrder(projectName)
-    const task: TaskConfig = {
-      id: taskId,
-      projectName,
-      title: item.title,
-      description: item.body ?? '',
-      status: initialStatus,
-      order: maxOrder + 1,
-      createdAt: now,
-      updatedAt: now,
-      sourceConnectorId: conn.connectorId,
-      sourceExternalId: item.externalId,
-      ...(item.externalUrl && { sourceExternalUrl: item.externalUrl })
-    }
-    dbInsertTask(task)
-    dbInsertTaskSourceLink({
-      taskId,
-      connectionId: conn.id,
-      connectorId: conn.connectorId,
-      externalId: item.externalId,
-      externalUrl: item.externalUrl ?? '',
-      sourceStatusRaw,
-      sourceUpdatedAt,
-      lastSyncedAt: now,
-      conflictState: 'none'
-    })
+        sourceStatusRaw: typeof item.raw?.status === 'string' ? item.raw.status : '',
+        sourceUpdatedAt: typeof item.raw?.updatedAt === 'string' ? item.raw.updatedAt : now
+      },
+      {
+        projectName: project || conn.executionProject || conn.name,
+        initialStatus,
+        now
+      }
+    )
     dbUpdateSourceConnection(conn.id, { lastSyncAt: now })
     dbSignalChange()
     configManager.notifyChanged()
-    return { taskId, created: true }
+    return result
   })
 
   registerMethod('connector:detectRepo', (projectPath) => {
