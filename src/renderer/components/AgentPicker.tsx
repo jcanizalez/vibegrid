@@ -6,6 +6,7 @@ import { AiAgentType, LaunchAgentType } from '../../shared/types'
 import { AgentIcon } from './AgentIcon'
 
 const AGENT_LABELS: Record<AiAgentType, string> = {
+  vorn: 'Vorn AI',
   claude: 'Claude',
   copilot: 'Copilot',
   codex: 'Codex',

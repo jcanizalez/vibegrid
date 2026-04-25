@@ -1,5 +1,6 @@
 import { Terminal } from 'lucide-react'
 import { AgentType, AiAgentType } from '../../shared/types'
+import vornLogo from '../assets/vorn-logo.png'
 
 interface Props {
   agentType: AgentType
@@ -142,7 +143,21 @@ function GeminiIcon({ size }: { size: number }) {
   )
 }
 
+function VornIcon({ size }: { size: number }) {
+  return (
+    <img
+      src={vornLogo}
+      alt="vorn"
+      width={size}
+      height={size}
+      style={{ width: size, height: size, objectFit: 'contain' }}
+      draggable={false}
+    />
+  )
+}
+
 const ICON_COMPONENTS: Record<AiAgentType, React.FC<{ size: number }>> = {
+  vorn: VornIcon,
   claude: ClaudeIcon,
   copilot: CopilotIcon,
   codex: CodexIcon,

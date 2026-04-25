@@ -22,7 +22,7 @@ import {
 import { rpcCall } from '../ws-client'
 
 const launchAgentConfigSchema = z.object({
-  agentType: z.enum(['claude', 'copilot', 'codex', 'opencode', 'gemini']),
+  agentType: z.enum(['vorn', 'claude', 'copilot', 'codex', 'opencode', 'gemini']),
   projectName: V.name,
   projectPath: V.absolutePath,
   args: z.array(V.shortText).optional(),

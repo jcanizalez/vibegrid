@@ -279,4 +279,32 @@ export function registerIpcHandlers(): void {
   ipcMain.on(IPC.TERMINAL_RESIZE, (_, payload: ResizePayload) =>
     bridge?.notify(IPC.TERMINAL_RESIZE, payload)
   )
+
+  // ─── Harness (AI provider orchestration) ─────────────────────
+
+  safeHandle(IPC.HARNESS_LIST_PROVIDERS, () =>
+    requireBridge().request(IPC.HARNESS_LIST_PROVIDERS, undefined)
+  )
+  safeHandle(IPC.HARNESS_CREATE_SESSION, (_, params) =>
+    requireBridge().request(IPC.HARNESS_CREATE_SESSION, params)
+  )
+  safeHandle(IPC.HARNESS_RESUME_SESSION, (_, params) =>
+    requireBridge().request(IPC.HARNESS_RESUME_SESSION, params)
+  )
+  safeHandle(IPC.HARNESS_SEND_MESSAGE, (_, params) =>
+    requireBridge().request(IPC.HARNESS_SEND_MESSAGE, params)
+  )
+  safeHandle(IPC.HARNESS_INTERRUPT, (_, params) =>
+    requireBridge().request(IPC.HARNESS_INTERRUPT, params)
+  )
+  safeHandle(IPC.HARNESS_STOP, (_, params) => requireBridge().request(IPC.HARNESS_STOP, params))
+  safeHandle(IPC.HARNESS_RESOLVE_PERMISSION, (_, params) =>
+    requireBridge().request(IPC.HARNESS_RESOLVE_PERMISSION, params)
+  )
+  safeHandle(IPC.HARNESS_GET_SESSION, (_, params) =>
+    requireBridge().request(IPC.HARNESS_GET_SESSION, params)
+  )
+  safeHandle(IPC.HARNESS_LIST_SESSIONS, () =>
+    requireBridge().request(IPC.HARNESS_LIST_SESSIONS, undefined)
+  )
 }

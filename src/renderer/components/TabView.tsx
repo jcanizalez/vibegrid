@@ -7,6 +7,7 @@ import { useFilteredHeadless } from '../hooks/useFilteredHeadless'
 import { AgentStatusIcon } from './AgentStatusIcon'
 import { useWaitingApprovals } from '../hooks/useWaitingApprovals'
 import { TerminalSlot } from './TerminalSlot'
+import { VornCardBody } from './harness/VornCardBody'
 import { PromptLauncher } from './PromptLauncher'
 import { InlineRename } from './InlineRename'
 import { CardContextMenu } from './CardContextMenu'
@@ -523,34 +524,45 @@ export function TabView() {
       ) : (
         <div className="flex-1 min-h-0 flex flex-col" style={{ background: '#141416' }}>
           <div className="relative flex-1 min-h-0">
-            {activeTabId && activeTerminal && (
-              <TerminalSlot
-                key={activeTabId}
-                terminalId={activeTabId}
-                isFocused={true}
-                className="w-full h-full"
-              />
-            )}
-            {activeTabId && activeTerminal && activeTerminal.lastOutputTimestamp === 0 && (
-              <div
-                className="absolute inset-0 p-3 space-y-2 pointer-events-none"
-                style={{ background: '#141416' }}
-              >
-                <div className="h-3 w-3/4 rounded bg-white/[0.04] animate-pulse" />
-                <div
-                  className="h-3 w-1/2 rounded bg-white/[0.04] animate-pulse"
-                  style={{ animationDelay: '0.15s' }}
+            {activeTabId &&
+              activeTerminal &&
+              (activeTerminal.session.agentType === 'vorn' &&
+              activeTerminal.session.harnessSessionId ? (
+                <VornCardBody
+                  key={activeTabId}
+                  harnessSessionId={activeTerminal.session.harnessSessionId}
                 />
-                <div
-                  className="h-3 w-5/6 rounded bg-white/[0.04] animate-pulse"
-                  style={{ animationDelay: '0.3s' }}
+              ) : (
+                <TerminalSlot
+                  key={activeTabId}
+                  terminalId={activeTabId}
+                  isFocused={true}
+                  className="w-full h-full"
                 />
+              ))}
+            {activeTabId &&
+              activeTerminal &&
+              activeTerminal.session.agentType !== 'vorn' &&
+              activeTerminal.lastOutputTimestamp === 0 && (
                 <div
-                  className="h-3 w-2/3 rounded bg-white/[0.04] animate-pulse"
-                  style={{ animationDelay: '0.45s' }}
-                />
-              </div>
-            )}
+                  className="absolute inset-0 p-3 space-y-2 pointer-events-none"
+                  style={{ background: '#141416' }}
+                >
+                  <div className="h-3 w-3/4 rounded bg-white/[0.04] animate-pulse" />
+                  <div
+                    className="h-3 w-1/2 rounded bg-white/[0.04] animate-pulse"
+                    style={{ animationDelay: '0.15s' }}
+                  />
+                  <div
+                    className="h-3 w-5/6 rounded bg-white/[0.04] animate-pulse"
+                    style={{ animationDelay: '0.3s' }}
+                  />
+                  <div
+                    className="h-3 w-2/3 rounded bg-white/[0.04] animate-pulse"
+                    style={{ animationDelay: '0.45s' }}
+                  />
+                </div>
+              )}
           </div>
           {activeTabId && activeTerminal && <CardStatusBar terminalId={activeTabId} />}
         </div>

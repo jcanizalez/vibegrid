@@ -1,6 +1,6 @@
 /** AI agents only. Use this for icon maps, install status, command configs, and
  *  anything else that applies exclusively to an AI CLI — not to plain shells. */
-export type AiAgentType = 'claude' | 'copilot' | 'codex' | 'opencode' | 'gemini'
+export type AiAgentType = 'vorn' | 'claude' | 'copilot' | 'codex' | 'opencode' | 'gemini'
 
 /** Any session type that can back a terminal tab. `'shell'` is a plain PTY
  *  (zsh/bash), everything else is an AI agent. */
@@ -14,7 +14,7 @@ export function isAiAgent(agentType: AgentType | undefined): agentType is AiAgen
 }
 
 export function supportsExactSessionResume(agentType: AgentType): boolean {
-  return agentType !== 'gemini' && agentType !== 'shell'
+  return agentType !== 'gemini' && agentType !== 'shell' && agentType !== 'vorn'
 }
 
 /** Can we pin a pre-generated session ID on fresh launch so we can --resume it later? */
@@ -46,6 +46,8 @@ export function getRecentSessionActivityLabel(agentType: AgentType): string {
     case 'gemini':
       return 'prompt'
     case 'opencode':
+      return 'message'
+    case 'vorn':
       return 'message'
     case 'shell':
       return 'line'
@@ -82,6 +84,8 @@ export interface TerminalSession {
   shellCwd?: string
   /** Shell session only: PTY exit code once the shell has exited. */
   shellExitCode?: number
+  /** Vorn (native) only: linked harness session id. */
+  harnessSessionId?: string
 }
 
 export type AuthMethod = 'key-file' | 'key-stored' | 'password' | 'agent'
@@ -940,7 +944,19 @@ export const IPC = {
   CONNECTION_EXECUTE_ACTION: 'connection:executeAction',
   CONNECTION_LIST_ACTIONS: 'connection:listActions',
   CONNECTION_LIST_MCP_TOOLS: 'connection:listMcpTools',
-  CONNECTION_REFRESH_MCP_TOOLS: 'connection:refreshMcpTools'
+  CONNECTION_REFRESH_MCP_TOOLS: 'connection:refreshMcpTools',
+
+  // Harness (AI provider orchestration)
+  HARNESS_LIST_PROVIDERS: 'harness:listProviders',
+  HARNESS_CREATE_SESSION: 'harness:createSession',
+  HARNESS_RESUME_SESSION: 'harness:resumeSession',
+  HARNESS_SEND_MESSAGE: 'harness:sendMessage',
+  HARNESS_INTERRUPT: 'harness:interrupt',
+  HARNESS_STOP: 'harness:stop',
+  HARNESS_RESOLVE_PERMISSION: 'harness:resolvePermission',
+  HARNESS_GET_SESSION: 'harness:getSession',
+  HARNESS_LIST_SESSIONS: 'harness:listSessions',
+  HARNESS_EVENT: 'harness:event'
 } as const
 
 export interface PermissionSuggestion {

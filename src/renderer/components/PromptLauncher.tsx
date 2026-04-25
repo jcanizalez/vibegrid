@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useMemo, KeyboardEvent } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAppStore } from '../stores'
+import { toast } from './Toast'
 import { AiAgentType, ProjectConfig, getProjectRemoteHostId } from '../../shared/types'
 import { AGENT_LIST } from '../lib/agent-definitions'
 import { AgentIcon } from './AgentIcon'
@@ -133,6 +134,36 @@ export function PromptLauncher({ mode, onClose }: PromptLauncherProps) {
     setLaunching(true)
 
     try {
+      // Vorn — native harness session that lives as a card in the grid
+      if (settings.selectedAgent === 'vorn') {
+        const harness = await window.api.harnessCreateSession('claude', {
+          cwd: project.path,
+          initialMessage: prompt.trim() || undefined
+        })
+        const store = useAppStore.getState()
+        const hs = store as unknown as import('../stores/harness-slice').HarnessSlice
+        hs.setActiveHarnessSession(harness.id)
+        if (prompt.trim()) {
+          hs.addUserMessage(harness.id, prompt.trim())
+        }
+        const synthetic: import('../../shared/types').TerminalSession = {
+          id: harness.id,
+          agentType: 'vorn',
+          projectName: project.name,
+          projectPath: project.path,
+          status: 'running',
+          createdAt: Date.now(),
+          pid: 0,
+          displayName: prompt.trim().slice(0, 60) || 'vorn',
+          harnessSessionId: harness.id
+        }
+        addTerminal(synthetic)
+        settings.persist()
+        setPrompt('')
+        onClose?.()
+        return
+      }
+
       const remoteHostId = getProjectRemoteHostId(project)
       const { worktreeMode, selectedWorktreePath, selectedBranch, currentBranch, liveBranch } =
         settings
@@ -182,6 +213,7 @@ export function PromptLauncher({ mode, onClose }: PromptLauncherProps) {
       onClose?.()
     } catch (err) {
       console.error('[PromptLauncher] launch failed:', err)
+      toast.error(`Launch failed: ${err instanceof Error ? err.message : String(err)}`)
     } finally {
       setLaunching(false)
     }

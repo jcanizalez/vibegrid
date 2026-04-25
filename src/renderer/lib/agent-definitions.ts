@@ -11,6 +11,15 @@ export interface AgentDefinition {
 }
 
 export const AGENT_DEFINITIONS: Record<AiAgentType, AgentDefinition> = {
+  vorn: {
+    type: 'vorn',
+    displayName: 'vorn',
+    color: '#C4956A',
+    bgColor: '#C4956A20',
+    description: 'Vorn native AI harness',
+    installCommand: '',
+    installUrl: ''
+  },
   claude: {
     type: 'claude',
     displayName: 'Claude Code',

@@ -28,6 +28,8 @@ import {
 } from '@vornrun/shared/types'
 import type { SourceConnection, TaskStatus } from '@vornrun/shared/types'
 import * as gitUtils from './git-utils'
+import { harnessManager, providerRegistry } from './harness'
+import { ClaudeConnector } from './harness/providers/claude-connector'
 import { listDir, readFileContent } from './file-utils'
 import {
   saveTaskImage,
@@ -1206,6 +1208,28 @@ export function registerAllMethods(): void {
     .catch((err) => {
       log.error('Failed to start hook server:', err)
     })
+
+  // ─── Harness (AI provider orchestration) ─────────────────────
+
+  providerRegistry.register(new ClaudeConnector())
+
+  registerMethod('harness:listProviders', () => harnessManager.listProviders())
+  registerMethod('harness:createSession', ({ providerId, ...opts }) =>
+    harnessManager.createSession(providerId, opts)
+  )
+  registerMethod('harness:resumeSession', ({ providerId, ...opts }) =>
+    harnessManager.resumeSession(providerId, opts)
+  )
+  registerMethod('harness:sendMessage', ({ sessionId, message }) =>
+    harnessManager.sendMessage(sessionId, message)
+  )
+  registerMethod('harness:interrupt', ({ sessionId }) => harnessManager.interrupt(sessionId))
+  registerMethod('harness:stop', ({ sessionId }) => harnessManager.stop(sessionId))
+  registerMethod('harness:resolvePermission', ({ sessionId, requestId, allowed }) =>
+    harnessManager.resolvePermission(sessionId, requestId, allowed)
+  )
+  registerMethod('harness:getSession', ({ sessionId }) => harnessManager.getSession(sessionId))
+  registerMethod('harness:listSessions', () => harnessManager.listSessions())
 }
 
 let widgetUpdateTimer: ReturnType<typeof setTimeout> | null = null

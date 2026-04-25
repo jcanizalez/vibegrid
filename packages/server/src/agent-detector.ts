@@ -30,10 +30,12 @@ export async function detectInstalledAgents(): Promise<AgentInstallStatus> {
     const config = configManager.loadConfig()
     const agentCommands = config.agentCommands || {}
 
-    const allAgents: AiAgentType[] = ['claude', 'copilot', 'codex', 'opencode', 'gemini']
+    const allAgents: AiAgentType[] = ['vorn', 'claude', 'copilot', 'codex', 'opencode', 'gemini']
 
     const results = await Promise.all(
       allAgents.map(async (agent) => {
+        // Vorn is always available — it's built-in
+        if (agent === 'vorn') return [agent, true] as const
         const cmdConfig: AgentCommandConfig = agentCommands[agent] || DEFAULT_AGENT_COMMANDS[agent]
         const primary = await commandExists(cmdConfig.command)
         const installed =

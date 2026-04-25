@@ -25,6 +25,14 @@ import {
   ConnectorManifest,
   ConnectorActionDef
 } from '../shared/types'
+import type {
+  HarnessSession,
+  HarnessProviderId,
+  HarnessEvent,
+  ProviderInfo,
+  StartSessionOpts,
+  ResumeSessionOpts
+} from '../shared/harness-types'
 
 const api = {
   createTerminal: (payload: CreateTerminalPayload) =>
@@ -506,7 +514,54 @@ const api = {
 
   getConnectorStatus: (): Promise<
     Array<{ connectorId: string; authed: boolean; message?: string }>
-  > => ipcRenderer.invoke(IPC.CONNECTOR_STATUS)
+  > => ipcRenderer.invoke(IPC.CONNECTOR_STATUS),
+
+  // ─── Harness ─────────────────────────────────────────────────
+
+  harnessListProviders: (): Promise<ProviderInfo[]> =>
+    ipcRenderer.invoke(IPC.HARNESS_LIST_PROVIDERS),
+
+  harnessCreateSession: (
+    providerId: HarnessProviderId,
+    opts: StartSessionOpts
+  ): Promise<HarnessSession> =>
+    ipcRenderer.invoke(IPC.HARNESS_CREATE_SESSION, { providerId, ...opts }),
+
+  harnessResumeSession: (
+    providerId: HarnessProviderId,
+    opts: ResumeSessionOpts
+  ): Promise<HarnessSession> =>
+    ipcRenderer.invoke(IPC.HARNESS_RESUME_SESSION, { providerId, ...opts }),
+
+  harnessSendMessage: (sessionId: string, message: string): Promise<void> =>
+    ipcRenderer.invoke(IPC.HARNESS_SEND_MESSAGE, { sessionId, message }),
+
+  harnessInterrupt: (sessionId: string): Promise<void> =>
+    ipcRenderer.invoke(IPC.HARNESS_INTERRUPT, { sessionId }),
+
+  harnessStop: (sessionId: string): Promise<void> =>
+    ipcRenderer.invoke(IPC.HARNESS_STOP, { sessionId }),
+
+  harnessResolvePermission: (
+    sessionId: string,
+    requestId: string,
+    allowed: boolean
+  ): Promise<void> =>
+    ipcRenderer.invoke(IPC.HARNESS_RESOLVE_PERMISSION, { sessionId, requestId, allowed }),
+
+  harnessGetSession: (sessionId: string): Promise<HarnessSession | null> =>
+    ipcRenderer.invoke(IPC.HARNESS_GET_SESSION, { sessionId }),
+
+  harnessListSessions: (): Promise<HarnessSession[]> =>
+    ipcRenderer.invoke(IPC.HARNESS_LIST_SESSIONS),
+
+  onHarnessEvent: (callback: (event: HarnessEvent) => void) => {
+    const listener = (_: Electron.IpcRendererEvent, event: HarnessEvent): void => callback(event)
+    ipcRenderer.on(IPC.HARNESS_EVENT, listener)
+    return () => {
+      ipcRenderer.removeListener(IPC.HARNESS_EVENT, listener)
+    }
+  }
 }
 
 contextBridge.exposeInMainWorld('api', api)

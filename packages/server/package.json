@@ -17,6 +17,7 @@
     "dev": "tsx src/index.ts"
   },
   "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "0.2.119",
     "@fastify/static": "^9.1.1",
     "@fastify/websocket": "^11.2.0",
     "@modelcontextprotocol/sdk": "^1.29.0",

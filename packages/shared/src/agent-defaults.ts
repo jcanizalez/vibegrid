@@ -1,6 +1,10 @@
 import { AiAgentType, AgentCommandConfig } from './types'
 
 export const DEFAULT_AGENT_COMMANDS: Record<AiAgentType, AgentCommandConfig> = {
+  vorn: {
+    command: 'vorn',
+    args: []
+  },
   claude: {
     command: 'claude',
     args: [],

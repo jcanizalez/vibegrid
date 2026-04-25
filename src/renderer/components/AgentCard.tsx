@@ -2,6 +2,7 @@ import { memo, forwardRef } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { useAppStore } from '../stores'
 import { TerminalSlot } from './TerminalSlot'
+import { VornCardBody } from './harness/VornCardBody'
 import { CardHeader } from './card/CardHeader'
 import { CardStatusBar } from './card/CardStatusBar'
 import { useTerminalScrollButton } from '../hooks/useTerminalScrollButton'
@@ -67,6 +68,8 @@ export const AgentCard = memo(
 
     const isFocused = focusedId === terminalId
     const isSelected = selectedId === terminalId
+    const isVorn = terminal.session.agentType === 'vorn'
+    const harnessSessionId = terminal.session.harnessSessionId
 
     const handleExpand = (): void => {
       setFocused(terminalId)
@@ -110,7 +113,12 @@ export const AgentCard = memo(
 
         {/* Terminal */}
         <div className="relative flex-1 min-h-0 pt-0.5" style={{ background: '#141416' }}>
-          {!isFocused && (
+          {!isFocused && isVorn && harnessSessionId && (
+            <div className={flexible ? 'absolute inset-0' : 'w-full h-full'}>
+              <VornCardBody harnessSessionId={harnessSessionId} />
+            </div>
+          )}
+          {!isFocused && !isVorn && (
             // In flexible mode, reserve 16px at SE so the react-grid-layout
             // resize handle isn't covered by the TerminalHost overlay (z-45).
             <TerminalSlot
@@ -124,7 +132,7 @@ export const AgentCard = memo(
               Expanded
             </div>
           )}
-          {!isFocused && terminal.lastOutputTimestamp === 0 && (
+          {!isFocused && !isVorn && terminal.lastOutputTimestamp === 0 && (
             <div
               className="absolute inset-0 p-3 space-y-2 pointer-events-none"
               style={{ background: '#141416' }}

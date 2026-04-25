@@ -11,12 +11,23 @@ export function consumePendingTerminalClose(id: string): boolean {
 
 export async function closeTerminalSession(id: string): Promise<void> {
   const state = useAppStore.getState()
+  const session = state.terminals.get(id)?.session
   pendingTerminalCloses.add(id)
   if (state.focusedTerminalId === id) state.setFocusedTerminal(null)
   if (state.selectedTerminalId === id) state.setSelectedTerminal(null)
   if (state.renamingTerminalId === id) state.setRenamingTerminalId(null)
   destroyTerminal(id)
   state.removeTerminal(id)
+
+  if (session?.agentType === 'vorn') {
+    const harnessId = session.harnessSessionId ?? id
+    try {
+      await window.api.harnessStop(harnessId)
+    } catch (err) {
+      console.warn(`[terminal-close] harnessStop failed for ${harnessId}:`, err)
+    }
+    return
+  }
 
   try {
     await window.api.killTerminal(id)

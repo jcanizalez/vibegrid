@@ -1,4 +1,13 @@
 import type {
+  HarnessEvent,
+  HarnessSession,
+  HarnessProviderId,
+  ProviderInfo,
+  StartSessionOpts,
+  ResumeSessionOpts
+} from './harness-types'
+
+import type {
   CreateTerminalPayload,
   TerminalSession,
   HeadlessSession,
@@ -301,6 +310,45 @@ export interface RequestMethods {
     params: void
     result: Array<{ connectorId: string; authed: boolean; message?: string }>
   }
+
+  // ─── Harness (AI provider orchestration) ────────────────────────
+
+  'harness:listProviders': {
+    params: void
+    result: ProviderInfo[]
+  }
+  'harness:createSession': {
+    params: StartSessionOpts & { providerId: HarnessProviderId }
+    result: HarnessSession
+  }
+  'harness:resumeSession': {
+    params: ResumeSessionOpts & { providerId: HarnessProviderId }
+    result: HarnessSession
+  }
+  'harness:sendMessage': {
+    params: { sessionId: string; message: string }
+    result: void
+  }
+  'harness:interrupt': {
+    params: { sessionId: string }
+    result: void
+  }
+  'harness:stop': {
+    params: { sessionId: string }
+    result: void
+  }
+  'harness:resolvePermission': {
+    params: { sessionId: string; requestId: string; allowed: boolean }
+    result: void
+  }
+  'harness:getSession': {
+    params: { sessionId: string }
+    result: HarnessSession | null
+  }
+  'harness:listSessions': {
+    params: void
+    result: HarnessSession[]
+  }
 }
 
 // ─── Server Notifications (server → client, push events) ────────
@@ -340,6 +388,9 @@ export interface ServerNotifications {
   'workflow:executionComplete': WorkflowExecution
   'session-exit': TerminalSession
   'database:corruption-recovered': { message: string }
+
+  // ─── Harness events ────────────────────────────────────────────
+  'harness:event': HarnessEvent
 }
 
 // ─── Client Notifications (client → server, fire-and-forget) ────

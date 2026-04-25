@@ -4,6 +4,7 @@ import { AiAgentType } from '../../shared/types'
 export type AgentInstallStatus = Record<AiAgentType, boolean>
 
 const DEFAULT_STATUS: AgentInstallStatus = {
+  vorn: true,
   claude: true,
   copilot: true,
   codex: true,

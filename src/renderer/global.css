@@ -280,3 +280,73 @@ select:focus:not(:focus-visible) {
   border-radius: 8px;
   opacity: 1 !important;
 }
+
+/* ─── Harness markdown ──────────────────────────────────────── */
+.harness-markdown {
+  color: #d1d5db;
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+.harness-markdown h1,
+.harness-markdown h2,
+.harness-markdown h3 {
+  color: #e5e7eb;
+  margin-top: 1em;
+  margin-bottom: 0.5em;
+}
+.harness-markdown p {
+  margin: 0.4em 0;
+}
+.harness-markdown code {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  color: #e5e7eb;
+  padding: 0.1em 0.4em;
+  border-radius: 4px;
+  font-size: 0.82em;
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+}
+.harness-markdown pre {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  padding: 0.75em 1em;
+  overflow-x: auto;
+  margin: 0.5em 0;
+}
+.harness-markdown pre code {
+  background: none;
+  padding: 0;
+}
+.harness-markdown ul,
+.harness-markdown ol {
+  padding-left: 1.5em;
+  margin: 0.4em 0;
+}
+.harness-markdown a {
+  color: var(--color-bronzo);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.harness-markdown blockquote {
+  border-left: 2px solid var(--color-bronzo);
+  padding-left: 0.75em;
+  margin: 0.5em 0;
+  color: #9ca3af;
+}
+.harness-markdown table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.5em 0;
+}
+.harness-markdown th,
+.harness-markdown td {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 0.35em 0.6em;
+  text-align: left;
+  font-size: 0.8em;
+}
+.harness-markdown th {
+  background: rgba(255, 255, 255, 0.04);
+  font-weight: 500;
+}

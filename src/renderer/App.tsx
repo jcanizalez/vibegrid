@@ -27,6 +27,8 @@ import { SidebarToggleButton } from './components/SidebarToggleButton'
 import { MainViewPills } from './components/MainViewPills'
 import { RecentSessionsButton } from './components/RecentSessionsButton'
 import { Tooltip } from './components/Tooltip'
+import type { HarnessEvent } from '../shared/harness-types'
+import type { HarnessSlice } from './stores/harness-slice'
 import { Plus, Menu } from 'lucide-react'
 import { MobileBottomTabs } from './components/MobileBottomTabs'
 import { TaskToolbar } from './components/TaskToolbar'
@@ -355,6 +357,18 @@ export function App() {
       useAppStore.getState().pruneExitedHeadless(retentionMinutes * 60_000)
     }, 30_000)
 
+    // Harness events (vorn native sessions) — global subscription so cards
+    // receive streaming regardless of which view is mounted.
+    const removeHarnessListener = window.api.onHarnessEvent((event: HarnessEvent) => {
+      const hs = useAppStore.getState() as unknown as HarnessSlice
+      hs.handleHarnessEvent(event)
+      if (event.type === 'session.ended') {
+        useAppStore.getState().updateStatus(event.sessionId, 'idle')
+      } else if (event.type === 'error') {
+        useAppStore.getState().updateStatus(event.sessionId, 'error')
+      }
+    })
+
     return () => {
       disposeGlobalDataListener()
       removeExitListener()
@@ -367,6 +381,7 @@ export function App() {
       removeSessionUpdatedListener()
       removeHeadlessExitListener()
       removeHeadlessDataListener()
+      removeHarnessListener()
       clearInterval(headlessPollInterval)
       clearInterval(pruneInterval)
     }

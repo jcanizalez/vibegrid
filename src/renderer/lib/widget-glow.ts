@@ -1,6 +1,7 @@
 import type { AiAgentType, AgentType } from '../../shared/types'
 
 const GLOW_COLORS: Record<AiAgentType, string> = {
+  vorn: 'rgba(196, 149, 106, 0.45)',
   claude: 'rgba(217, 119, 87, 0.45)',
   copilot: 'rgba(255, 255, 255, 0.3)',
   codex: 'rgba(122, 157, 255, 0.45)',
