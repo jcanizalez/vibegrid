@@ -12,13 +12,20 @@ const mockStore = {
   reorderWorkflows: vi.fn(),
   sidebarWorkflowFilter: 'all' as 'all' | 'manual' | 'scheduled',
   setSidebarWorkflowFilter: vi.fn(),
-  workflowExecutions: new Map<string, unknown>()
+  workflowExecutions: new Map<string, unknown>(),
+  editingWorkflowId: null as string | null,
+  isWorkflowEditorOpen: false
 }
 
 vi.mock('../src/renderer/stores', () => ({
   useAppStore: (selector?: (state: unknown) => unknown) => {
     return selector ? selector(mockStore) : mockStore
   }
+}))
+
+const waitingMock = vi.fn(() => [] as unknown[])
+vi.mock('../src/renderer/hooks/useWaitingApprovals', () => ({
+  useWaitingApprovals: () => waitingMock()
 }))
 
 vi.mock('../src/renderer/lib/workflow-execution', () => ({
@@ -58,6 +65,10 @@ beforeEach(() => {
   mockStore.reorderWorkflows.mockReset()
   mockStore.setSidebarWorkflowFilter.mockReset()
   mockStore.sidebarWorkflowFilter = 'all'
+  mockStore.editingWorkflowId = null
+  mockStore.isWorkflowEditorOpen = false
+  waitingMock.mockReset()
+  waitingMock.mockReturnValue([])
 })
 
 describe('WorkflowsSection', () => {
@@ -145,6 +156,42 @@ describe('WorkflowsSection', () => {
     render(<WorkflowsSection isCollapsed={true} workspaceWorkflows={workflows} />)
     expect(screen.queryByText('Workflows')).not.toBeInTheDocument()
     expect(screen.queryByText('Flow a')).not.toBeInTheDocument()
+  })
+
+  it('renders the "All runs" entry above the workflow list', () => {
+    render(<WorkflowsSection isCollapsed={false} workspaceWorkflows={[]} />)
+    expect(screen.getByRole('button', { name: 'All runs' })).toBeInTheDocument()
+  })
+
+  it('marks "All runs" as selected when no workflow is being edited', () => {
+    mockStore.editingWorkflowId = null
+    mockStore.isWorkflowEditorOpen = false
+    render(<WorkflowsSection isCollapsed={false} workspaceWorkflows={[]} />)
+    expect(screen.getByRole('button', { name: 'All runs' })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('does not mark "All runs" as selected when a workflow is being edited', () => {
+    mockStore.editingWorkflowId = 'a'
+    render(<WorkflowsSection isCollapsed={false} workspaceWorkflows={[makeWorkflow('a')]} />)
+    expect(screen.getByRole('button', { name: 'All runs' })).toHaveAttribute(
+      'aria-pressed',
+      'false'
+    )
+  })
+
+  it('clears editor selection when "All runs" is clicked', () => {
+    mockStore.editingWorkflowId = 'a'
+    mockStore.isWorkflowEditorOpen = true
+    render(<WorkflowsSection isCollapsed={false} workspaceWorkflows={[makeWorkflow('a')]} />)
+    fireEvent.click(screen.getByRole('button', { name: 'All runs' }))
+    expect(mockStore.setEditingWorkflowId).toHaveBeenCalledWith(null)
+    expect(mockStore.setWorkflowEditorOpen).toHaveBeenCalledWith(false)
+  })
+
+  it('shows the waiting count next to "All runs" when approvals are pending', () => {
+    waitingMock.mockReturnValue([{}, {}])
+    render(<WorkflowsSection isCollapsed={false} workspaceWorkflows={[]} />)
+    expect(screen.getByRole('button', { name: 'All runs' })).toContainElement(screen.getByText('2'))
   })
 
   it('Edit Workflow menu item opens the editor for the right workflow', () => {

@@ -2151,62 +2151,88 @@ export function saveWorkflowRun(execution: WorkflowExecution): void {
   run()
 }
 
+type WorkflowRunNodeRow = {
+  run_id: string
+  node_id: string
+  status: string
+  started_at: string | null
+  completed_at: string | null
+  session_id: string | null
+  error: string | null
+  logs: string | null
+  task_id: string | null
+  agent_session_id: string | null
+  agent_type: string | null
+  project_name: string | null
+  project_path: string | null
+  approved_at: string | null
+}
+
+function mapNodeRow(n: WorkflowRunNodeRow): NodeExecutionState {
+  return {
+    nodeId: n.node_id,
+    status: n.status as NodeExecutionState['status'],
+    ...(n.started_at != null && { startedAt: n.started_at }),
+    ...(n.completed_at != null && { completedAt: n.completed_at }),
+    ...(n.session_id != null && { sessionId: n.session_id }),
+    ...(n.error != null && { error: n.error }),
+    ...(n.logs != null && { logs: n.logs }),
+    ...(n.task_id != null && { taskId: n.task_id }),
+    ...(n.agent_session_id != null && { agentSessionId: n.agent_session_id }),
+    ...(n.agent_type != null && { agentType: n.agent_type as NodeExecutionState['agentType'] }),
+    ...(n.project_name != null && { projectName: n.project_name }),
+    ...(n.project_path != null && { projectPath: n.project_path }),
+    ...(n.approved_at != null && { approvedAt: n.approved_at })
+  }
+}
+
+function fetchNodesByRunIds(
+  d: Database.Database,
+  runIds: string[]
+): Map<string, NodeExecutionState[]> {
+  if (runIds.length === 0) return new Map()
+  const placeholders = runIds.map(() => '?').join(',')
+  const rows = d
+    .prepare(`SELECT * FROM workflow_run_nodes WHERE run_id IN (${placeholders})`)
+    .all(...runIds) as WorkflowRunNodeRow[]
+  const out = new Map<string, NodeExecutionState[]>()
+  for (const r of rows) {
+    const bucket = out.get(r.run_id)
+    const node = mapNodeRow(r)
+    if (bucket) bucket.push(node)
+    else out.set(r.run_id, [node])
+  }
+  return out
+}
+
 export function listWorkflowRuns(workflowId: string, limit = 20): WorkflowExecution[] {
   const d = getDb()
 
-  const rows = d
-    .prepare('SELECT * FROM workflow_runs WHERE workflow_id = ? ORDER BY started_at DESC LIMIT ?')
-    .all(workflowId, limit) as Array<{
+  type RunRow = {
     id: string
     workflow_id: string
     started_at: string
     completed_at: string | null
     status: string
     trigger_task_id: string | null
-  }>
+  }
+  const rows = d
+    .prepare('SELECT * FROM workflow_runs WHERE workflow_id = ? ORDER BY started_at DESC LIMIT ?')
+    .all(workflowId, limit) as RunRow[]
 
-  return rows.map((r) => {
-    const nodeRows = d
-      .prepare('SELECT * FROM workflow_run_nodes WHERE run_id = ?')
-      .all(r.id) as Array<{
-      node_id: string
-      status: string
-      started_at: string | null
-      completed_at: string | null
-      session_id: string | null
-      error: string | null
-      logs: string | null
-      task_id: string | null
-      agent_session_id: string | null
-      agent_type: string | null
-      project_name: string | null
-      project_path: string | null
-      approved_at: string | null
-    }>
+  const nodesByRun = fetchNodesByRunIds(
+    d,
+    rows.map((r) => r.id)
+  )
 
-    return {
-      workflowId: r.workflow_id,
-      startedAt: r.started_at,
-      ...(r.completed_at != null && { completedAt: r.completed_at }),
-      status: r.status as WorkflowExecution['status'],
-      ...(r.trigger_task_id != null && { triggerTaskId: r.trigger_task_id }),
-      nodeStates: nodeRows.map((n) => ({
-        nodeId: n.node_id,
-        status: n.status as NodeExecutionState['status'],
-        ...(n.started_at != null && { startedAt: n.started_at }),
-        ...(n.completed_at != null && { completedAt: n.completed_at }),
-        ...(n.session_id != null && { sessionId: n.session_id }),
-        ...(n.error != null && { error: n.error }),
-        ...(n.logs != null && { logs: n.logs }),
-        ...(n.task_id != null && { taskId: n.task_id }),
-        ...(n.agent_session_id != null && { agentSessionId: n.agent_session_id }),
-        ...(n.agent_type != null && { agentType: n.agent_type as NodeExecutionState['agentType'] }),
-        ...(n.project_name != null && { projectName: n.project_name }),
-        ...(n.project_path != null && { projectPath: n.project_path }),
-        ...(n.approved_at != null && { approvedAt: n.approved_at })
-      }))
-    }
-  })
+  return rows.map((r) => ({
+    workflowId: r.workflow_id,
+    startedAt: r.started_at,
+    ...(r.completed_at != null && { completedAt: r.completed_at }),
+    status: r.status as WorkflowExecution['status'],
+    ...(r.trigger_task_id != null && { triggerTaskId: r.trigger_task_id }),
+    nodeStates: nodesByRun.get(r.id) ?? []
+  }))
 }
 
 export function listWorkflowRunsByTask(
@@ -2215,20 +2241,7 @@ export function listWorkflowRunsByTask(
 ): (WorkflowExecution & { workflowName?: string })[] {
   const d = getDb()
 
-  // Find runs where the task triggered the workflow OR a node executed the task
-  const rows = d
-    .prepare(
-      `
-    SELECT DISTINCT wr.*, w.name as workflow_name
-    FROM workflow_runs wr
-    LEFT JOIN workflows w ON w.id = wr.workflow_id
-    WHERE wr.trigger_task_id = ?
-       OR wr.id IN (SELECT run_id FROM workflow_run_nodes WHERE task_id = ?)
-    ORDER BY wr.started_at DESC
-    LIMIT ?
-  `
-    )
-    .all(taskId, taskId, limit) as Array<{
+  type RunRow = {
     id: string
     workflow_id: string
     started_at: string
@@ -2236,50 +2249,50 @@ export function listWorkflowRunsByTask(
     status: string
     trigger_task_id: string | null
     workflow_name: string | null
-  }>
+  }
+  const rows = d
+    .prepare(
+      `SELECT DISTINCT wr.*, w.name as workflow_name
+       FROM workflow_runs wr
+       LEFT JOIN workflows w ON w.id = wr.workflow_id
+       WHERE wr.trigger_task_id = ?
+          OR wr.id IN (SELECT run_id FROM workflow_run_nodes WHERE task_id = ?)
+       ORDER BY wr.started_at DESC
+       LIMIT ?`
+    )
+    .all(taskId, taskId, limit) as RunRow[]
 
-  return rows.map((r) => {
-    const nodeRows = d
-      .prepare('SELECT * FROM workflow_run_nodes WHERE run_id = ?')
-      .all(r.id) as Array<{
-      node_id: string
-      status: string
-      started_at: string | null
-      completed_at: string | null
-      session_id: string | null
-      error: string | null
-      logs: string | null
-      task_id: string | null
-      agent_session_id: string | null
-      approved_at: string | null
-    }>
+  const nodesByRun = fetchNodesByRunIds(
+    d,
+    rows.map((r) => r.id)
+  )
 
-    return {
-      workflowId: r.workflow_id,
-      startedAt: r.started_at,
-      ...(r.completed_at != null && { completedAt: r.completed_at }),
-      status: r.status as WorkflowExecution['status'],
-      ...(r.trigger_task_id != null && { triggerTaskId: r.trigger_task_id }),
-      ...(r.workflow_name != null && { workflowName: r.workflow_name }),
-      nodeStates: nodeRows.map((n) => ({
-        nodeId: n.node_id,
-        status: n.status as NodeExecutionState['status'],
-        ...(n.started_at != null && { startedAt: n.started_at }),
-        ...(n.completed_at != null && { completedAt: n.completed_at }),
-        ...(n.session_id != null && { sessionId: n.session_id }),
-        ...(n.error != null && { error: n.error }),
-        ...(n.logs != null && { logs: n.logs }),
-        ...(n.task_id != null && { taskId: n.task_id }),
-        ...(n.agent_session_id != null && { agentSessionId: n.agent_session_id }),
-        ...(n.approved_at != null && { approvedAt: n.approved_at })
-      }))
-    }
-  })
+  return rows.map((r) => ({
+    workflowId: r.workflow_id,
+    startedAt: r.started_at,
+    ...(r.completed_at != null && { completedAt: r.completed_at }),
+    status: r.status as WorkflowExecution['status'],
+    ...(r.trigger_task_id != null && { triggerTaskId: r.trigger_task_id }),
+    ...(r.workflow_name != null && { workflowName: r.workflow_name }),
+    nodeStates: nodesByRun.get(r.id) ?? []
+  }))
 }
 
+// Surfaces every run that has at least one waiting node — small in practice
+// because gates pause execution. No LIMIT is intentional so the badge count
+// matches the real backlog. If this ever grows, cap with a LIMIT here and
+// chunk `fetchNodesByRunIds` to stay under SQLite's IN-clause variable cap.
 export function listRunsWithWaitingGates(): WorkflowExecution[] {
   const d = getDb()
 
+  type RunRow = {
+    id: string
+    workflow_id: string
+    started_at: string
+    completed_at: string | null
+    status: string
+    trigger_task_id: string | null
+  }
   const rows = d
     .prepare(
       `SELECT DISTINCT wr.*
@@ -2288,43 +2301,12 @@ export function listRunsWithWaitingGates(): WorkflowExecution[] {
        WHERE wrn.status = 'waiting'
        ORDER BY wr.started_at DESC`
     )
-    .all() as Array<{
-    id: string
-    workflow_id: string
-    started_at: string
-    completed_at: string | null
-    status: string
-    trigger_task_id: string | null
-  }>
+    .all() as RunRow[]
 
-  if (rows.length === 0) return []
-
-  const placeholders = rows.map(() => '?').join(',')
-  const allNodeRows = d
-    .prepare(`SELECT * FROM workflow_run_nodes WHERE run_id IN (${placeholders})`)
-    .all(...rows.map((r) => r.id)) as Array<{
-    run_id: string
-    node_id: string
-    status: string
-    started_at: string | null
-    completed_at: string | null
-    session_id: string | null
-    error: string | null
-    logs: string | null
-    task_id: string | null
-    agent_session_id: string | null
-    agent_type: string | null
-    project_name: string | null
-    project_path: string | null
-    approved_at: string | null
-  }>
-
-  const nodesByRun = new Map<string, typeof allNodeRows>()
-  for (const n of allNodeRows) {
-    const bucket = nodesByRun.get(n.run_id)
-    if (bucket) bucket.push(n)
-    else nodesByRun.set(n.run_id, [n])
-  }
+  const nodesByRun = fetchNodesByRunIds(
+    d,
+    rows.map((r) => r.id)
+  )
 
   return rows.map((r) => ({
     workflowId: r.workflow_id,
@@ -2332,21 +2314,62 @@ export function listRunsWithWaitingGates(): WorkflowExecution[] {
     ...(r.completed_at != null && { completedAt: r.completed_at }),
     status: r.status as WorkflowExecution['status'],
     ...(r.trigger_task_id != null && { triggerTaskId: r.trigger_task_id }),
-    nodeStates: (nodesByRun.get(r.id) ?? []).map((n) => ({
-      nodeId: n.node_id,
-      status: n.status as NodeExecutionState['status'],
-      ...(n.started_at != null && { startedAt: n.started_at }),
-      ...(n.completed_at != null && { completedAt: n.completed_at }),
-      ...(n.session_id != null && { sessionId: n.session_id }),
-      ...(n.error != null && { error: n.error }),
-      ...(n.logs != null && { logs: n.logs }),
-      ...(n.task_id != null && { taskId: n.task_id }),
-      ...(n.agent_session_id != null && { agentSessionId: n.agent_session_id }),
-      ...(n.agent_type != null && { agentType: n.agent_type as NodeExecutionState['agentType'] }),
-      ...(n.project_name != null && { projectName: n.project_name }),
-      ...(n.project_path != null && { projectPath: n.project_path }),
-      ...(n.approved_at != null && { approvedAt: n.approved_at })
-    }))
+    nodeStates: nodesByRun.get(r.id) ?? []
+  }))
+}
+
+/**
+ * Cross-workflow run history for the Workflows → All runs view. Joins on
+ * the workflows table so the renderer can display the workflow name without
+ * a second lookup. When `workspaceId` is provided, restricts to workflows
+ * in that workspace; otherwise returns runs across every workflow.
+ */
+export function listAllWorkflowRuns(
+  workspaceId?: string,
+  limit = 50
+): (WorkflowExecution & { workflowName?: string })[] {
+  const d = getDb()
+  // Clamp to keep the IN-clause below SQLite's default 999-variable cap
+  // when fetching node rows for each run.
+  const cappedLimit = Math.max(1, Math.min(limit, 500))
+
+  type RunRow = {
+    id: string
+    workflow_id: string
+    started_at: string
+    completed_at: string | null
+    status: string
+    trigger_task_id: string | null
+    workflow_name: string | null
+  }
+  // When filtering by workspace, exclude orphaned runs (workflow deleted, the
+  // LEFT JOIN nulls everything on `w`). Without `w.id IS NOT NULL`, the
+  // COALESCE would silently bucket every orphan into 'personal'.
+  const where = workspaceId
+    ? `WHERE w.id IS NOT NULL AND COALESCE(w.workspace_id, 'personal') = ?`
+    : ''
+  const sql = `SELECT wr.*, w.name as workflow_name
+               FROM workflow_runs wr
+               LEFT JOIN workflows w ON w.id = wr.workflow_id
+               ${where}
+               ORDER BY wr.started_at DESC
+               LIMIT ?`
+  const params = workspaceId ? [workspaceId, cappedLimit] : [cappedLimit]
+  const rows = d.prepare(sql).all(...params) as RunRow[]
+
+  const nodesByRun = fetchNodesByRunIds(
+    d,
+    rows.map((r) => r.id)
+  )
+
+  return rows.map((r) => ({
+    workflowId: r.workflow_id,
+    startedAt: r.started_at,
+    ...(r.completed_at != null && { completedAt: r.completed_at }),
+    status: r.status as WorkflowExecution['status'],
+    ...(r.trigger_task_id != null && { triggerTaskId: r.trigger_task_id }),
+    ...(r.workflow_name != null && { workflowName: r.workflow_name }),
+    nodeStates: nodesByRun.get(r.id) ?? []
   }))
 }
 

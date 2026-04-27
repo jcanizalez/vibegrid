@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest'
-import { formatRelativeTime } from '../src/renderer/lib/format-time'
+import {
+  formatRelativeTime,
+  formatRunDuration,
+  formatCompactDuration
+} from '../src/renderer/lib/format-time'
 
 const NOW = new Date('2026-04-16T12:00:00Z').getTime()
 
@@ -48,5 +52,63 @@ describe('formatRelativeTime', () => {
     const result = formatRelativeTime(future)
     expect(result).not.toBe('Just now')
     expect(result).not.toContain('ago')
+  })
+})
+
+describe('formatRunDuration', () => {
+  it('returns "running..." when end is undefined', () => {
+    expect(formatRunDuration('2026-04-20T10:00:00Z')).toBe('running...')
+  })
+
+  it('formats sub-second durations as ms', () => {
+    expect(formatRunDuration('2026-04-20T10:00:00.000Z', '2026-04-20T10:00:00.250Z')).toBe('250ms')
+  })
+
+  it('formats seconds with one decimal place under a minute', () => {
+    expect(formatRunDuration('2026-04-20T10:00:00Z', '2026-04-20T10:00:01.400Z')).toBe('1.4s')
+    expect(formatRunDuration('2026-04-20T10:00:00Z', '2026-04-20T10:00:45Z')).toBe('45.0s')
+  })
+
+  it('formats minutes and seconds at or above one minute', () => {
+    expect(formatRunDuration('2026-04-20T10:00:00Z', '2026-04-20T10:02:13Z')).toBe('2m 13s')
+    expect(formatRunDuration('2026-04-20T10:00:00Z', '2026-04-20T11:00:05Z')).toBe('60m 5s')
+  })
+
+  it('returns "—" for unparseable timestamps instead of "NaNms"', () => {
+    expect(formatRunDuration('not-a-date', '2026-04-20T10:00:01Z')).toBe('—')
+    expect(formatRunDuration('2026-04-20T10:00:00Z', 'still-not')).toBe('—')
+  })
+
+  it('returns "—" when end is before start instead of a negative duration', () => {
+    expect(formatRunDuration('2026-04-20T10:00:05Z', '2026-04-20T10:00:00Z')).toBe('—')
+  })
+})
+
+describe('formatCompactDuration', () => {
+  it('returns "—" for negative durations', () => {
+    expect(formatCompactDuration('2026-04-20T10:00:05Z', '2026-04-20T10:00:00Z')).toBe('—')
+  })
+
+  it('formats seconds-only durations as "Ns"', () => {
+    expect(formatCompactDuration('2026-04-20T10:00:00Z', '2026-04-20T10:00:30Z')).toBe('30s')
+  })
+
+  it('formats one-minute durations as "MM:SS"', () => {
+    expect(formatCompactDuration('2026-04-20T10:00:00Z', '2026-04-20T10:01:08Z')).toBe('1:08')
+  })
+
+  it('zero-pads the seconds component', () => {
+    expect(formatCompactDuration('2026-04-20T10:00:00Z', '2026-04-20T10:02:03Z')).toBe('2:03')
+  })
+
+  it('counts up to now when end is omitted', () => {
+    const start = new Date(NOW - 75_000).toISOString()
+    expect(formatCompactDuration(start)).toBe('1:15')
+  })
+
+  it('returns "—" for unparseable timestamps instead of "NaN:NaN"', () => {
+    expect(formatCompactDuration('not-a-date')).toBe('—')
+    expect(formatCompactDuration('not-a-date', '2026-04-20T10:00:00Z')).toBe('—')
+    expect(formatCompactDuration('2026-04-20T10:00:00Z', 'still-not')).toBe('—')
   })
 })

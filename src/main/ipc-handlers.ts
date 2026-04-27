@@ -129,6 +129,9 @@ export function registerIpcHandlers(): void {
   safeHandle(IPC.WORKFLOW_RUN_LIST_WAITING, () =>
     requireBridge().request(IPC.WORKFLOW_RUN_LIST_WAITING, {})
   )
+  safeHandle(IPC.WORKFLOW_RUN_LIST_ALL, (_, workspaceId, limit) =>
+    requireBridge().request(IPC.WORKFLOW_RUN_LIST_ALL, { workspaceId, limit })
+  )
 
   // Session logs
   safeHandle(IPC.SESSION_LOG_LIST, (_, taskId) =>

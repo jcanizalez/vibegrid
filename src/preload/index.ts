@@ -357,6 +357,12 @@ const api = {
   listRunsWithWaitingGates: (): Promise<WorkflowExecution[]> =>
     ipcRenderer.invoke(IPC.WORKFLOW_RUN_LIST_WAITING),
 
+  listAllWorkflowRuns: (
+    workspaceId?: string,
+    limit?: number
+  ): Promise<(WorkflowExecution & { workflowName?: string })[]> =>
+    ipcRenderer.invoke(IPC.WORKFLOW_RUN_LIST_ALL, workspaceId, limit),
+
   listSessionLogs: (taskId: string): Promise<SessionLog[]> =>
     ipcRenderer.invoke(IPC.SESSION_LOG_LIST, taskId),
 

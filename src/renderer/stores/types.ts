@@ -37,6 +37,7 @@ export type TaskStatusFilter = 'all' | 'todo' | 'in_progress' | 'in_review' | 'd
 export type TaskSourceFilter = 'all' | 'local' | (string & {})
 export type ProjectSortMode = 'manual' | 'name' | 'recent'
 export type WorkflowFilter = 'all' | 'manual' | 'scheduled'
+export type RunBucket = 'all' | 'running' | 'waiting' | 'success' | 'error'
 export type WorktreeSortMode = 'name' | 'recent'
 export type WorktreeFilter = 'all' | 'active'
 export type SidebarViewMode = 'worktrees' | 'worktrees-sessions' | 'sessions' | 'sessions-flat'
@@ -149,6 +150,10 @@ export interface UISlice {
   isDiffPanelMaximized: boolean
   diffPanelWidth: number
   mainViewMode: 'sessions' | 'tasks' | 'workflows'
+  workflowsLandingTab: 'runs' | 'review'
+  workflowsRunFilter: RunBucket
+  workflowsRunsInflight: number
+  workflowsRunsReloadToken: number
   selectedTaskId: string | null
   taskStatusFilter: TaskStatusFilter
   taskSourceFilter: TaskSourceFilter
@@ -191,6 +196,11 @@ export interface UISlice {
   setDiffPanelMaximized: (maximized: boolean) => void
   setDiffPanelWidth: (width: number) => void
   setMainViewMode: (mode: 'sessions' | 'tasks' | 'workflows') => void
+  setWorkflowsLandingTab: (tab: 'runs' | 'review') => void
+  setWorkflowsRunFilter: (filter: RunBucket) => void
+  beginWorkflowsRunsLoad: () => void
+  endWorkflowsRunsLoad: () => void
+  bumpWorkflowsRunsReload: () => void
   setSelectedTaskId: (id: string | null) => void
   setTaskStatusFilter: (filter: TaskStatusFilter) => void
   setTaskSourceFilter: (filter: TaskSourceFilter) => void

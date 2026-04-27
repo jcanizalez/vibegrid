@@ -40,6 +40,7 @@ import {
   saveWorkflowRun,
   listWorkflowRuns,
   listWorkflowRunsByTask,
+  listAllWorkflowRuns,
   listRunsWithWaitingGates,
   updateWorkflowRunStatus,
   dbSaveSSHKey,
@@ -539,6 +540,9 @@ export function registerAllMethods(): void {
     listWorkflowRunsByTask(taskId, limit)
   )
   registerMethod('workflowRun:listWaiting', () => listRunsWithWaitingGates())
+  registerMethod('workflowRun:listAll', ({ workspaceId, limit }) =>
+    listAllWorkflowRuns(workspaceId, limit)
+  )
 
   // Session logs
   registerMethod('sessionLog:list', ({ taskId }) => listSessionLogs(taskId))

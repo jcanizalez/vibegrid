@@ -13,6 +13,11 @@ import { AddProjectDialog } from './components/AddProjectDialog'
 const WorkflowEditor = lazy(() =>
   import('./components/workflow-editor/WorkflowEditor').then((m) => ({ default: m.WorkflowEditor }))
 )
+const WorkflowsLandingView = lazy(() =>
+  import('./components/workflow-runs/WorkflowsLandingView').then((m) => ({
+    default: m.WorkflowsLandingView
+  }))
+)
 import {
   executeWorkflow as runWorkflow,
   rescheduleWaitingGateTimers
@@ -30,6 +35,7 @@ import { Tooltip } from './components/Tooltip'
 import { Plus, Menu } from 'lucide-react'
 import { MobileBottomTabs } from './components/MobileBottomTabs'
 import { TaskToolbar } from './components/TaskToolbar'
+import { WorkflowsLandingHeader } from './components/workflow-runs/WorkflowsLandingHeader'
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
 import { useVirtualKeyboard } from './hooks/useVirtualKeyboard'
 import { useGitDiffPolling } from './hooks/useGitDiffPolling'
@@ -434,7 +440,11 @@ export function App() {
               </div>
             )}
             <div className={`flex items-center titlebar-no-drag ${isMobile ? 'gap-1.5' : 'gap-1'}`}>
-              {mainViewMode === 'workflows' && !isMobile ? null : mainViewMode !== 'tasks' ? (
+              {mainViewMode === 'workflows' && !isMobile ? (
+                editingWorkflowId === null && !isWorkflowEditorOpen ? (
+                  <WorkflowsLandingHeader />
+                ) : null
+              ) : mainViewMode !== 'tasks' ? (
                 <>
                   {!isMobile && (
                     <>
@@ -522,9 +532,7 @@ export function App() {
                 {editingWorkflowId !== null || isWorkflowEditorOpen ? (
                   <WorkflowEditor inline />
                 ) : (
-                  <div className="flex-1 flex items-center justify-center text-gray-500 text-sm">
-                    Select a workflow from the sidebar to edit it
-                  </div>
+                  <WorkflowsLandingView />
                 )}
               </Suspense>
             ) : mainViewMode === 'workflows' && isMobile ? (

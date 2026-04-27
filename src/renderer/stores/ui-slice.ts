@@ -101,6 +101,10 @@ export const createUISlice: StateCreator<AppStore, [], [], UISlice> = (set, get)
   isDiffPanelMaximized: false,
   diffPanelWidth: 480,
   mainViewMode: 'sessions' as const,
+  workflowsLandingTab: 'runs' as const,
+  workflowsRunFilter: 'all' as const,
+  workflowsRunsInflight: 0,
+  workflowsRunsReloadToken: 0,
   selectedTaskId: null,
   taskStatusFilter: 'all' as const,
   taskSourceFilter: 'all' as TaskSourceFilter,
@@ -261,6 +265,14 @@ export const createUISlice: StateCreator<AppStore, [], [], UISlice> = (set, get)
       set({ mainViewMode: mode, ...extra })
     }
   },
+  setWorkflowsLandingTab: (tab) => set({ workflowsLandingTab: tab }),
+  setWorkflowsRunFilter: (filter) => set({ workflowsRunFilter: filter }),
+  beginWorkflowsRunsLoad: () =>
+    set((s) => ({ workflowsRunsInflight: s.workflowsRunsInflight + 1 })),
+  endWorkflowsRunsLoad: () =>
+    set((s) => ({ workflowsRunsInflight: Math.max(0, s.workflowsRunsInflight - 1) })),
+  bumpWorkflowsRunsReload: () =>
+    set((s) => ({ workflowsRunsReloadToken: s.workflowsRunsReloadToken + 1 })),
   setSelectedTaskId: (id) => set({ selectedTaskId: id }),
   setTaskStatusFilter: (filter) => set({ taskStatusFilter: filter }),
   setTaskSourceFilter: (filter) => set({ taskSourceFilter: filter }),
