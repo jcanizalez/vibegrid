@@ -57,7 +57,8 @@ vi.mock('../src/renderer/hooks/useTerminalPinchZoom', () => ({
 let mockOrderedIds = ['term-1']
 let mockMinimizedIds: string[] = []
 vi.mock('../src/renderer/hooks/useVisibleTerminals', () => ({
-  useVisibleTerminals: () => ({ orderedIds: mockOrderedIds, minimizedIds: mockMinimizedIds })
+  useVisibleTerminals: () => ({ orderedIds: mockOrderedIds, minimizedIds: mockMinimizedIds }),
+  compareTerminalIds: (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0)
 }))
 let mockFilteredHeadless: unknown[] = []
 vi.mock('../src/renderer/hooks/useFilteredHeadless', () => ({

@@ -2,7 +2,7 @@ import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { motion } from 'framer-motion'
 import { useAppStore } from '../stores'
-import { useVisibleTerminals } from '../hooks/useVisibleTerminals'
+import { useVisibleTerminals, compareTerminalIds } from '../hooks/useVisibleTerminals'
 import { useFilteredHeadless } from '../hooks/useFilteredHeadless'
 import { AgentStatusIcon } from './AgentStatusIcon'
 import { useWaitingApprovals } from '../hooks/useWaitingApprovals'
@@ -112,7 +112,17 @@ function PlusDropdown({
 
 export function TabView() {
   const { orderedIds, minimizedIds } = useVisibleTerminals()
+  const terminalOrder = useAppStore((s) => s.terminalOrder)
   const terminals = useAppStore((s) => s.terminals)
+  const sortMode = useAppStore((s) => s.sortMode)
+  // Tab mode treats minimize as a no-op: every session shows as a tab. The
+  // minimizedTerminals Set is preserved so switching back to grid restores
+  // the BackgroundTray pills. The merged list honors the active sortMode so
+  // tabs follow the same order as the grid.
+  const allTabIds = useMemo(() => {
+    const merged = [...orderedIds, ...minimizedIds]
+    return merged.sort((a, b) => compareTerminalIds(a, b, terminals, sortMode, terminalOrder))
+  }, [orderedIds, minimizedIds, terminalOrder, terminals, sortMode])
   const activeTabId = useAppStore((s) => s.activeTabId)
   const setActiveTabId = useAppStore((s) => s.setActiveTabId)
   const setSelected = useAppStore((s) => s.setSelectedTerminal)
@@ -120,7 +130,6 @@ export function TabView() {
   const renamingTerminalId = useAppStore((s) => s.renamingTerminalId)
   const setRenamingTerminalId = useAppStore((s) => s.setRenamingTerminalId)
   const renameTerminal = useAppStore((s) => s.renameTerminal)
-  const sortMode = useAppStore((s) => s.sortMode)
   const reorderTerminals = useAppStore((s) => s.reorderTerminals)
   const setDiffSidebar = useAppStore((s) => s.setDiffSidebarTerminalId)
   const tasks = useAppStore((s) => s.config?.tasks)
@@ -152,14 +161,14 @@ export function TabView() {
   }, [tasks])
 
   useEffect(() => {
-    if (orderedIds.length === 0) {
+    if (allTabIds.length === 0) {
       if (activeTabId !== null) setActiveTabId(null)
       return
     }
-    if (!activeTabId || !orderedIds.includes(activeTabId)) {
-      setActiveTabId(orderedIds[0])
+    if (!activeTabId || !allTabIds.includes(activeTabId)) {
+      setActiveTabId(allTabIds[0])
     }
-  }, [orderedIds, activeTabId, setActiveTabId])
+  }, [allTabIds, activeTabId, setActiveTabId])
 
   const handleSelectTab = (id: string): void => {
     setActiveTabId(id)
@@ -175,8 +184,8 @@ export function TabView() {
 
     // Auto-select adjacent tab before removing
     if (activeTabId === id) {
-      const idx = orderedIds.indexOf(id)
-      const nextId = orderedIds[idx + 1] ?? orderedIds[idx - 1] ?? null
+      const idx = allTabIds.indexOf(id)
+      const nextId = allTabIds[idx + 1] ?? allTabIds[idx - 1] ?? null
       setActiveTabId(nextId)
     }
 
@@ -218,26 +227,26 @@ export function TabView() {
           prev ? { ...prev, pointerX: e.clientX, pointerY: e.clientY } : prev
         )
       }
-      const targetIndex = getHorizontalDropIndex(e.clientX, orderedIds, tabRefs.current)
+      const targetIndex = getHorizontalDropIndex(e.clientX, allTabIds, tabRefs.current)
       setDropTargetIndex(targetIndex)
     },
-    [dragState, orderedIds]
+    [dragState, allTabIds]
   )
 
   const handlePointerUp = useCallback(() => {
     if (dragState?.isDragging && dropTargetIndex !== null) {
-      const fromIndex = orderedIds.indexOf(dragState.draggingId)
+      const fromIndex = allTabIds.indexOf(dragState.draggingId)
       if (
         fromIndex !== -1 &&
         fromIndex !== dropTargetIndex &&
-        orderedIds.includes(dragState.draggingId)
+        allTabIds.includes(dragState.draggingId)
       ) {
         reorderTerminals(fromIndex, dropTargetIndex)
       }
     }
     setDragState(null)
     setDropTargetIndex(null)
-  }, [dragState, dropTargetIndex, orderedIds, reorderTerminals])
+  }, [dragState, dropTargetIndex, allTabIds, reorderTerminals])
 
   const handlePointerCancel = useCallback(() => {
     setDragState(null)
@@ -246,9 +255,10 @@ export function TabView() {
 
   /* ── Render ─────────────────────────────────────────────────── */
 
-  const hasBackground =
-    minimizedIds.length > 0 || filteredHeadless.length > 0 || waitingApprovals.length > 0
-  const hasTabs = orderedIds.length > 0
+  // Minimize is a grid-only concept, so don't surface minimized sessions in
+  // the tab-mode background tray. Headless + waiting approvals still do.
+  const hasBackground = filteredHeadless.length > 0 || waitingApprovals.length > 0
+  const hasTabs = allTabIds.length > 0
   const activeTerminal = activeTabId ? terminals.get(activeTabId) : null
 
   return (
@@ -256,7 +266,7 @@ export function TabView() {
       {hasTabs && (
         <BackgroundTray
           headlessSessions={filteredHeadless}
-          minimizedIds={minimizedIds}
+          minimizedIds={[]}
           waitingApprovals={waitingApprovals}
           variant="tabs"
         />
@@ -285,7 +295,7 @@ export function TabView() {
           className="flex-1 flex items-end gap-1 px-1 overflow-x-auto min-w-0"
           style={{ minHeight: 40 }}
         >
-          {orderedIds.map((id, index) => {
+          {allTabIds.map((id, index) => {
             const terminal = terminals.get(id)
             if (!terminal) return null
             const isActive = id === activeTabId
@@ -515,7 +525,7 @@ export function TabView() {
         <div className="flex-1 overflow-auto p-4">
           <BackgroundTray
             headlessSessions={filteredHeadless}
-            minimizedIds={minimizedIds}
+            minimizedIds={[]}
             waitingApprovals={waitingApprovals}
             variant="grid"
           />
