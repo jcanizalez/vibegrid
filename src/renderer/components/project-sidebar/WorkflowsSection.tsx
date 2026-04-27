@@ -6,8 +6,9 @@ import { WorkflowFilterToolbar } from './WorkflowFilterToolbar'
 import { WorkflowContextMenu } from './WorkflowContextMenu'
 import { SidebarSectionHeader } from './SidebarSectionHeader'
 import { isScheduledWorkflow } from '../../lib/workflow-helpers'
-import { Zap } from 'lucide-react'
+import { Zap, Activity } from 'lucide-react'
 import type { WorkflowDefinition } from '../../../shared/types'
+import { useWaitingApprovals } from '../../hooks/useWaitingApprovals'
 
 type ContextMenuState = { id: string; x: number; y: number } | null
 
@@ -24,6 +25,10 @@ export function WorkflowsSection({
   const updateWorkflow = useAppStore((s) => s.updateWorkflow)
   const reorderWorkflows = useAppStore((s) => s.reorderWorkflows)
   const workflowFilter = useAppStore((s) => s.sidebarWorkflowFilter)
+  const editingWorkflowId = useAppStore((s) => s.editingWorkflowId)
+  const isWorkflowEditorOpen = useAppStore((s) => s.isWorkflowEditorOpen)
+  const allRunsSelected = editingWorkflowId === null && !isWorkflowEditorOpen
+  const waitingCount = useWaitingApprovals().length
 
   const [sectionCollapsed, setSectionCollapsed] = useState(false)
   const [contextMenu, setContextMenu] = useState<ContextMenuState>(null)
@@ -101,6 +106,37 @@ export function WorkflowsSection({
           </>
         }
       />
+
+      {!sectionCollapsed && (
+        <button
+          type="button"
+          onClick={() => {
+            setEditingWorkflowId(null)
+            setWorkflowEditorOpen(false)
+          }}
+          title={isCollapsed ? 'All runs' : undefined}
+          aria-label="All runs"
+          aria-pressed={allRunsSelected}
+          className={`group/all relative w-full text-left px-2 py-1.5 rounded-md text-[13px] flex items-center gap-2 min-w-0 transition-colors ${
+            allRunsSelected ? 'text-white' : 'text-gray-300 hover:text-white hover:bg-white/[0.04]'
+          } ${isCollapsed ? 'justify-center px-0' : ''}`}
+        >
+          {allRunsSelected && !isCollapsed && (
+            <span className="absolute left-0 top-1 bottom-1 w-px bg-white rounded-full" />
+          )}
+          <Activity size={iconSize} strokeWidth={1.5} className="text-gray-400 shrink-0" />
+          {!isCollapsed && (
+            <>
+              <span className="min-w-0 flex-1 truncate">All runs</span>
+              {waitingCount > 0 && (
+                <span className="font-mono text-[10px] text-amber-400 tabular-nums">
+                  {waitingCount}
+                </span>
+              )}
+            </>
+          )}
+        </button>
+      )}
 
       {!isCollapsed && !sectionCollapsed && filteredWorkflows.length === 0 && (
         <p className="text-[13px] text-gray-600 px-2.5 py-1">No workflows</p>

@@ -91,6 +91,7 @@ export const createUISlice: StateCreator<AppStore, [], [], UISlice> = (set, get)
     (savedGrid.statusFilter as 'all' | 'running' | 'waiting' | 'idle' | 'error') ?? 'all',
   terminalOrder: [],
   visibleTerminalIds: [],
+  focusableTerminalIds: [],
   minimizedTerminals: new Set(),
   backgroundTrayCollapsed: false,
   isOnboardingOpen: false,
@@ -100,6 +101,10 @@ export const createUISlice: StateCreator<AppStore, [], [], UISlice> = (set, get)
   isDiffPanelMaximized: false,
   diffPanelWidth: 480,
   mainViewMode: 'sessions' as const,
+  workflowsLandingTab: 'runs' as const,
+  workflowsRunFilter: 'all' as const,
+  workflowsRunsLoading: false,
+  workflowsRunsReloadToken: 0,
   selectedTaskId: null,
   taskStatusFilter: 'all' as const,
   taskSourceFilter: 'all' as TaskSourceFilter,
@@ -184,6 +189,7 @@ export const createUISlice: StateCreator<AppStore, [], [], UISlice> = (set, get)
 
   setTerminalOrder: (order) => set({ terminalOrder: order }),
   setVisibleTerminalIds: (ids) => set({ visibleTerminalIds: ids }),
+  setFocusableTerminalIds: (ids) => set({ focusableTerminalIds: ids }),
 
   reorderTerminals: (fromIndex, toIndex) =>
     set((state) => {
@@ -259,6 +265,11 @@ export const createUISlice: StateCreator<AppStore, [], [], UISlice> = (set, get)
       set({ mainViewMode: mode, ...extra })
     }
   },
+  setWorkflowsLandingTab: (tab) => set({ workflowsLandingTab: tab }),
+  setWorkflowsRunFilter: (filter) => set({ workflowsRunFilter: filter }),
+  setWorkflowsRunsLoading: (loading) => set({ workflowsRunsLoading: loading }),
+  bumpWorkflowsRunsReload: () =>
+    set((s) => ({ workflowsRunsReloadToken: s.workflowsRunsReloadToken + 1 })),
   setSelectedTaskId: (id) => set({ selectedTaskId: id }),
   setTaskStatusFilter: (filter) => set({ taskStatusFilter: filter }),
   setTaskSourceFilter: (filter) => set({ taskSourceFilter: filter }),
