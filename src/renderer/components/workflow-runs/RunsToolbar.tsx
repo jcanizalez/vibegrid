@@ -51,6 +51,9 @@ export function RunsToolbar({ filter, setFilter }: Props) {
       <Tooltip label="View options" position="bottom">
         <button
           onClick={toggle}
+          aria-label="Filter runs"
+          aria-haspopup="menu"
+          aria-expanded={open}
           className={`relative p-1 rounded-md transition-colors ${
             open
               ? 'text-white bg-white/[0.1]'
