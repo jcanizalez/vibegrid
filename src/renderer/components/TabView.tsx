@@ -2,7 +2,7 @@ import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { motion } from 'framer-motion'
 import { useAppStore } from '../stores'
-import { useVisibleTerminals } from '../hooks/useVisibleTerminals'
+import { useVisibleTerminals, compareTerminalIds } from '../hooks/useVisibleTerminals'
 import { useFilteredHeadless } from '../hooks/useFilteredHeadless'
 import { AgentStatusIcon } from './AgentStatusIcon'
 import { useWaitingApprovals } from '../hooks/useWaitingApprovals'
@@ -113,18 +113,16 @@ function PlusDropdown({
 export function TabView() {
   const { orderedIds, minimizedIds } = useVisibleTerminals()
   const terminalOrder = useAppStore((s) => s.terminalOrder)
+  const terminals = useAppStore((s) => s.terminals)
+  const sortMode = useAppStore((s) => s.sortMode)
   // Tab mode treats minimize as a no-op: every session shows as a tab. The
   // minimizedTerminals Set is preserved so switching back to grid restores
-  // the BackgroundTray pills.
+  // the BackgroundTray pills. The merged list honors the active sortMode so
+  // tabs follow the same order as the grid.
   const allTabIds = useMemo(() => {
     const merged = [...orderedIds, ...minimizedIds]
-    return merged.sort((a, b) => {
-      const ia = terminalOrder.indexOf(a)
-      const ib = terminalOrder.indexOf(b)
-      return (ia === -1 ? Infinity : ia) - (ib === -1 ? Infinity : ib)
-    })
-  }, [orderedIds, minimizedIds, terminalOrder])
-  const terminals = useAppStore((s) => s.terminals)
+    return merged.sort((a, b) => compareTerminalIds(a, b, terminals, sortMode, terminalOrder))
+  }, [orderedIds, minimizedIds, terminalOrder, terminals, sortMode])
   const activeTabId = useAppStore((s) => s.activeTabId)
   const setActiveTabId = useAppStore((s) => s.setActiveTabId)
   const setSelected = useAppStore((s) => s.setSelectedTerminal)
@@ -132,7 +130,6 @@ export function TabView() {
   const renamingTerminalId = useAppStore((s) => s.renamingTerminalId)
   const setRenamingTerminalId = useAppStore((s) => s.setRenamingTerminalId)
   const renameTerminal = useAppStore((s) => s.renameTerminal)
-  const sortMode = useAppStore((s) => s.sortMode)
   const reorderTerminals = useAppStore((s) => s.reorderTerminals)
   const setDiffSidebar = useAppStore((s) => s.setDiffSidebarTerminalId)
   const tasks = useAppStore((s) => s.config?.tasks)

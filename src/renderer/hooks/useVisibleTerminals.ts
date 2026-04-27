@@ -1,7 +1,42 @@
 import { useMemo, useEffect } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { useAppStore } from '../stores'
-import { MAIN_WORKTREE_SENTINEL, type TerminalState } from '../stores/types'
+import { MAIN_WORKTREE_SENTINEL, type SortMode, type TerminalState } from '../stores/types'
+
+/**
+ * Stable comparator for terminal ids under the active sortMode. Manual mode
+ * pushes ids missing from `terminalOrder` to the end (rather than producing
+ * `Infinity - Infinity = NaN`, which is undefined behavior for Array#sort).
+ */
+export function compareTerminalIds(
+  aId: string,
+  bId: string,
+  terminals: Map<string, TerminalState>,
+  sortMode: SortMode,
+  terminalOrder: string[]
+): number {
+  const aState = terminals.get(aId)
+  const bState = terminals.get(bId)
+  if (!aState || !bState) {
+    if (!aState && !bState) return 0
+    return aState ? -1 : 1
+  }
+  switch (sortMode) {
+    case 'created':
+      return bState.session.createdAt - aState.session.createdAt
+    case 'recent':
+      return bState.lastOutputTimestamp - aState.lastOutputTimestamp
+    case 'manual':
+    default: {
+      const ia = terminalOrder.indexOf(aId)
+      const ib = terminalOrder.indexOf(bId)
+      if (ia === -1 && ib === -1) return 0
+      if (ia === -1) return 1
+      if (ib === -1) return -1
+      return ia - ib
+    }
+  }
+}
 
 export function useVisibleTerminals(): { orderedIds: string[]; minimizedIds: string[] } {
   const {
@@ -46,23 +81,8 @@ export function useVisibleTerminals(): { orderedIds: string[]; minimizedIds: str
         return false
       return true
     }
-    const sortFn = (
-      [aId, aState]: [string, TerminalState],
-      [bId, bState]: [string, TerminalState]
-    ): number => {
-      switch (sortMode) {
-        case 'created':
-          return bState.session.createdAt - aState.session.createdAt
-        case 'recent':
-          return bState.lastOutputTimestamp - aState.lastOutputTimestamp
-        case 'manual':
-        default: {
-          const ia = terminalOrder.indexOf(aId)
-          const ib = terminalOrder.indexOf(bId)
-          return (ia === -1 ? Infinity : ia) - (ib === -1 ? Infinity : ib)
-        }
-      }
-    }
+    const sortFn = ([aId]: [string, TerminalState], [bId]: [string, TerminalState]): number =>
+      compareTerminalIds(aId, bId, terminals, sortMode, terminalOrder)
     const all = Array.from(terminals.entries())
     const filtered = all
       .filter(([, t]) => {
