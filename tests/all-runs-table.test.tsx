@@ -198,4 +198,23 @@ describe('AllRunsTable', () => {
     expect(mockState.setEditingWorkflowId).toHaveBeenCalledWith('wf-a')
     expect(mockState.setMainViewMode).toHaveBeenCalledWith('workflows')
   })
+
+  it('does not open the editor on double-click of a deleted-workflow row', () => {
+    const runs = [makeRun('wf-gone', 'success', { workflowName: 'Gone' })]
+    render(<AllRunsTable runs={runs} workflowsById={new Map()} filter="all" />)
+    fireEvent.doubleClick(screen.getByText('Gone'))
+    expect(mockState.setEditingWorkflowId).not.toHaveBeenCalled()
+    expect(mockState.setMainViewMode).not.toHaveBeenCalled()
+  })
+
+  it('disables the "Open workflow" button on a deleted-workflow row', () => {
+    const runs = [makeRun('wf-gone', 'success', { workflowName: 'Gone' })]
+    render(<AllRunsTable runs={runs} workflowsById={new Map()} filter="all" />)
+    fireEvent.click(screen.getByText('Gone'))
+    const openBtn = screen.getByRole('button', { name: 'Open workflow' })
+    expect(openBtn).toBeDisabled()
+    expect(openBtn.title).toBe('Workflow no longer exists')
+    fireEvent.click(openBtn)
+    expect(mockState.setEditingWorkflowId).not.toHaveBeenCalled()
+  })
 })

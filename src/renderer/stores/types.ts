@@ -152,7 +152,7 @@ export interface UISlice {
   mainViewMode: 'sessions' | 'tasks' | 'workflows'
   workflowsLandingTab: 'runs' | 'review'
   workflowsRunFilter: RunBucket
-  workflowsRunsLoading: boolean
+  workflowsRunsInflight: number
   workflowsRunsReloadToken: number
   selectedTaskId: string | null
   taskStatusFilter: TaskStatusFilter
@@ -198,7 +198,8 @@ export interface UISlice {
   setMainViewMode: (mode: 'sessions' | 'tasks' | 'workflows') => void
   setWorkflowsLandingTab: (tab: 'runs' | 'review') => void
   setWorkflowsRunFilter: (filter: RunBucket) => void
-  setWorkflowsRunsLoading: (loading: boolean) => void
+  beginWorkflowsRunsLoad: () => void
+  endWorkflowsRunsLoad: () => void
   bumpWorkflowsRunsReload: () => void
   setSelectedTaskId: (id: string | null) => void
   setTaskStatusFilter: (filter: TaskStatusFilter) => void

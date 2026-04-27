@@ -100,7 +100,7 @@ export function AllRunsTable({ runs, workflowsById, filter }: Props) {
                 <button
                   type="button"
                   onClick={() => setExpandedId(expanded ? null : id)}
-                  onDoubleClick={() => openInEditor(run.workflowId)}
+                  onDoubleClick={isDeleted ? undefined : () => openInEditor(run.workflowId)}
                   className={`w-full grid items-center px-3 py-2.5 text-left
                               border-b border-white/[0.04]
                               ${expanded ? 'bg-white/[0.04] text-white' : 'text-gray-300 hover:bg-white/[0.04] hover:text-white'}`}
@@ -171,8 +171,10 @@ export function AllRunsTable({ runs, workflowsById, filter }: Props) {
                     <div className="px-4 py-2 flex items-center justify-end">
                       <button
                         type="button"
+                        disabled={isDeleted}
                         onClick={() => openInEditor(run.workflowId)}
-                        className="px-2 py-1 text-[11px] text-gray-400 border border-white/[0.08] rounded hover:bg-white/[0.04] hover:text-white"
+                        title={isDeleted ? 'Workflow no longer exists' : undefined}
+                        className="px-2 py-1 text-[11px] text-gray-400 border border-white/[0.08] rounded hover:bg-white/[0.04] hover:text-white disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-gray-400"
                       >
                         Open workflow
                       </button>

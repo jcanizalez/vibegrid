@@ -9,7 +9,7 @@ export function WorkflowsLandingHeader() {
   const setTab = useAppStore((s) => s.setWorkflowsLandingTab)
   const filter = useAppStore((s) => s.workflowsRunFilter)
   const setFilter = useAppStore((s) => s.setWorkflowsRunFilter)
-  const loading = useAppStore((s) => s.workflowsRunsLoading)
+  const loading = useAppStore((s) => s.workflowsRunsInflight > 0)
   const bumpReload = useAppStore((s) => s.bumpWorkflowsRunsReload)
   const waiting = useWaitingApprovals()
 

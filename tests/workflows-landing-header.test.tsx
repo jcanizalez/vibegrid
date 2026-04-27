@@ -14,7 +14,7 @@ const mockState = {
   setWorkflowsLandingTab: vi.fn(),
   workflowsRunFilter: 'all' as RunBucket,
   setWorkflowsRunFilter: vi.fn(),
-  workflowsRunsLoading: false,
+  workflowsRunsInflight: 0,
   bumpWorkflowsRunsReload: vi.fn()
 }
 
@@ -35,7 +35,7 @@ const { WorkflowsLandingHeader } =
 beforeEach(() => {
   mockState.workflowsLandingTab = 'runs'
   mockState.workflowsRunFilter = 'all'
-  mockState.workflowsRunsLoading = false
+  mockState.workflowsRunsInflight = 0
   mockState.setWorkflowsLandingTab.mockReset()
   mockState.setWorkflowsRunFilter.mockReset()
   mockState.bumpWorkflowsRunsReload.mockReset()
@@ -77,7 +77,7 @@ describe('WorkflowsLandingHeader', () => {
   })
 
   it('spins the refresh icon while loading is true', () => {
-    mockState.workflowsRunsLoading = true
+    mockState.workflowsRunsInflight = 2
     const { container } = render(<WorkflowsLandingHeader />)
     expect(container.querySelector('.animate-spin')).toBeInTheDocument()
   })

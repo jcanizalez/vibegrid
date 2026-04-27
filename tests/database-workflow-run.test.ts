@@ -192,4 +192,22 @@ describe('listAllWorkflowRuns', () => {
     expect(runs[0].triggerTaskId).toBe('task-7')
     expect(runs[0].workflowName).toBeUndefined()
   })
+
+  it('excludes orphaned runs from workspace-filtered listings (no silent personal bucket)', () => {
+    saveConfig(configWithWorkflows([{ id: 'wf-orphan', name: 'O', workspaceId: 'team' }]))
+    saveWorkflowRun({
+      workflowId: 'wf-orphan',
+      startedAt: '2026-04-20T10:00:00Z',
+      status: 'success',
+      nodeStates: []
+    })
+    saveConfig({
+      version: 1,
+      defaults: { shell: 'bash', fontSize: 14, theme: 'dark' },
+      projects: []
+    })
+    expect(listAllWorkflowRuns('personal')).toEqual([])
+    expect(listAllWorkflowRuns('team')).toEqual([])
+    expect(listAllWorkflowRuns()).toHaveLength(1)
+  })
 })

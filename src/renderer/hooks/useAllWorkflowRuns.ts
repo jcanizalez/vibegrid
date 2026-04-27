@@ -20,13 +20,17 @@ export function useAllWorkflowRuns(limit = 50): {
   const workflowExecutions = useAppStore((s) => s.workflowExecutions)
   const workflows = useAppStore((s) => s.config?.workflows)
   const reloadToken = useAppStore((s) => s.workflowsRunsReloadToken)
-  const setStoreLoading = useAppStore((s) => s.setWorkflowsRunsLoading)
+  const beginLoad = useAppStore((s) => s.beginWorkflowsRunsLoad)
+  const endLoad = useAppStore((s) => s.endWorkflowsRunsLoad)
   const [persisted, setPersisted] = useState<RunListEntry[]>([])
   const [loading, setLoading] = useState(true)
 
+  // Store-side loader uses an in-flight counter (not a boolean) so the
+  // header spinner stays on while initial load, manual refresh, and the
+  // debounced live-completion refetch overlap.
   const reload = useCallback(async () => {
     setLoading(true)
-    setStoreLoading(true)
+    beginLoad()
     try {
       const rows = await window.api.listAllWorkflowRuns(activeWorkspace, limit)
       setPersisted(rows)
@@ -34,9 +38,9 @@ export function useAllWorkflowRuns(limit = 50): {
       console.error('[useAllWorkflowRuns] load failed', err)
     } finally {
       setLoading(false)
-      setStoreLoading(false)
+      endLoad()
     }
-  }, [activeWorkspace, limit, setStoreLoading])
+  }, [activeWorkspace, limit, beginLoad, endLoad])
 
   useEffect(() => {
     void reload()

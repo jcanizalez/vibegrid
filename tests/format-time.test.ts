@@ -73,6 +73,15 @@ describe('formatRunDuration', () => {
     expect(formatRunDuration('2026-04-20T10:00:00Z', '2026-04-20T10:02:13Z')).toBe('2m 13s')
     expect(formatRunDuration('2026-04-20T10:00:00Z', '2026-04-20T11:00:05Z')).toBe('60m 5s')
   })
+
+  it('returns "—" for unparseable timestamps instead of "NaNms"', () => {
+    expect(formatRunDuration('not-a-date', '2026-04-20T10:00:01Z')).toBe('—')
+    expect(formatRunDuration('2026-04-20T10:00:00Z', 'still-not')).toBe('—')
+  })
+
+  it('returns "—" when end is before start instead of a negative duration', () => {
+    expect(formatRunDuration('2026-04-20T10:00:05Z', '2026-04-20T10:00:00Z')).toBe('—')
+  })
 })
 
 describe('formatCompactDuration', () => {
@@ -95,5 +104,11 @@ describe('formatCompactDuration', () => {
   it('counts up to now when end is omitted', () => {
     const start = new Date(NOW - 75_000).toISOString()
     expect(formatCompactDuration(start)).toBe('1:15')
+  })
+
+  it('returns "—" for unparseable timestamps instead of "NaN:NaN"', () => {
+    expect(formatCompactDuration('not-a-date')).toBe('—')
+    expect(formatCompactDuration('not-a-date', '2026-04-20T10:00:00Z')).toBe('—')
+    expect(formatCompactDuration('2026-04-20T10:00:00Z', 'still-not')).toBe('—')
   })
 })

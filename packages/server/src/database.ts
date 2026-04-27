@@ -2278,6 +2278,10 @@ export function listWorkflowRunsByTask(
   }))
 }
 
+// Surfaces every run that has at least one waiting node — small in practice
+// because gates pause execution. No LIMIT is intentional so the badge count
+// matches the real backlog. If this ever grows, cap with a LIMIT here and
+// chunk `fetchNodesByRunIds` to stay under SQLite's IN-clause variable cap.
 export function listRunsWithWaitingGates(): WorkflowExecution[] {
   const d = getDb()
 
@@ -2338,7 +2342,12 @@ export function listAllWorkflowRuns(
     trigger_task_id: string | null
     workflow_name: string | null
   }
-  const where = workspaceId ? `WHERE COALESCE(w.workspace_id, 'personal') = ?` : ''
+  // When filtering by workspace, exclude orphaned runs (workflow deleted, the
+  // LEFT JOIN nulls everything on `w`). Without `w.id IS NOT NULL`, the
+  // COALESCE would silently bucket every orphan into 'personal'.
+  const where = workspaceId
+    ? `WHERE w.id IS NOT NULL AND COALESCE(w.workspace_id, 'personal') = ?`
+    : ''
   const sql = `SELECT wr.*, w.name as workflow_name
                FROM workflow_runs wr
                LEFT JOIN workflows w ON w.id = wr.workflow_id
