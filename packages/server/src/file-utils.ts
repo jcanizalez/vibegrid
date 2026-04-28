@@ -1,9 +1,9 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import { execFile } from 'node:child_process'
+import { execFile, execFileSync } from 'node:child_process'
 import { promisify } from 'node:util'
 import type { FileEntry, RemoteHost } from '@vornrun/shared/types'
-import { sshExecSync, shellEscape, getSafeEnv } from './process-utils'
+import { sshExecSync, shellEscape, getSafeEnv, buildSshArgs } from './process-utils'
 import { resolveExecutable } from './resolve-executable'
 
 const execFileAsync = promisify(execFile)
@@ -201,5 +201,41 @@ function readFileContentRemote(
     return text
   } catch {
     return null
+  }
+}
+
+export function writeFileContent(
+  filePath: string,
+  content: string,
+  remote?: RemoteHost
+): { success: boolean; error?: string } {
+  if (remote) return writeFileContentRemote(filePath, content, remote)
+  try {
+    fs.writeFileSync(filePath, content, 'utf-8')
+    return { success: true }
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : String(err) }
+  }
+}
+
+function writeFileContentRemote(
+  filePath: string,
+  content: string,
+  remote: RemoteHost
+): { success: boolean; error?: string } {
+  try {
+    // Pipe content via stdin to avoid argv length limits and quoting pitfalls.
+    const sshArgs = buildSshArgs(remote)
+    sshArgs.push(`cat > ${shellEscape(filePath, 'posix')}`)
+    execFileSync('ssh', sshArgs, {
+      input: content,
+      stdio: ['pipe', 'pipe', 'pipe'],
+      timeout: 30000,
+      env: getSafeEnv(),
+      maxBuffer: 16 * 1024 * 1024
+    })
+    return { success: true }
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : String(err) }
   }
 }

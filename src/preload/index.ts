@@ -185,6 +185,12 @@ const api = {
     remoteHostId?: string
   ): Promise<string | null> =>
     ipcRenderer.invoke(IPC.FILE_READ_CONTENT, { filePath, maxBytes, remoteHostId }),
+  writeFileContent: (
+    filePath: string,
+    content: string,
+    remoteHostId?: string
+  ): Promise<{ success: boolean; error?: string }> =>
+    ipcRenderer.invoke(IPC.FILE_WRITE_CONTENT, { filePath, content, remoteHostId }),
 
   // Task images
   openImageDialog: (): Promise<string[] | null> => ipcRenderer.invoke(IPC.DIALOG_OPEN_IMAGE),

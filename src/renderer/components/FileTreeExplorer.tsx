@@ -1,20 +1,69 @@
 import { useState, useEffect, useCallback, useMemo, useRef, type JSX } from 'react'
 import type { FileEntry } from '../../shared/types'
-import { ChevronRight, Loader2, X, Folder, FolderOpen } from 'lucide-react'
+import { ChevronRight, Loader2, X, Search, Pencil, Save } from 'lucide-react'
 import { FileTypeIcon } from './file-icons'
 
 const MAX_PREVIEW_LINES = 2000
 const ROW_HEIGHT = 22 // px — matches VS Code's tree item height
 const INDENT_WIDTH = 16 // px per depth level
 const BASE_LEFT = 8 // px left gutter
+const SPLIT_RATIO_KEY = 'vorn:files-split-ratio'
+const MIN_RATIO = 0.15
+const MAX_RATIO = 0.85
+const DEFAULT_RATIO = 0.5
 
+// ---------------------------------------------------------------------------
+// Filter helpers
+// ---------------------------------------------------------------------------
+function computeFilterSets(
+  rootEntries: FileEntry[],
+  dirCache: Map<string, FileEntry[]>,
+  filter: string
+): { matched: Set<string>; expand: Set<string> } {
+  const matched = new Set<string>()
+  const expand = new Set<string>()
+  if (!filter) return { matched, expand }
+  const lc = filter.toLowerCase()
+
+  function visit(entry: FileEntry): boolean {
+    const selfMatch = entry.name.toLowerCase().includes(lc)
+    if (entry.isDirectory) {
+      let descendantMatch = false
+      const children = dirCache.get(entry.path)
+      if (children) {
+        for (const child of children) {
+          if (visit(child)) descendantMatch = true
+        }
+      }
+      if (descendantMatch) expand.add(entry.path)
+      if (selfMatch || descendantMatch) {
+        matched.add(entry.path)
+        return true
+      }
+      return false
+    } else {
+      if (selfMatch) matched.add(entry.path)
+      return selfMatch
+    }
+  }
+
+  for (const e of rootEntries) visit(e)
+  return { matched, expand }
+}
+
+// ---------------------------------------------------------------------------
+// Tree node
+// ---------------------------------------------------------------------------
 function TreeNode({
   entry,
   depth,
   dirCache,
   loadDir,
   selectedFile,
-  onSelectFile
+  onSelectFile,
+  filter,
+  matched,
+  forceExpand
 }: {
   entry: FileEntry
   depth: number
@@ -22,11 +71,17 @@ function TreeNode({
   loadDir: (path: string) => Promise<void>
   selectedFile: string | null
   onSelectFile: (path: string) => void
+  filter: string
+  matched: Set<string>
+  forceExpand: Set<string>
 }) {
   const [expanded, setExpanded] = useState(false)
   const [loading, setLoading] = useState(false)
 
-  const handleToggle = async () => {
+  const filterActive = filter.length > 0
+  if (filterActive && !matched.has(entry.path)) return null
+
+  const handleToggle = async (): Promise<void> => {
     if (!entry.isDirectory) return
     if (!expanded && !dirCache.has(entry.path)) {
       setLoading(true)
@@ -36,11 +91,12 @@ function TreeNode({
     setExpanded(!expanded)
   }
 
+  const effectivelyExpanded = expanded || (filterActive && forceExpand.has(entry.path))
   const children = dirCache.get(entry.path)
   const isSelected = !entry.isDirectory && selectedFile === entry.path
 
   // Indent guides: one vertical line per depth level
-  const guides = []
+  const guides: JSX.Element[] = []
   for (let i = 0; i < depth; i++) {
     guides.push(
       <span
@@ -71,18 +127,13 @@ function TreeNode({
             <ChevronRight
               size={14}
               strokeWidth={2}
-              className={`text-gray-500 shrink-0 transition-transform duration-100 ${expanded ? 'rotate-90' : ''}`}
+              className={`text-gray-500 shrink-0 transition-transform duration-100 ${effectivelyExpanded ? 'rotate-90' : ''}`}
               style={{ width: 14, height: 14 }}
             />
           )}
-          {expanded ? (
-            <FolderOpen size={14} strokeWidth={1.2} className="text-gray-500 shrink-0" />
-          ) : (
-            <Folder size={14} strokeWidth={1.2} className="text-gray-500 shrink-0" />
-          )}
           <span className="truncate text-gray-300 leading-none">{entry.name}</span>
         </button>
-        {expanded && children && (
+        {effectivelyExpanded && children && (
           <div>
             {children.map((child) => (
               <TreeNode
@@ -93,6 +144,9 @@ function TreeNode({
                 loadDir={loadDir}
                 selectedFile={selectedFile}
                 onSelectFile={onSelectFile}
+                filter={filter}
+                matched={matched}
+                forceExpand={forceExpand}
               />
             ))}
             {children.length === 0 && (
@@ -103,7 +157,6 @@ function TreeNode({
                   paddingLeft: `${BASE_LEFT + (depth + 1) * INDENT_WIDTH + 16}px`
                 }}
               >
-                {/* Indent guides for empty message */}
                 {[
                   ...guides,
                   <span
@@ -281,14 +334,46 @@ function useHighlightedLines(text: string, fileName: string): TokenLine[] | null
     }
   }, [text, lang, key])
 
-  // Only return tokens if they match the current file
   if (!lang || !result || result.key !== key) return null
   return result.tokens
 }
 
-function LineRow({ lineNum, children }: { lineNum: number; children: React.ReactNode }) {
+// ---------------------------------------------------------------------------
+// Find-in-file
+// ---------------------------------------------------------------------------
+type FindMatch = { line: number; start: number; end: number }
+
+function computeMatches(lines: string[], query: string): FindMatch[] {
+  if (!query) return []
+  const lc = query.toLowerCase()
+  const out: FindMatch[] = []
+  for (let i = 0; i < lines.length; i++) {
+    const lower = lines[i].toLowerCase()
+    let from = 0
+    while (from <= lower.length - lc.length) {
+      const idx = lower.indexOf(lc, from)
+      if (idx < 0) break
+      out.push({ line: i, start: idx, end: idx + lc.length })
+      from = idx + lc.length
+    }
+  }
+  return out
+}
+
+// ---------------------------------------------------------------------------
+// Line row
+// ---------------------------------------------------------------------------
+function LineRow({
+  lineNum,
+  children,
+  rowRef
+}: {
+  lineNum: number
+  children: React.ReactNode
+  rowRef?: (el: HTMLDivElement | null) => void
+}) {
   return (
-    <div className="flex select-text hover:bg-white/[0.02]">
+    <div ref={rowRef} className="flex select-text hover:bg-white/[0.02]">
       <span className="w-[40px] shrink-0 text-right pr-3 text-[11px] text-gray-600 select-none">
         {lineNum}
       </span>
@@ -297,25 +382,115 @@ function LineRow({ lineNum, children }: { lineNum: number; children: React.React
   )
 }
 
-function FilePreview({
+// Render a line of plain text with `<mark>` overlays at the given match ranges.
+function renderLineWithMarks(
+  line: string,
+  marks: { start: number; end: number; active: boolean }[]
+): JSX.Element[] {
+  if (marks.length === 0) return [<span key="t">{line || ' '}</span>]
+  const out: JSX.Element[] = []
+  let cursor = 0
+  marks.forEach((m, i) => {
+    if (m.start > cursor) out.push(<span key={`p${i}`}>{line.slice(cursor, m.start)}</span>)
+    out.push(
+      <span
+        key={`m${i}`}
+        className={
+          m.active
+            ? 'bg-amber-300/70 text-black rounded-[1px]'
+            : 'bg-amber-300/25 text-gray-100 rounded-[1px]'
+        }
+      >
+        {line.slice(m.start, m.end)}
+      </span>
+    )
+    cursor = m.end
+  })
+  if (cursor < line.length) out.push(<span key="tail">{line.slice(cursor)}</span>)
+  return out
+}
+
+// ---------------------------------------------------------------------------
+// Read view
+// ---------------------------------------------------------------------------
+function ReadView({
   filePath,
   content,
-  onClose
+  findQuery,
+  activeMatchIdx,
+  onMatchesComputed
 }: {
   filePath: string
   content: string
-  onClose: () => void
+  findQuery: string
+  activeMatchIdx: number
+  onMatchesComputed: (count: number) => void
 }) {
   const allLines = useMemo(() => content.split('\n'), [content])
   const fileName = filePath.split(/[/\\]/).pop() || filePath
   const capped = allLines.length > MAX_PREVIEW_LINES
-  const visibleText = useMemo(
-    () => (capped ? allLines.slice(0, MAX_PREVIEW_LINES).join('\n') : content),
-    [allLines, capped, content]
+  const visibleLines = useMemo(
+    () => (capped ? allLines.slice(0, MAX_PREVIEW_LINES) : allLines),
+    [allLines, capped]
   )
+  const visibleText = useMemo(() => visibleLines.join('\n'), [visibleLines])
   const highlighted = useHighlightedLines(visibleText, fileName)
 
+  const matches = useMemo(() => computeMatches(visibleLines, findQuery), [visibleLines, findQuery])
+  const matchesByLine = useMemo(() => {
+    const m = new Map<number, FindMatch[]>()
+    matches.forEach((mm) => {
+      const arr = m.get(mm.line) ?? []
+      arr.push(mm)
+      m.set(mm.line, arr)
+    })
+    return m
+  }, [matches])
+
+  useEffect(() => {
+    onMatchesComputed(matches.length)
+  }, [matches.length, onMatchesComputed])
+
+  const rowRefs = useRef(new Map<number, HTMLDivElement | null>())
+
+  useEffect(() => {
+    if (matches.length === 0) return
+    const m = matches[activeMatchIdx % matches.length]
+    if (!m) return
+    const el = rowRefs.current.get(m.line)
+    el?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+  }, [activeMatchIdx, matches])
+
+  const findActive = findQuery.length > 0
+  const activeMatch =
+    findActive && matches.length > 0 ? matches[activeMatchIdx % matches.length] : null
+
   const renderedLines = useMemo<JSX.Element[]>(() => {
+    if (findActive) {
+      return visibleLines.map((line, i) => {
+        const lm = matchesByLine.get(i) ?? []
+        const marks = lm.map((m) => ({
+          start: m.start,
+          end: m.end,
+          active: !!activeMatch && activeMatch.line === i && activeMatch.start === m.start
+        }))
+        return (
+          <LineRow
+            key={i}
+            lineNum={i + 1}
+            rowRef={(el) => {
+              if (el) rowRefs.current.set(i, el)
+              else rowRefs.current.delete(i)
+            }}
+          >
+            <span className="text-gray-300 px-1 flex-1 whitespace-pre">
+              {renderLineWithMarks(line, marks)}
+            </span>
+          </LineRow>
+        )
+      })
+    }
+
     if (highlighted) {
       return highlighted.map((tokens, i) => (
         <LineRow key={i} lineNum={i + 1}>
@@ -331,46 +506,491 @@ function FilePreview({
       ))
     }
 
-    const plain = capped ? allLines.slice(0, MAX_PREVIEW_LINES) : allLines
-    return plain.map((line, i) => (
+    return visibleLines.map((line, i) => (
       <LineRow key={i} lineNum={i + 1}>
         <span className="text-gray-400 px-1 flex-1 whitespace-pre">{line || ' '}</span>
       </LineRow>
     ))
-  }, [allLines, capped, highlighted])
+  }, [findActive, visibleLines, highlighted, matchesByLine, activeMatch])
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 border-t border-white/[0.06]">
+    <div className="flex-1 overflow-y-auto">
+      <pre className="text-[12px] leading-[1.6] font-mono">
+        {renderedLines}
+        {capped && (
+          <div className="px-3 py-2 text-[11px] text-gray-600 italic">
+            Showing first {MAX_PREVIEW_LINES} of {allLines.length} lines
+          </div>
+        )}
+      </pre>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Edit view
+// ---------------------------------------------------------------------------
+function EditView({
+  draft,
+  onChange,
+  onSaveShortcut
+}: {
+  draft: string
+  onChange: (next: string) => void
+  onSaveShortcut: () => void
+}) {
+  const lineCount = useMemo(() => draft.split('\n').length, [draft])
+  const gutter = useMemo(
+    () => Array.from({ length: lineCount }, (_, i) => i + 1).join('\n'),
+    [lineCount]
+  )
+
+  return (
+    <div className="flex-1 overflow-auto flex">
+      <pre
+        className="select-none text-right pr-3 pl-2 py-1 text-[11px] leading-[1.6] font-mono text-gray-600 shrink-0"
+        aria-hidden="true"
+      >
+        {gutter}
+      </pre>
+      <textarea
+        value={draft}
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={(e) => {
+          if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+            e.preventDefault()
+            onSaveShortcut()
+          }
+        }}
+        spellCheck={false}
+        className="flex-1 bg-transparent text-gray-200 text-[12px] leading-[1.6] font-mono outline-none resize-none whitespace-pre py-1 pr-3"
+        style={{ minHeight: '100%' }}
+      />
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// File panel
+// ---------------------------------------------------------------------------
+function FilePanel({
+  cwd,
+  filePath,
+  content,
+  loading,
+  isBinary,
+  onClose,
+  onContentSaved,
+  remoteHostId,
+  dirtyRef
+}: {
+  cwd: string
+  filePath: string
+  content: string | null
+  loading: boolean
+  isBinary: boolean
+  onClose: () => void
+  onContentSaved: (next: string) => void
+  remoteHostId?: string
+  dirtyRef: React.MutableRefObject<boolean>
+}) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+
+  const [findOpen, setFindOpen] = useState(false)
+  const [findQuery, setFindQuery] = useState('')
+  const [findCount, setFindCount] = useState(0)
+  const [findIdx, setFindIdx] = useState(0)
+  const findInputRef = useRef<HTMLInputElement | null>(null)
+
+  // Reset transient state when file changes
+  useEffect(() => {
+    setEditing(false)
+    setDraft('')
+    setSaveError(null)
+    setFindOpen(false)
+    setFindQuery('')
+    setFindIdx(0)
+  }, [filePath])
+
+  useEffect(() => {
+    if (findOpen) findInputRef.current?.focus()
+  }, [findOpen])
+
+  const fileName = filePath.split(/[/\\]/).pop() || filePath
+  const relPath = useMemo(() => {
+    if (cwd && filePath.startsWith(cwd)) {
+      const rel = filePath.slice(cwd.length).replace(/^[\\/]+/, '')
+      return rel || fileName
+    }
+    return filePath
+  }, [filePath, cwd, fileName])
+
+  const dirty = editing && content !== null && draft !== content
+  const canEdit = !isBinary && content !== null && !loading
+  const canFind = canEdit && !editing
+
+  useEffect(() => {
+    dirtyRef.current = dirty
+    return () => {
+      dirtyRef.current = false
+    }
+  }, [dirty, dirtyRef])
+
+  const handleStartEdit = (): void => {
+    if (!canEdit || content === null) return
+    setDraft(content)
+    setEditing(true)
+    setSaveError(null)
+  }
+
+  const handleCancelEdit = (): void => {
+    if (dirty && !window.confirm('Discard unsaved changes?')) return
+    setEditing(false)
+    setDraft('')
+    setSaveError(null)
+  }
+
+  const handleSave = useCallback(async (): Promise<void> => {
+    if (!editing) return
+    setSaving(true)
+    setSaveError(null)
+    try {
+      const res = await window.api.writeFileContent(filePath, draft, remoteHostId)
+      if (!res.success) {
+        setSaveError(res.error || 'Failed to save')
+        return
+      }
+      onContentSaved(draft)
+      setEditing(false)
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setSaving(false)
+    }
+  }, [filePath, editing, draft, remoteHostId, onContentSaved])
+
+  const handleToggleFind = (): void => {
+    if (!canFind) return
+    setFindOpen((v) => !v)
+  }
+
+  const cycleMatch = (delta: number): void => {
+    if (findCount === 0) return
+    setFindIdx((i) => (i + delta + findCount) % findCount)
+  }
+
+  const onMatchesComputed = useCallback((count: number) => {
+    setFindCount(count)
+    setFindIdx((i) => (count === 0 ? 0 : Math.min(i, count - 1)))
+  }, [])
+
+  return (
+    <div className="flex-1 flex flex-col min-h-0">
+      <PanelHeader title="File" onClose={onClose} />
+
+      {/* Path strip + toolbar */}
       <div
-        className="sticky top-0 z-10 flex items-center gap-2 px-3 py-1.5 text-[12px] font-mono
-                    border-b border-white/[0.06] shrink-0"
+        className="flex items-center gap-2 px-3 py-1 text-[11px] font-mono border-b border-white/[0.06] shrink-0"
         style={{ background: '#1e1e22' }}
       >
-        <FileTypeIcon name={fileName} size={14} />
-        <span className="text-gray-300 flex-1 min-w-0 truncate">{fileName}</span>
-        <span className="text-gray-600 text-[11px] shrink-0">{allLines.length} lines</span>
+        <FileTypeIcon name={fileName} size={12} />
+        <span className="text-gray-400 flex-1 min-w-0 truncate" title={filePath} dir="rtl">
+          {relPath}
+        </span>
+        {dirty && (
+          <span
+            className="w-[6px] h-[6px] rounded-full bg-amber-400 shrink-0"
+            title="Unsaved changes"
+          />
+        )}
+        <ToolbarBtn
+          icon={Search}
+          label="Find in file"
+          active={findOpen}
+          disabled={!canFind}
+          onClick={handleToggleFind}
+        />
+        {editing ? (
+          <>
+            <ToolbarBtn
+              icon={Save}
+              label={saving ? 'Saving…' : 'Save (⌘S)'}
+              disabled={!dirty || saving}
+              onClick={handleSave}
+            />
+            <ToolbarBtn icon={X} label="Cancel edit" onClick={handleCancelEdit} />
+          </>
+        ) : (
+          <ToolbarBtn icon={Pencil} label="Edit" disabled={!canEdit} onClick={handleStartEdit} />
+        )}
+      </div>
+
+      {/* Find bar */}
+      {findOpen && canFind && (
+        <div
+          className="flex items-center gap-2 px-3 py-1 text-[11px] border-b border-white/[0.06] shrink-0"
+          style={{ background: '#1a1a1d' }}
+        >
+          <Search size={12} className="text-gray-500 shrink-0" />
+          <input
+            ref={findInputRef}
+            value={findQuery}
+            onChange={(e) => {
+              setFindQuery(e.target.value)
+              setFindIdx(0)
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                cycleMatch(e.shiftKey ? -1 : 1)
+              } else if (e.key === 'Escape') {
+                e.preventDefault()
+                setFindOpen(false)
+                setFindQuery('')
+              }
+            }}
+            placeholder="Find in file"
+            className="flex-1 bg-transparent text-gray-200 outline-none text-[12px] font-mono"
+          />
+          <span className="text-gray-500 shrink-0 tabular-nums">
+            {findCount === 0 ? '0/0' : `${findIdx + 1}/${findCount}`}
+          </span>
+          <button
+            onClick={() => cycleMatch(-1)}
+            disabled={findCount === 0}
+            className="text-gray-500 hover:text-white px-1 disabled:opacity-40"
+            title="Previous (Shift+Enter)"
+          >
+            ↑
+          </button>
+          <button
+            onClick={() => cycleMatch(1)}
+            disabled={findCount === 0}
+            className="text-gray-500 hover:text-white px-1 disabled:opacity-40"
+            title="Next (Enter)"
+          >
+            ↓
+          </button>
+          <button
+            onClick={() => {
+              setFindOpen(false)
+              setFindQuery('')
+            }}
+            className="text-gray-500 hover:text-white p-0.5"
+            title="Close (Esc)"
+          >
+            <X size={12} />
+          </button>
+        </div>
+      )}
+
+      {/* Body */}
+      {loading ? (
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 size={16} className="text-gray-500 animate-spin" />
+        </div>
+      ) : isBinary ? (
+        <div className="flex-1 flex items-center justify-center text-gray-600 text-[12px]">
+          Binary file — preview unavailable
+        </div>
+      ) : editing ? (
+        <EditView draft={draft} onChange={setDraft} onSaveShortcut={handleSave} />
+      ) : content !== null ? (
+        <ReadView
+          filePath={filePath}
+          content={content}
+          findQuery={findOpen ? findQuery : ''}
+          activeMatchIdx={findIdx}
+          onMatchesComputed={onMatchesComputed}
+        />
+      ) : null}
+
+      {saveError && (
+        <div
+          className="px-3 py-1 text-[11px] text-red-400 border-t border-white/[0.06] shrink-0"
+          style={{ background: '#2a1a1a' }}
+        >
+          {saveError}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ToolbarBtn({
+  icon: Icon,
+  label,
+  active,
+  disabled,
+  onClick
+}: {
+  icon: typeof Search
+  label: string
+  active?: boolean
+  disabled?: boolean
+  onClick: () => void
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      title={label}
+      aria-label={label}
+      className={`p-1 rounded transition-colors shrink-0 ${
+        disabled
+          ? 'text-gray-700 cursor-not-allowed'
+          : active
+            ? 'text-gray-100 bg-white/[0.08]'
+            : 'text-gray-500 hover:text-gray-200 hover:bg-white/[0.05]'
+      }`}
+    >
+      <Icon size={12} strokeWidth={2} />
+    </button>
+  )
+}
+
+function PanelHeader({ title, onClose }: { title: string; onClose?: () => void }) {
+  return (
+    <div
+      className="flex items-center px-3 py-1.5 border-b border-white/[0.06] shrink-0 text-[12px]"
+      style={{ background: '#17171a' }}
+    >
+      <span className="flex-1 text-gray-300 font-medium">{title}</span>
+      {onClose && (
         <button
           onClick={onClose}
-          className="text-gray-600 hover:text-white p-0.5 rounded transition-colors shrink-0"
+          className="text-gray-600 hover:text-white p-0.5 rounded transition-colors"
+          aria-label={`Close ${title}`}
         >
           <X size={12} strokeWidth={2} />
         </button>
-      </div>
+      )}
+    </div>
+  )
+}
 
-      <div className="flex-1 overflow-y-auto">
-        <pre className="text-[12px] leading-[1.6] font-mono">
-          {renderedLines}
-          {capped && (
-            <div className="px-3 py-2 text-[11px] text-gray-600 italic">
-              Showing first {MAX_PREVIEW_LINES} of {allLines.length} lines
-            </div>
+// ---------------------------------------------------------------------------
+// Files panel (header + filter + tree)
+// ---------------------------------------------------------------------------
+function FilesPanel({
+  rootEntries,
+  dirCache,
+  loadDir,
+  selectedFile,
+  onSelectFile
+}: {
+  rootEntries: FileEntry[]
+  dirCache: Map<string, FileEntry[]>
+  loadDir: (path: string) => Promise<void>
+  selectedFile: string | null
+  onSelectFile: (path: string) => void
+}) {
+  const [filter, setFilter] = useState('')
+  const { matched, expand } = useMemo(
+    () => computeFilterSets(rootEntries, dirCache, filter),
+    [rootEntries, dirCache, filter]
+  )
+
+  return (
+    <div className="flex flex-col min-h-0 h-full">
+      <PanelHeader title="Files" />
+      <div className="px-2 py-1.5 border-b border-white/[0.06] shrink-0">
+        <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-white/[0.04] focus-within:bg-white/[0.06]">
+          <Search size={12} className="text-gray-600 shrink-0" />
+          <input
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') setFilter('')
+            }}
+            placeholder="Filter files…"
+            className="flex-1 bg-transparent text-gray-200 outline-none text-[12px] placeholder:text-gray-600"
+          />
+          {filter && (
+            <button
+              onClick={() => setFilter('')}
+              className="text-gray-600 hover:text-white p-0.5"
+              aria-label="Clear filter"
+            >
+              <X size={11} />
+            </button>
           )}
-        </pre>
+        </div>
+      </div>
+      <div className="flex-1 overflow-y-auto py-0.5">
+        {rootEntries.map((entry) => (
+          <TreeNode
+            key={entry.path}
+            entry={entry}
+            depth={0}
+            dirCache={dirCache}
+            loadDir={loadDir}
+            selectedFile={selectedFile}
+            onSelectFile={onSelectFile}
+            filter={filter}
+            matched={matched}
+            forceExpand={expand}
+          />
+        ))}
+        {filter && matched.size === 0 && (
+          <div className="px-3 py-2 text-[11px] text-gray-600 italic">No matching files loaded</div>
+        )}
       </div>
     </div>
   )
 }
 
+// ---------------------------------------------------------------------------
+// Stacked split divider
+// ---------------------------------------------------------------------------
+function SplitDivider({
+  containerRef,
+  onRatioChange,
+  onRatioCommit
+}: {
+  containerRef: React.RefObject<HTMLDivElement | null>
+  onRatioChange: (ratio: number) => void
+  onRatioCommit: (ratio: number) => void
+}) {
+  const handlePointerDown = (e: React.PointerEvent): void => {
+    e.preventDefault()
+    const container = containerRef.current
+    if (!container) return
+    const rect = container.getBoundingClientRect()
+    let lastRatio: number | null = null
+
+    const onMove = (ev: PointerEvent): void => {
+      const y = ev.clientY - rect.top
+      const ratio = Math.max(MIN_RATIO, Math.min(MAX_RATIO, y / rect.height))
+      lastRatio = ratio
+      onRatioChange(ratio)
+    }
+    const onUp = (): void => {
+      document.removeEventListener('pointermove', onMove)
+      document.removeEventListener('pointerup', onUp)
+      if (lastRatio !== null) onRatioCommit(lastRatio)
+    }
+    document.addEventListener('pointermove', onMove)
+    document.addEventListener('pointerup', onUp)
+  }
+
+  return (
+    <div
+      onPointerDown={handlePointerDown}
+      className="h-1 cursor-row-resize hover:bg-blue-500/30 transition-colors shrink-0"
+      style={{ background: 'rgba(255,255,255,0.06)' }}
+      aria-label="Resize files / file panels"
+      role="separator"
+    />
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Top-level orchestrator
+// ---------------------------------------------------------------------------
 export function FileTreeExplorer({ cwd, remoteHostId }: { cwd: string; remoteHostId?: string }) {
   const [rootEntries, setRootEntries] = useState<FileEntry[] | null>(null)
   const [loading, setLoading] = useState(true)
@@ -378,7 +998,26 @@ export function FileTreeExplorer({ cwd, remoteHostId }: { cwd: string; remoteHos
   const [selectedFile, setSelectedFile] = useState<string | null>(null)
   const [fileContent, setFileContent] = useState<string | null>(null)
   const [fileLoading, setFileLoading] = useState(false)
+  const [isBinary, setIsBinary] = useState(false)
   const activeRequestRef = useRef<string | null>(null)
+  const dirtyRef = useRef(false)
+
+  const containerRef = useRef<HTMLDivElement | null>(null)
+  const [splitRatio, setSplitRatio] = useState<number>(() => {
+    if (typeof localStorage === 'undefined') return DEFAULT_RATIO
+    const stored = localStorage.getItem(SPLIT_RATIO_KEY)
+    const n = stored ? Number(stored) : NaN
+    if (!Number.isFinite(n)) return DEFAULT_RATIO
+    return Math.max(MIN_RATIO, Math.min(MAX_RATIO, n))
+  })
+
+  const persistRatio = useCallback((next: number): void => {
+    try {
+      localStorage.setItem(SPLIT_RATIO_KEY, String(next))
+    } catch {
+      /* ignore quota errors */
+    }
+  }, [])
 
   useEffect(() => {
     let stale = false
@@ -416,21 +1055,36 @@ export function FileTreeExplorer({ cwd, remoteHostId }: { cwd: string; remoteHos
   const handleSelectFile = useCallback(
     async (filePath: string) => {
       if (filePath === activeRequestRef.current) return
+      if (dirtyRef.current && !window.confirm('Discard unsaved changes?')) return
       activeRequestRef.current = filePath
       setSelectedFile(filePath)
+      setFileContent(null)
+      setIsBinary(false)
       setFileLoading(true)
       const content = await window.api.readFileContent(filePath, undefined, remoteHostId)
       if (activeRequestRef.current !== filePath) return
-      setFileContent(content)
+      if (content === null) {
+        setIsBinary(true)
+        setFileContent(null)
+      } else {
+        setIsBinary(false)
+        setFileContent(content)
+      }
       setFileLoading(false)
     },
     [remoteHostId]
   )
 
   const handleClosePreview = useCallback(() => {
+    if (dirtyRef.current && !window.confirm('Discard unsaved changes?')) return
     activeRequestRef.current = null
     setSelectedFile(null)
     setFileContent(null)
+    setIsBinary(false)
+  }, [])
+
+  const handleContentSaved = useCallback((next: string) => {
+    setFileContent(next)
   }, [])
 
   if (loading) {
@@ -449,40 +1103,52 @@ export function FileTreeExplorer({ cwd, remoteHostId }: { cwd: string; remoteHos
     )
   }
 
-  const showPreview = selectedFile && (fileContent !== null || fileLoading)
+  const showFilePanel = selectedFile !== null
 
   return (
-    <div className="flex-1 flex flex-col min-h-0">
-      <div className={`overflow-y-auto py-0.5 ${showPreview ? 'max-h-[50%]' : 'flex-1'}`}>
-        {rootEntries.map((entry) => (
-          <TreeNode
-            key={entry.path}
-            entry={entry}
-            depth={0}
-            dirCache={dirCache}
-            loadDir={loadDir}
-            selectedFile={selectedFile}
-            onSelectFile={handleSelectFile}
-          />
-        ))}
+    <div ref={containerRef} className="flex-1 flex flex-col min-h-0">
+      <div
+        className="flex flex-col min-h-0"
+        style={
+          showFilePanel
+            ? { flex: `${splitRatio} 1 0`, minHeight: 0 }
+            : { flex: '1 1 0', minHeight: 0 }
+        }
+      >
+        <FilesPanel
+          rootEntries={rootEntries}
+          dirCache={dirCache}
+          loadDir={loadDir}
+          selectedFile={selectedFile}
+          onSelectFile={handleSelectFile}
+        />
       </div>
 
-      {showPreview &&
-        (fileLoading ? (
-          <div className="flex-1 flex items-center justify-center border-t border-white/[0.06]">
-            <Loader2 size={16} className="text-gray-500 animate-spin" />
-          </div>
-        ) : fileContent !== null ? (
-          <FilePreview
-            filePath={selectedFile!}
-            content={fileContent}
-            onClose={handleClosePreview}
+      {showFilePanel && (
+        <>
+          <SplitDivider
+            containerRef={containerRef}
+            onRatioChange={setSplitRatio}
+            onRatioCommit={persistRatio}
           />
-        ) : (
-          <div className="flex-1 flex items-center justify-center border-t border-white/[0.06] text-gray-600 text-[12px]">
-            Binary file — preview unavailable
+          <div
+            className="flex flex-col min-h-0"
+            style={{ flex: `${1 - splitRatio} 1 0`, minHeight: 0 }}
+          >
+            <FilePanel
+              cwd={cwd}
+              filePath={selectedFile}
+              content={fileContent}
+              loading={fileLoading}
+              isBinary={isBinary}
+              onClose={handleClosePreview}
+              onContentSaved={handleContentSaved}
+              remoteHostId={remoteHostId}
+              dirtyRef={dirtyRef}
+            />
           </div>
-        ))}
+        </>
+      )}
     </div>
   )
 }
