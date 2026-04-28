@@ -149,12 +149,11 @@ describe('ProjectItem progress-toast handlers', () => {
 
   it('new worktree button fires a loading toast and calls window.api.createWorktree', async () => {
     const { container } = renderProjectItem()
-    await waitFor(() => expect(mockIsGitRepo).toHaveBeenCalled())
-    // The new-worktree button is the 2nd visible action button (after new session)
-    const buttons = Array.from(container.querySelectorAll('button[type="button"]'))
-    // Find it via its SVG child: FolderGit2 is distinctive because it has class text-amber-400/70
-    const wtButton = buttons.find((b) => b.querySelector('.text-amber-400\\/70')) as HTMLElement
-    expect(wtButton).toBeDefined()
+    const wtButton = (await waitFor(() => {
+      const btn = container.querySelector('button[aria-label="New worktree"]')
+      if (!btn) throw new Error('worktree button not yet rendered')
+      return btn
+    })) as HTMLElement
     act(() => {
       fireEvent.click(wtButton)
     })
