@@ -67,6 +67,10 @@ export const AgentCard = memo(
 
     const isFocused = focusedId === terminalId
     const isSelected = selectedId === terminalId
+    // Selection is signalled by dimming the chrome (header + status bar) on
+    // every *other* card so the active one stands out by relative brightness,
+    // without painting a border that fights with the terminal contents.
+    const isChromeDimmed = selectedId !== null && !isSelected && !isFocused
 
     const handleExpand = (): void => {
       setFocused(terminalId)
@@ -80,11 +84,9 @@ export const AgentCard = memo(
                    ${
                      isFocused
                        ? 'border-blue-500/60 ring-1 ring-blue-500/30'
-                       : isSelected
-                         ? 'border-white/40 ring-1 ring-white/10'
-                         : isDragTarget
-                           ? 'card-drop-target border-blue-500/30 hover:border-white/[0.12]'
-                           : 'border-white/[0.06] hover:border-white/[0.12]'
+                       : isDragTarget
+                         ? 'card-drop-target border-blue-500/30 hover:border-white/[0.12]'
+                         : 'border-white/[0.06] hover:border-white/[0.12]'
                    }
                    ${
                      flexible
@@ -106,6 +108,7 @@ export const AgentCard = memo(
           onDragStart={onDragStart}
           onDoubleClick={handleExpand}
           revealActions={isTouchDevice}
+          dimmed={isChromeDimmed}
         />
 
         {/* Terminal */}
@@ -165,7 +168,7 @@ export const AgentCard = memo(
           )}
         </div>
 
-        <CardStatusBar terminalId={terminalId} />
+        <CardStatusBar terminalId={terminalId} dimmed={isChromeDimmed} />
 
         {!flexible && <RowResizeHandle />}
       </div>
