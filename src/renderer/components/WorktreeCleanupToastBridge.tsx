@@ -34,18 +34,20 @@ export function WorktreeCleanupToastBridge() {
         actions: buildActions(false)
       })
 
-      // Background dirty check — update toast in place if uncommitted changes detected.
+      // Background dirty check — update toast in place if uncommitted changes
+      // detected. Use updateIfExists so a late-arriving result can't resurrect a
+      // toast the user already dismissed via Keep/Remove/X.
       window.api
         .isWorktreeDirty(worktreePath)
         .then((dirty) => {
           if (!dirty) return
-          toast.update(id, `Worktree "${name}" has uncommitted changes`, 'warning', {
+          toast.updateIfExists(id, `Worktree "${name}" has uncommitted changes`, 'warning', {
             duration: Number.POSITIVE_INFINITY,
             actions: buildActions(true)
           })
         })
         .catch(() => {
-          toast.update(
+          toast.updateIfExists(
             id,
             `Worktree "${name}" — last session ended (changes check failed)`,
             'warning',

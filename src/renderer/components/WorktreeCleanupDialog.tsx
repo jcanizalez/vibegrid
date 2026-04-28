@@ -44,6 +44,9 @@ export function WorktreeCleanupDialog() {
   useExplicitDeleteSubscription(
     useCallback((next: ExplicitDeleteInfo) => {
       setInfo(next)
+      // Reset the re-entry guard so the new dialog can act even if a prior
+      // removal is still completing in the background.
+      removingLock.current = false
       const id = ++checkIdRef.current
       setDirtyState('checking')
       window.api

@@ -120,6 +120,27 @@ toast.dismiss = (id: string): void => {
   notify()
 }
 
+/**
+ * Like `toast.update`, but bails out (returns null) if the toast no longer exists.
+ * Use when an async update may race with the user dismissing the toast — without
+ * this guard, `toast.update` would resurrect the dismissed toast.
+ */
+toast.updateIfExists = (
+  id: string,
+  message: string,
+  type: ToastType,
+  opts: ToastUpdateOptions = {}
+): string | null => {
+  const existing = toasts.find((t) => t.id === id)
+  if (!existing) return null
+  const duration = opts.duration ?? DEFAULT_DURATIONS[type]
+  const actions = opts.actions === null ? undefined : (opts.actions ?? existing.actions)
+  toasts = toasts.map((t) => (t.id === id ? { ...t, message, type, duration, actions } : t))
+  notify()
+  scheduleDismiss(id, duration)
+  return id
+}
+
 /* ------------------------------------------------------------------ */
 /*  Icons & colors per type                                           */
 /* ------------------------------------------------------------------ */
