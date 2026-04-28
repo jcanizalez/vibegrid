@@ -30,6 +30,7 @@ import { ToolbarBreadcrumb } from './components/ToolbarBreadcrumb'
 import { SettingsPage } from './components/SettingsPage'
 import { SidebarToggleButton } from './components/SidebarToggleButton'
 import { MainViewPills } from './components/MainViewPills'
+import { ToolbarMinimizedStrip } from './components/ToolbarMinimizedStrip'
 import { RecentSessionsButton } from './components/RecentSessionsButton'
 import { Tooltip } from './components/Tooltip'
 import { Plus, Menu } from 'lucide-react'
@@ -75,6 +76,7 @@ export function App() {
     editingWorkflowId,
     layoutMode,
     mainViewMode,
+    minimizedPlacement,
     selectedTaskId,
     diffSidebarTerminalId
   } = useAppStore(
@@ -90,6 +92,7 @@ export function App() {
       editingWorkflowId: s.editingWorkflowId,
       layoutMode: s.config?.defaults?.layoutMode ?? 'grid',
       mainViewMode: s.config?.defaults?.mainViewMode ?? 'sessions',
+      minimizedPlacement: s.config?.defaults?.minimizedPlacement ?? 'toolbar',
       selectedTaskId: s.selectedTaskId,
       diffSidebarTerminalId: s.diffSidebarTerminalId
     }))
@@ -434,6 +437,10 @@ export function App() {
                   <MainViewPills />
                 </>
               )}
+              {!isMobile &&
+                layoutMode === 'grid' &&
+                mainViewMode === 'sessions' &&
+                minimizedPlacement !== 'canvas' && <ToolbarMinimizedStrip />}
             </div>
             {!isMobile && (
               <div className="flex-1 flex justify-center min-w-0 titlebar-no-drag">
