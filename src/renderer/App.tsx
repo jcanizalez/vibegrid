@@ -46,6 +46,7 @@ import {
   disposeGlobalDataListener
 } from './lib/terminal-registry'
 import { WorktreeCleanupDialog } from './components/WorktreeCleanupDialog'
+import { WorktreeCleanupToastBridge } from './components/WorktreeCleanupToastBridge'
 import { RightPanel } from './components/RightPanel'
 import { TaskBoardView } from './components/TaskBoardView'
 import { TaskDetailPanel } from './components/TaskDetailPanel'
@@ -576,6 +577,7 @@ export function App() {
       <CommandPalette />
       <AddTaskDialog />
       <WorktreeCleanupDialog />
+      <WorktreeCleanupToastBridge />
       <MissedScheduleDialog />
       <AnimatePresence>{isShortcutsPanelOpen && <KeyboardShortcutsPanel />}</AnimatePresence>
 
