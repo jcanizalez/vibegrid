@@ -30,7 +30,11 @@ export function MinimizedPill({ terminalId }: { terminalId: string }) {
       }}
       title="Click to restore"
     >
-      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${STATUS_DOT[status]}`} />
+      <span
+        className={`w-1.5 h-1.5 rounded-full shrink-0 ${STATUS_DOT[status]} ${
+          status === 'running' ? 'animate-pulse' : ''
+        }`}
+      />
 
       <AgentIcon agentType={session.agentType} size={14} />
 

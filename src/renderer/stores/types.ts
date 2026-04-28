@@ -143,6 +143,7 @@ export interface UISlice {
   focusableTerminalIds: string[]
   minimizedTerminals: Set<string>
   backgroundTrayCollapsed: boolean
+  toolbarMinimizedCollapsed: boolean
   isOnboardingOpen: boolean
   diffSidebarTerminalId: string | null
   gitDiffStats: Map<string, GitDiffStat>
@@ -188,6 +189,7 @@ export interface UISlice {
   reorderTerminals: (fromIndex: number, toIndex: number) => void
   toggleMinimized: (id: string) => void
   toggleBackgroundTray: () => void
+  toggleToolbarMinimizedCollapsed: () => void
   setOnboardingOpen: (open: boolean) => void
   setDiffSidebarTerminalId: (id: string | null, tab?: PanelTab) => void
   updateGitDiffStat: (terminalId: string, stat: GitDiffStat) => void

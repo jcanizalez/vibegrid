@@ -159,6 +159,9 @@ export type TaskStatus = 'todo' | 'in_progress' | 'in_review' | 'done' | 'cancel
 
 export type TaskViewMode = 'list' | 'kanban'
 
+export const MINIMIZED_PLACEMENTS = ['canvas', 'toolbar', 'both'] as const
+export type MinimizedPlacement = (typeof MINIMIZED_PLACEMENTS)[number]
+
 export type MainViewMode = 'sessions' | 'tasks' | 'workflows'
 
 export interface TaskConfig {
@@ -692,6 +695,7 @@ export interface AppConfig {
     widgetEnabled?: boolean
     taskViewMode?: TaskViewMode
     layoutMode?: 'grid' | 'tabs'
+    minimizedPlacement?: MinimizedPlacement
     mainViewMode?: MainViewMode
     activeWorkspace?: string
     updateChannel?: 'stable' | 'beta'
