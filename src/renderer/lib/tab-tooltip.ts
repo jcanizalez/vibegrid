@@ -14,9 +14,11 @@ export function buildTooltip(
   isWorktree?: boolean,
   taskTitle?: string,
   shellCwd?: string,
-  shellExitCode?: number
+  shellExitCode?: number,
+  projectName?: string
 ): string {
-  const lines = [`${displayName} — ${STATUS_LABEL[status]}`]
+  const heading = projectName ? `${projectName} / ${displayName}` : displayName
+  const lines = [`${heading} — ${STATUS_LABEL[status]}`]
   if (branch) {
     lines.push(`Branch: ${branch}${isWorktree ? ' (worktree)' : ''}`)
   }

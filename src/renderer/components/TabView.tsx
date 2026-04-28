@@ -19,6 +19,8 @@ import { ConfirmPopover } from './ConfirmPopover'
 import { Tooltip } from './Tooltip'
 import { toast } from './Toast'
 import { ChevronDown, FolderOpen, GripVertical, Pencil, Plus, X } from 'lucide-react'
+import { ProjectIcon } from './project-sidebar/ProjectIcon'
+import type { ProjectConfig } from '../../shared/types'
 import { GridContextMenu } from './GridContextMenu'
 import { GridToolbar } from './GridToolbar'
 import { WindowControls } from './WindowControls'
@@ -26,7 +28,7 @@ import { SidebarToggleButton } from './SidebarToggleButton'
 import { MainViewPills } from './MainViewPills'
 import { RecentSessionsButton } from './RecentSessionsButton'
 import { resolveActiveProject, createSessionFromProject } from '../lib/session-utils'
-import { MOD, isMac, isWeb, TRAFFIC_LIGHT_PAD_PX } from '../lib/platform'
+import { isMac, isWeb, TRAFFIC_LIGHT_PAD_PX } from '../lib/platform'
 
 const DRAG_THRESHOLD = 5
 
@@ -133,6 +135,7 @@ export function TabView() {
   const reorderTerminals = useAppStore((s) => s.reorderTerminals)
   const setDiffSidebar = useAppStore((s) => s.setDiffSidebarTerminalId)
   const tasks = useAppStore((s) => s.config?.tasks)
+  const projects = useAppStore((s) => s.config?.projects)
   const isSidebarOpen = useAppStore((s) => s.isSidebarOpen)
   const filteredHeadless = useFilteredHeadless()
   const waitingApprovals = useWaitingApprovals()
@@ -150,6 +153,12 @@ export function TabView() {
   const isFiltered = statusFilter !== 'all'
   const isManualSort = sortMode === 'manual'
   const needsTrafficLightPad = isMac && !isSidebarOpen && !isWeb
+
+  const projectByName = useMemo(() => {
+    const map = new Map<string, ProjectConfig>()
+    for (const p of projects ?? []) map.set(p.name, p)
+    return map
+  }, [projects])
 
   const assignedTaskBySessionId = useMemo(() => {
     type Task = NonNullable<typeof tasks>[number]
@@ -313,6 +322,7 @@ export function TabView() {
             const tooltipTaskTitle =
               displayName === assignedTask?.title ? undefined : assignedTask?.title
             const isShell = terminal.session.agentType === 'shell'
+            const project = projectByName.get(terminal.session.projectName)
             const tooltip = buildTooltip(
               displayName,
               terminal.status,
@@ -320,7 +330,8 @@ export function TabView() {
               isShell ? undefined : terminal.session.isWorktree,
               isShell ? undefined : tooltipTaskTitle,
               isShell ? terminal.session.shellCwd : undefined,
-              isShell ? terminal.session.shellExitCode : undefined
+              isShell ? terminal.session.shellExitCode : undefined,
+              terminal.session.projectName
             )
 
             return (
@@ -338,8 +349,8 @@ export function TabView() {
                   e.stopPropagation()
                   setContextMenu({ terminalId: id, x: e.clientX, y: e.clientY })
                 }}
-                className={`titlebar-no-drag group relative flex items-center gap-2 pl-3 pr-10 h-[36px] text-[13px] cursor-pointer
-                           transition-colors flex-1 min-w-[120px] max-w-[260px] select-none border-b
+                className={`titlebar-no-drag group relative flex items-center gap-1.5 pl-2.5 pr-2 h-[36px] text-[13px] cursor-pointer
+                           transition-colors flex-1 min-w-[96px] max-w-[260px] select-none border-b
                            ${isDragTarget ? 'ring-1 ring-blue-500/50' : ''}
                            ${isDragging ? 'opacity-50' : ''}
                            ${
@@ -381,24 +392,34 @@ export function TabView() {
                     className="text-xs w-[100px]"
                   />
                 ) : (
-                  <span className="truncate flex-1 min-w-0" title={tooltip}>
-                    {displayName}
-                  </span>
+                  <>
+                    <span className="truncate flex-1 min-w-0" title={tooltip}>
+                      {displayName}
+                    </span>
+                    {/* Project marker — always visible so two tabs that share a displayName
+                        (e.g. both running on `main`) stay distinguishable. */}
+                    <span
+                      className="shrink-0 flex items-center"
+                      title={tooltip}
+                      aria-label={
+                        terminal.session.projectName
+                          ? `Project: ${terminal.session.projectName}`
+                          : undefined
+                      }
+                    >
+                      <ProjectIcon icon={project?.icon} color={project?.iconColor} size={11} />
+                    </span>
+                  </>
                 )}
 
-                <span className="absolute right-2 top-0 bottom-0 flex items-center gap-1 group-hover:bg-[#1a1a1e] group-hover:rounded-l-sm">
-                  {index < 9 && !isRenaming && (
-                    <span
-                      className="absolute right-0 top-1/2 -translate-y-1/2
-                                   opacity-100 group-hover:opacity-0 transition-opacity
-                                   px-1 py-0.5 text-[9px] font-mono text-gray-500
-                                   bg-white/[0.06] border border-white/[0.1] rounded leading-none
-                                   pointer-events-none"
-                    >
-                      {MOD}
-                      {index + 1}
-                    </span>
-                  )}
+                {/* Hover-only action toolbar — overlays the marker so the marker has the
+                    right edge to itself in the resting state. */}
+                <span
+                  className="absolute right-1.5 top-0 bottom-0 flex items-center gap-0.5
+                             opacity-0 group-hover:opacity-100 transition-opacity
+                             pointer-events-none group-hover:pointer-events-auto
+                             bg-[#1a1a1e] pl-1.5 pr-0.5 rounded-l-sm"
+                >
                   {!isRenaming && (
                     <>
                       <TabIconButton
