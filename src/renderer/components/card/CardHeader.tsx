@@ -18,6 +18,8 @@ interface Props {
   onDoubleClick?: () => void
   /** Force the action cluster to be visible (e.g. on touch devices where hover is unreliable). */
   revealActions?: boolean
+  /** Visually de-emphasise this header when another card is the active selection. */
+  dimmed?: boolean
 }
 
 export function CardHeader({
@@ -27,7 +29,8 @@ export function CardHeader({
   draggable,
   onDragStart,
   onDoubleClick,
-  revealActions
+  revealActions,
+  dimmed
 }: Props) {
   const { terminal, isRenaming, setRenamingTerminalId, renameTerminal } = useAppStore(
     useShallow((s) => ({
@@ -51,7 +54,9 @@ export function CardHeader({
 
   return (
     <div
-      className="flex items-center gap-2 px-3 py-2.5 border-b border-white/[0.04] shrink-0"
+      className={`flex items-center gap-2 px-3 py-2.5 border-b border-white/[0.04] shrink-0
+                  transition-opacity duration-200 ease-out
+                  ${dimmed ? 'opacity-60 group-hover/card:opacity-100' : 'opacity-100'}`}
       style={{ background: '#141416' }}
     >
       <div

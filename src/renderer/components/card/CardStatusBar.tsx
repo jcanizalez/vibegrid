@@ -7,9 +7,11 @@ import { ListTodo } from 'lucide-react'
 
 interface Props {
   terminalId: string
+  /** Visually de-emphasise this status bar when another card is the active selection. */
+  dimmed?: boolean
 }
 
-export function CardStatusBar({ terminalId }: Props) {
+export function CardStatusBar({ terminalId, dimmed }: Props) {
   const { terminal, assignedTask, setEditingTask, setTaskDialogOpen } = useAppStore(
     useShallow((s) => ({
       terminal: s.terminals.get(terminalId),
@@ -27,7 +29,9 @@ export function CardStatusBar({ terminalId }: Props) {
 
   return (
     <div
-      className="shrink-0 flex items-center gap-2 px-2 h-[22px] border-t border-white/[0.04] text-[11px]"
+      className={`shrink-0 flex items-center gap-2 px-2 h-[22px] border-t border-white/[0.04] text-[11px]
+                  transition-opacity duration-200 ease-out
+                  ${dimmed ? 'opacity-60 group-hover/card:opacity-100' : 'opacity-100'}`}
       style={{ background: '#141416' }}
     >
       {hasBranch && <BranchChip terminalId={terminalId} />}
