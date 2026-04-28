@@ -10,11 +10,23 @@ import { useIsMobile } from '../hooks/useIsMobile'
 
 type ToastType = 'success' | 'error' | 'warning' | 'info' | 'loading'
 
+export interface ToastAction {
+  label: string
+  onClick: (toastId: string) => void
+  tone?: 'default' | 'danger'
+}
+
+export interface ToastOptions {
+  duration?: number
+  actions?: ToastAction[]
+}
+
 interface Toast {
   id: string
   message: string
   type: ToastType
-  duration?: number
+  duration: number
+  actions?: ToastAction[]
 }
 
 const DEFAULT_DURATIONS: Record<ToastType, number> = {
@@ -55,10 +67,15 @@ function scheduleDismiss(id: string, duration: number) {
 export function toast(
   message: string,
   type: ToastType = 'success',
-  duration: number = DEFAULT_DURATIONS[type]
+  durationOrOptions?: number | ToastOptions
 ): string {
+  const opts: ToastOptions =
+    typeof durationOrOptions === 'number'
+      ? { duration: durationOrOptions }
+      : (durationOrOptions ?? {})
+  const duration = opts.duration ?? DEFAULT_DURATIONS[type]
   const id = crypto.randomUUID()
-  toasts = [...toasts, { id, message, type, duration }]
+  toasts = [...toasts, { id, message, type, duration, actions: opts.actions }]
   notify()
   scheduleDismiss(id, duration)
   return id
@@ -70,14 +87,28 @@ toast.warning = (msg: string) => toast(msg, 'warning', 3500)
 toast.info = (msg: string) => toast(msg, 'info')
 toast.loading = (msg: string) => toast(msg, 'loading')
 
-toast.update = (id: string, message: string, type: ToastType): string => {
+interface ToastUpdateOptions {
+  duration?: number
+  actions?: ToastAction[] | null
+}
+
+toast.update = (
+  id: string,
+  message: string,
+  type: ToastType,
+  opts: ToastUpdateOptions = {}
+): string => {
   const existing = toasts.find((t) => t.id === id)
   if (!existing) {
     // Toast was dismissed manually — fall back to a fresh one so feedback isn't lost
-    return toast(message, type)
+    return toast(message, type, {
+      duration: opts.duration,
+      actions: opts.actions ?? undefined
+    })
   }
-  const duration = DEFAULT_DURATIONS[type]
-  toasts = toasts.map((t) => (t.id === id ? { ...t, message, type, duration } : t))
+  const duration = opts.duration ?? DEFAULT_DURATIONS[type]
+  const actions = opts.actions === null ? undefined : (opts.actions ?? existing.actions)
+  toasts = toasts.map((t) => (t.id === id ? { ...t, message, type, duration, actions } : t))
   notify()
   scheduleDismiss(id, duration)
   return id
@@ -87,6 +118,27 @@ toast.dismiss = (id: string): void => {
   clearDismissTimer(id)
   toasts = toasts.filter((t) => t.id !== id)
   notify()
+}
+
+/**
+ * Like `toast.update`, but bails out (returns null) if the toast no longer exists.
+ * Use when an async update may race with the user dismissing the toast — without
+ * this guard, `toast.update` would resurrect the dismissed toast.
+ */
+toast.updateIfExists = (
+  id: string,
+  message: string,
+  type: ToastType,
+  opts: ToastUpdateOptions = {}
+): string | null => {
+  const existing = toasts.find((t) => t.id === id)
+  if (!existing) return null
+  const duration = opts.duration ?? DEFAULT_DURATIONS[type]
+  const actions = opts.actions === null ? undefined : (opts.actions ?? existing.actions)
+  toasts = toasts.map((t) => (t.id === id ? { ...t, message, type, duration, actions } : t))
+  notify()
+  scheduleDismiss(id, duration)
+  return id
 }
 
 /* ------------------------------------------------------------------ */
@@ -189,6 +241,19 @@ export function ToastContainer() {
                 className={`shrink-0 ${style.text} ${t.type === 'loading' ? 'animate-spin' : ''}`}
               />
               <span className="text-sm text-gray-200 flex-1">{t.message}</span>
+              {t.actions?.map((action, i) => (
+                <button
+                  key={i}
+                  onClick={() => action.onClick(t.id)}
+                  className={`shrink-0 px-2 py-0.5 text-xs rounded transition-colors hover:bg-white/[0.06] ${
+                    action.tone === 'danger'
+                      ? 'text-red-400 hover:text-red-300'
+                      : 'text-gray-300 hover:text-white'
+                  }`}
+                >
+                  {action.label}
+                </button>
+              ))}
               <button
                 onClick={() => dismiss(t.id)}
                 className="shrink-0 p-0.5 text-gray-500 hover:text-gray-300 transition-colors"
