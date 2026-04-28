@@ -1,8 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const mockExecFile = vi.fn()
+const mockExecFileSync = vi.fn()
 vi.mock('node:child_process', () => ({
-  execFile: (...args: unknown[]) => mockExecFile(...args)
+  execFile: (...args: unknown[]) => mockExecFile(...args),
+  execFileSync: (...args: unknown[]) => mockExecFileSync(...args)
 }))
 vi.mock('node:util', () => ({
   promisify: (fn: unknown) => fn
@@ -14,12 +16,14 @@ vi.mock('node:fs', () => ({
     statSync: vi.fn(),
     openSync: vi.fn(),
     readSync: vi.fn(),
-    closeSync: vi.fn()
+    closeSync: vi.fn(),
+    writeFileSync: vi.fn()
   }
 }))
 
 import fs from 'node:fs'
-import { listDir, readFileContent } from '../packages/server/src/file-utils'
+import { listDir, readFileContent, writeFileContent } from '../packages/server/src/file-utils'
+import type { RemoteHost } from '@vornrun/shared/types'
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -185,5 +189,63 @@ describe('readFileContent', () => {
     const result = readFileContent('/test/bad.txt')
     expect(result).toBeNull()
     expect(fs.closeSync).toHaveBeenCalledWith(99)
+  })
+})
+
+describe('writeFileContent', () => {
+  it('writes content locally and returns success', () => {
+    vi.mocked(fs.writeFileSync).mockImplementation(() => undefined)
+
+    const result = writeFileContent('/test/out.txt', 'hello\nworld')
+    expect(result).toEqual({ success: true })
+    expect(fs.writeFileSync).toHaveBeenCalledWith('/test/out.txt', 'hello\nworld', 'utf-8')
+  })
+
+  it('returns error on local write failure', () => {
+    vi.mocked(fs.writeFileSync).mockImplementation(() => {
+      throw new Error('EACCES: permission denied')
+    })
+
+    const result = writeFileContent('/locked/file.txt', 'data')
+    expect(result.success).toBe(false)
+    expect(result.error).toContain('EACCES')
+  })
+
+  it('writes via SSH stdin for a remote host (no argv-length pitfall)', () => {
+    mockExecFileSync.mockReturnValue('')
+
+    const remote: RemoteHost = {
+      id: 'h1',
+      label: 'example',
+      hostname: 'example.com',
+      user: 'alice',
+      port: 22
+    }
+    const big = 'x'.repeat(300_000)
+    const result = writeFileContent('/remote/file.txt', big, remote)
+
+    expect(result).toEqual({ success: true })
+    const [cmd, args, opts] = mockExecFileSync.mock.calls[0]
+    expect(cmd).toBe('ssh')
+    expect(args[args.length - 1]).toMatch(/^cat > .*\/remote\/file\.txt'?$/)
+    expect((opts as { input: string }).input).toBe(big)
+  })
+
+  it('returns error when SSH exec throws', () => {
+    mockExecFileSync.mockImplementation(() => {
+      throw new Error('ssh: connect failed')
+    })
+
+    const remote: RemoteHost = {
+      id: 'h1',
+      label: 'example',
+      hostname: 'example.com',
+      user: 'alice',
+      port: 22
+    }
+    const result = writeFileContent('/remote/file.txt', 'data', remote)
+
+    expect(result.success).toBe(false)
+    expect(result.error).toContain('ssh: connect failed')
   })
 })

@@ -28,7 +28,7 @@ import {
 } from '@vornrun/shared/types'
 import type { SourceConnection, TaskStatus } from '@vornrun/shared/types'
 import * as gitUtils from './git-utils'
-import { listDir, readFileContent } from './file-utils'
+import { listDir, readFileContent, writeFileContent } from './file-utils'
 import {
   saveTaskImage,
   saveTaskImageFromBase64,
@@ -592,6 +592,10 @@ export function registerAllMethods(): void {
   registerMethod('file:readContent', ({ filePath, maxBytes, remoteHostId }) => {
     const remote = remoteHostId ? resolveRemoteHostById(remoteHostId) : undefined
     return readFileContent(filePath, maxBytes, remote)
+  })
+  registerMethod('file:writeContent', ({ filePath, content, remoteHostId }) => {
+    const remote = remoteHostId ? resolveRemoteHostById(remoteHostId) : undefined
+    return writeFileContent(filePath, content, remote)
   })
 
   // SSH

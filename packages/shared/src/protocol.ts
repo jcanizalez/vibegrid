@@ -194,6 +194,10 @@ export interface RequestMethods {
     params: { filePath: string; maxBytes?: number; remoteHostId?: string }
     result: string | null
   }
+  'file:writeContent': {
+    params: { filePath: string; content: string; remoteHostId?: string }
+    result: { success: boolean; error?: string }
+  }
 
   // Connectors
   'connector:list': {

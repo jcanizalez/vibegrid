@@ -159,6 +159,9 @@ export function registerIpcHandlers(): void {
   safeHandle(IPC.FILE_READ_CONTENT, (_, params) =>
     requireBridge().request(IPC.FILE_READ_CONTENT, params)
   )
+  safeHandle(IPC.FILE_WRITE_CONTENT, (_, params) =>
+    requireBridge().request(IPC.FILE_WRITE_CONTENT, params)
+  )
 
   // Tailscale
   safeHandle(IPC.TAILSCALE_STATUS, () => requireBridge().request(IPC.TAILSCALE_STATUS))

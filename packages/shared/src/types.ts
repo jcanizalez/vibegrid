@@ -923,6 +923,7 @@ export const IPC = {
   OPEN_EXTERNAL: 'shell:openExternal',
   FILE_LIST_DIR: 'file:listDir',
   FILE_READ_CONTENT: 'file:readContent',
+  FILE_WRITE_CONTENT: 'file:writeContent',
   CONNECTOR_LIST: 'connector:list',
   CONNECTOR_GET: 'connector:get',
   CONNECTION_LIST: 'connection:list',
