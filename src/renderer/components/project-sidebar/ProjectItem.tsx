@@ -284,6 +284,7 @@ export function ProjectItem({
                   <Tooltip label="New worktree" position="right">
                     <button
                       type="button"
+                      aria-label="New worktree"
                       disabled={creatingWorktree}
                       onClick={(e) => {
                         e.stopPropagation()
