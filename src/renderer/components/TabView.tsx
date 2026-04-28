@@ -397,17 +397,14 @@ export function TabView() {
                       {displayName}
                     </span>
                     {/* Project marker — always visible so two tabs that share a displayName
-                        (e.g. both running on `main`) stay distinguishable. */}
-                    <span
-                      className="shrink-0 flex items-center"
-                      title={tooltip}
-                      aria-label={
-                        terminal.session.projectName
-                          ? `Project: ${terminal.session.projectName}`
-                          : undefined
-                      }
-                    >
+                        (e.g. both running on `main`) stay distinguishable. The icon is
+                        decorative; the sr-only span is what actually reaches screen
+                        readers via the tab role's accessible name. */}
+                    <span className="shrink-0 flex items-center" title={tooltip}>
                       <ProjectIcon icon={project?.icon} color={project?.iconColor} size={11} />
+                      {terminal.session.projectName && (
+                        <span className="sr-only"> (project: {terminal.session.projectName})</span>
+                      )}
                     </span>
                   </>
                 )}

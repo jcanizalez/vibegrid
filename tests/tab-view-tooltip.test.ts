@@ -58,4 +58,27 @@ describe('buildTooltip (TabView tab hover)', () => {
     expect(text).not.toMatch(/Cwd:/)
     expect(text).not.toMatch(/Exit:/)
   })
+
+  it('prefixes the heading with the project when projectName is provided', () => {
+    const text = buildTooltip(
+      'main',
+      'running',
+      'main',
+      false,
+      undefined,
+      undefined,
+      undefined,
+      'vorn'
+    )
+    const firstLine = text.split('\n')[0]
+    expect(firstLine).toBe('vorn / main — Running')
+    expect(text).toMatch(/Branch: main/)
+  })
+
+  it('falls back to displayName-only heading when projectName is undefined', () => {
+    const text = buildTooltip('fix-auth', 'running')
+    const firstLine = text.split('\n')[0]
+    expect(firstLine).toBe('fix-auth — Running')
+    expect(firstLine).not.toMatch(/\//)
+  })
 })

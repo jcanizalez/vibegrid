@@ -17,7 +17,10 @@ export function ToolbarMinimizedStrip() {
   useEffect(() => {
     if (!popoverOpen) return
     const onDown = (e: MouseEvent): void => {
-      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
+      // Treat a missing anchor as "outside" so the popover still closes if the
+      // overflow button (or collapsed badge) unmounts while open — e.g. the
+      // user restored every minimized session.
+      if (!popoverRef.current || !popoverRef.current.contains(e.target as Node)) {
         setPopoverOpen(false)
       }
     }
@@ -40,7 +43,7 @@ export function ToolbarMinimizedStrip() {
                      text-[11px] font-medium text-gray-300
                      hover:text-white hover:border-white/[0.12] transition-colors"
           title={`${count} minimized`}
-          aria-haspopup="menu"
+          aria-haspopup="dialog"
           aria-expanded={popoverOpen}
           aria-label={`${count} minimized sessions`}
         >
@@ -50,7 +53,8 @@ export function ToolbarMinimizedStrip() {
 
         {popoverOpen && (
           <div
-            role="menu"
+            role="dialog"
+            aria-label="Minimized sessions"
             className="absolute top-full left-0 mt-1.5 z-50 p-1.5
                        flex flex-col gap-1 max-h-[60vh] overflow-y-auto min-w-[200px]
                        bg-[#1a1a1e] border border-white/[0.08] rounded-md shadow-lg"
@@ -104,7 +108,7 @@ export function ToolbarMinimizedStrip() {
                        text-[11px] font-medium text-gray-400
                        hover:text-white hover:border-white/[0.12] transition-colors"
             title={`${overflow.length} more minimized`}
-            aria-haspopup="menu"
+            aria-haspopup="dialog"
             aria-expanded={popoverOpen}
           >
             +{overflow.length}
@@ -112,7 +116,8 @@ export function ToolbarMinimizedStrip() {
 
           {popoverOpen && (
             <div
-              role="menu"
+              role="dialog"
+              aria-label="Additional minimized sessions"
               className="absolute top-full right-0 mt-1.5 z-50 p-1.5
                          flex flex-col gap-1 max-h-[60vh] overflow-y-auto
                          bg-[#1a1a1e] border border-white/[0.08] rounded-md shadow-lg"

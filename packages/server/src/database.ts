@@ -798,6 +798,9 @@ function loadDefaults(d: Database.Database): AppConfig['defaults'] {
     ...(map.layoutMode !== undefined && {
       layoutMode: map.layoutMode as AppConfig['defaults']['layoutMode']
     }),
+    ...(map.minimizedPlacement !== undefined && {
+      minimizedPlacement: map.minimizedPlacement as AppConfig['defaults']['minimizedPlacement']
+    }),
     ...(map.updateChannel !== undefined && {
       updateChannel: map.updateChannel as AppConfig['defaults']['updateChannel']
     }),
