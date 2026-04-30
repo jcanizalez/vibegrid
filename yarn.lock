@@ -3801,6 +3801,26 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@tiptap/pm@npm:^3.22.5":
+  version: 3.22.5
+  resolution: "@tiptap/pm@npm:3.22.5"
+  dependencies:
+    prosemirror-changeset: "npm:^2.3.0"
+    prosemirror-commands: "npm:^1.6.2"
+    prosemirror-dropcursor: "npm:^1.8.1"
+    prosemirror-gapcursor: "npm:^1.3.2"
+    prosemirror-history: "npm:^1.4.1"
+    prosemirror-keymap: "npm:^1.2.2"
+    prosemirror-model: "npm:^1.24.1"
+    prosemirror-schema-list: "npm:^1.5.0"
+    prosemirror-state: "npm:^1.4.3"
+    prosemirror-tables: "npm:^1.6.4"
+    prosemirror-transform: "npm:^1.10.2"
+    prosemirror-view: "npm:^1.38.1"
+  checksum: 10c0/845e433c787acdac53296d0ba5df6f4d388ab08df35183591c0a709309b890f18c5a327b1638af3b65ffa45e695bbc6336604be4e218e73111bb9e5bdd34ceb7
+  languageName: node
+  linkType: hard
+
 "@tiptap/react@npm:^3.22.4":
   version: 3.22.4
   resolution: "@tiptap/react@npm:3.22.4"
@@ -12619,7 +12639,7 @@ __metadata:
     "@tiptap/extension-task-item": "npm:^3.22.4"
     "@tiptap/extension-task-list": "npm:^3.22.4"
     "@tiptap/extensions": "npm:^3.22.4"
-    "@tiptap/pm": "npm:^3.22.4"
+    "@tiptap/pm": "npm:^3.22.5"
     "@tiptap/react": "npm:^3.22.4"
     "@tiptap/starter-kit": "npm:^3.22.4"
     "@tiptap/suggestion": "npm:^3.22.4"
